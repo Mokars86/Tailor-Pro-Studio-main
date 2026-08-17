@@ -1,5 +1,5 @@
 import React from 'react';
-import { Settings, Award, Sun, Moon, Palette, UserCircle2, Download } from 'lucide-react';
+import { Settings, Award, Sun, Moon, Palette, UserCircle2, Download, RefreshCw } from 'lucide-react';
 import { StudioSettings } from '../types';
 
 interface HeaderProps {
@@ -13,6 +13,7 @@ interface HeaderProps {
   onOpenFabricScanner?: () => void;
   onOpenInstallApp?: () => void;
   onOpenAdminPortal?: () => void;
+  onManualSync?: () => void;
   theme?: 'light' | 'dark';
   onToggleTheme?: (newTheme: 'light' | 'dark') => void;
   supabaseStatus?: 'connected' | 'syncing' | 'offline';
@@ -24,6 +25,7 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenMasterCertificate,
   onOpenFabricScanner,
   onOpenInstallApp,
+  onManualSync,
   theme = 'light',
   onToggleTheme,
   supabaseStatus = 'connected'
@@ -55,22 +57,21 @@ export const Header: React.FC<HeaderProps> = ({
 
           {/* Mobile Right: Supabase Synced Badge */}
           <div className="flex items-center gap-2 sm:hidden">
-            <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold border ${
-              supabaseStatus === 'connected'
-                ? 'bg-emerald-500/10 text-emerald-800 dark:text-emerald-300 border-emerald-300/60'
-                : supabaseStatus === 'syncing'
-                ? 'bg-amber-500/10 text-amber-800 dark:text-amber-300 border-amber-300/60'
-                : 'bg-slate-500/10 text-slate-700 dark:text-slate-300 border-slate-300/60'
-            }`}>
-              <span className={`w-2 h-2 rounded-full ${
+            <button
+              type="button"
+              onClick={onManualSync}
+              className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold border transition-all cursor-pointer ${
                 supabaseStatus === 'connected'
-                  ? 'bg-emerald-500 animate-pulse'
+                  ? 'bg-emerald-500/10 text-emerald-800 dark:text-emerald-300 border-emerald-300/60 hover:bg-emerald-500/20'
                   : supabaseStatus === 'syncing'
-                  ? 'bg-amber-500 animate-ping'
-                  : 'bg-slate-400'
-              }`} />
-              <span>{supabaseStatus === 'connected' ? 'Supabase Sync' : supabaseStatus === 'syncing' ? 'Syncing...' : 'Local Cache'}</span>
-            </span>
+                  ? 'bg-amber-500/10 text-amber-800 dark:text-amber-300 border-amber-300/60 hover:bg-amber-500/20'
+                  : 'bg-slate-500/10 text-slate-700 dark:text-slate-300 border-slate-300/60 hover:bg-slate-500/20'
+              }`}
+              title="Tap to sync latest cloud data"
+            >
+              <RefreshCw className={`w-3 h-3 ${supabaseStatus === 'syncing' ? 'animate-spin text-amber-500' : 'text-emerald-500'}`} />
+              <span>{supabaseStatus === 'connected' ? 'Sync Cloud' : supabaseStatus === 'syncing' ? 'Syncing...' : 'Local Cache'}</span>
+            </button>
           </div>
         </div>
 
@@ -104,22 +105,21 @@ export const Header: React.FC<HeaderProps> = ({
 
           {/* Supabase Synced Badge */}
           <div className="hidden sm:flex items-center gap-2">
-            <span className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold border ${
-              supabaseStatus === 'connected'
-                ? 'bg-emerald-500/10 text-emerald-800 dark:text-emerald-300 border-emerald-300/60'
-                : supabaseStatus === 'syncing'
-                ? 'bg-amber-500/10 text-amber-800 dark:text-amber-300 border-amber-300/60'
-                : 'bg-slate-500/10 text-slate-700 dark:text-slate-300 border-slate-300/60'
-            }`} title="Supabase Database & Storage Connection">
-              <span className={`w-2 h-2 rounded-full ${
+            <button
+              type="button"
+              onClick={onManualSync}
+              className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold border transition-all cursor-pointer ${
                 supabaseStatus === 'connected'
-                  ? 'bg-emerald-500 animate-pulse'
+                  ? 'bg-emerald-500/10 text-emerald-800 dark:text-emerald-300 border-emerald-300/60 hover:bg-emerald-500/20'
                   : supabaseStatus === 'syncing'
-                  ? 'bg-amber-500 animate-ping'
-                  : 'bg-slate-400'
-              }`} />
+                  ? 'bg-amber-500/10 text-amber-800 dark:text-amber-300 border-amber-300/60 hover:bg-amber-500/20'
+                  : 'bg-slate-500/10 text-slate-700 dark:text-slate-300 border-slate-300/60 hover:bg-slate-500/20'
+              }`}
+              title="Click to refresh and sync latest data from Supabase Cloud"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${supabaseStatus === 'syncing' ? 'animate-spin text-amber-500' : 'text-emerald-500'}`} />
               <span>{supabaseStatus === 'connected' ? 'Supabase Live' : supabaseStatus === 'syncing' ? 'Syncing DB...' : 'Local Cache'}</span>
-            </span>
+            </button>
           </div>
 
 

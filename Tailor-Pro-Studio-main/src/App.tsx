@@ -40,6 +40,7 @@ import {
   queueOfflineAction,
   flushOfflineQueue
 } from './services/offlineSyncService';
+import { supabase } from './lib/supabase';
 
 
 import { Header } from './components/Header';
@@ -281,77 +282,103 @@ export default function App() {
     return () => unsubscribe();
   }, []);
 
-  // Initialize Supabase Sync on Mount
-  useEffect(() => {
-    let isMounted = true;
-    async function initSupabaseSync() {
-      try {
-        setSupabaseStatus('syncing');
-        await seedInitialSupabaseData(
-          initialClients,
-          initialApprentices,
-          initialUnpaidDeposits,
-          initialRunwaySessions,
-          initialLedgerTransactions,
-          initialInventoryItems,
-          defaultStudioSettings
-        );
+  // Comprehensive Cross-Device Cloud Synchronization (Desktop <-> Mobile)
+  const performFullCloudSync = React.useCallback(async () => {
+    try {
+      setSupabaseStatus('syncing');
+      await seedInitialSupabaseData(
+        initialClients,
+        initialApprentices,
+        initialUnpaidDeposits,
+        initialRunwaySessions,
+        initialLedgerTransactions,
+        initialInventoryItems,
+        defaultStudioSettings
+      );
 
-        const dbClients = await fetchClientsFromSupabase();
-        if (dbClients && dbClients.length > 0 && isMounted) {
-          setClients(dbClients);
-        }
-
-        const dbApprentices = await fetchApprenticesFromSupabase();
-        if (dbApprentices && dbApprentices.length > 0 && isMounted) {
-          setApprentices(dbApprentices);
-        }
-
-        const dbTasks = await fetchApprenticeTasksFromSupabase();
-        if (dbTasks && dbTasks.length > 0 && isMounted) {
-          setApprenticeTasks(dbTasks);
-          localStorage.setItem('tailor_apprentice_tasks', JSON.stringify(dbTasks));
-        }
-
-        const dbDeposits = await fetchUnpaidDepositsFromSupabase();
-        if (dbDeposits && dbDeposits.length > 0 && isMounted) {
-          setUnpaidDeposits(dbDeposits);
-        }
-
-        const dbSessions = await fetchRunwaySessionsFromSupabase();
-        if (dbSessions && dbSessions.length > 0 && isMounted) {
-          setSessions(dbSessions);
-        }
-
-        const dbTx = await fetchLedgerTransactionsFromSupabase();
-        if (dbTx && dbTx.length > 0 && isMounted) {
-          setTransactions(dbTx);
-        }
-
-        const dbInv = await fetchInventoryItemsFromSupabase();
-        if (dbInv && dbInv.length > 0 && isMounted) {
-          setInventory(dbInv);
-        }
-
-        const dbSettings = await fetchStudioSettingsFromSupabase();
-        if (dbSettings && isMounted) {
-          setStudioSettings(dbSettings);
-        }
-
-        if (isMounted) {
-          setSupabaseStatus('connected');
-        }
-      } catch (err) {
-        console.warn('[Supabase Sync] Operating with local cache:', err);
-        if (isMounted) setSupabaseStatus('offline');
+      const dbClients = await fetchClientsFromSupabase();
+      if (dbClients !== null) {
+        setClients(dbClients);
       }
-    }
 
-    initSupabaseSync();
-    return () => {
-      isMounted = false;
-    };
+      const dbApprentices = await fetchApprenticesFromSupabase();
+      if (dbApprentices !== null) {
+        setApprentices(dbApprentices);
+      }
+
+      const dbTasks = await fetchApprenticeTasksFromSupabase();
+      if (dbTasks !== null) {
+        setApprenticeTasks(dbTasks);
+      }
+
+      const dbDeposits = await fetchUnpaidDepositsFromSupabase();
+      if (dbDeposits !== null) {
+        setUnpaidDeposits(dbDeposits);
+      }
+
+      const dbSessions = await fetchRunwaySessionsFromSupabase();
+      if (dbSessions !== null) {
+        setSessions(dbSessions);
+      }
+
+      const dbTx = await fetchLedgerTransactionsFromSupabase();
+      if (dbTx !== null) {
+        setTransactions(dbTx);
+      }
+
+      const dbInv = await fetchInventoryItemsFromSupabase();
+      if (dbInv !== null) {
+        setInventory(dbInv);
+      }
+
+      const dbSettings = await fetchStudioSettingsFromSupabase();
+      if (dbSettings) {
+        setStudioSettings(dbSettings);
+      }
+
+      setSupabaseStatus('connected');
+    } catch (err) {
+      console.warn('[Supabase Sync] Cross-device sync operating in local mode:', err);
+      setSupabaseStatus('offline');
+    }
   }, []);
+
+  // Perform Cloud Sync on Mount, Tab Focus, and Realtime Database Changes
+  useEffect(() => {
+    performFullCloudSync();
+
+    const handleFocus = () => {
+      performFullCloudSync();
+    };
+
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        performFullCloudSync();
+      }
+    };
+
+    window.addEventListener('focus', handleFocus);
+    document.addEventListener('visibilitychange', handleVisibility);
+
+    // Supabase Realtime Listener for Instant Desktop <-> Mobile Sync
+    const channel = supabase
+      .channel('public-cloud-changes')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public' },
+        () => {
+          console.log('[Supabase Realtime] Cloud DB change detected, auto-syncing...');
+          performFullCloudSync();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      window.removeEventListener('focus', handleFocus);
+      document.removeEventListener('visibilitychange', handleVisibility);
+      supabase.removeChannel(channel);
+    };
+  }, [performFullCloudSync]);
 
   // Search & Filter state for Customer Directory
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -954,6 +981,7 @@ export default function App() {
   };
 
   const handleSignInSuccess = (email: string, selectedRole?: UserRole) => {
+    performFullCloudSync();
     const userEmail = email.trim() || 'designer@tailorpro.com';
     setActiveUserEmail(userEmail);
     const users = getUserAccountRecords();
@@ -1339,6 +1367,7 @@ export default function App() {
         onOpenFabricScanner={() => setIsFabricScannerOpen(true)}
         onOpenInstallApp={() => setIsInstallAppOpen(true)}
         onOpenAdminPortal={() => setIsAdminPortalOpen(true)}
+        onManualSync={performFullCloudSync}
         theme={theme}
         onToggleTheme={handleToggleTheme}
         supabaseStatus={supabaseStatus}
