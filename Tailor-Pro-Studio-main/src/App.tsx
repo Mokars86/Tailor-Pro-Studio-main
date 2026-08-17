@@ -387,6 +387,24 @@ export default function App() {
   const [isLogoutConfirmOpen, setIsLogoutConfirmOpen] = useState<boolean>(false);
   const [isInstallAppOpen, setIsInstallAppOpen] = useState<boolean>(false);
 
+  // Auto-prompt Desktop PWA install on Chrome when visiting Netlify link
+  useEffect(() => {
+    const isStandalone =
+      window.matchMedia('(display-mode: standalone)').matches ||
+      (navigator as any).standalone === true ||
+      document.referrer.includes('android-app://');
+
+    const dismissed = sessionStorage.getItem('tailor_pwa_prompt_dismissed');
+
+    if (!isStandalone && !dismissed) {
+      const timer = setTimeout(() => {
+        setIsInstallAppOpen(true);
+      }, 1200);
+
+      return () => clearTimeout(timer);
+    }
+  }, []);
+
   const handlePromptLogout = () => {
     setIsLogoutConfirmOpen(true);
   };

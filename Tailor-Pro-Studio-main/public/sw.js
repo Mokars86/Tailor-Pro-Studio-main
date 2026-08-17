@@ -1,8 +1,10 @@
-const CACHE_NAME = 'tailor-pro-v1';
+const CACHE_NAME = 'tailor-pro-v2';
 const ASSETS_TO_CACHE = [
   '/',
   '/index.html',
   '/manifest.json',
+  '/pwa-192x192.png',
+  '/pwa-512x512.png',
   '/tailor_pro_logo.jpg',
   '/mokars_tech_logo.png',
   '/_redirects'

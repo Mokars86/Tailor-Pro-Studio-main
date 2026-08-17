@@ -14,6 +14,11 @@ export const InstallAppModal: React.FC<InstallAppModalProps> = ({ isOpen, onClos
 
   if (!isOpen) return null;
 
+  const handleClose = () => {
+    sessionStorage.setItem('tailor_pwa_prompt_dismissed', 'true');
+    onClose();
+  };
+
   const handleInstallDesktop = async () => {
     if (deferredPrompt) {
       const success = await triggerInstall();
@@ -60,7 +65,7 @@ export const InstallAppModal: React.FC<InstallAppModalProps> = ({ isOpen, onClos
             </div>
           </div>
           <button
-            onClick={onClose}
+            onClick={handleClose}
             className="p-2 rounded-full hover:bg-white/10 text-white/80 hover:text-white transition-all cursor-pointer z-10"
           >
             <X className="w-5 h-5" />
@@ -192,7 +197,7 @@ export const InstallAppModal: React.FC<InstallAppModalProps> = ({ isOpen, onClos
             <span>Multi-Device Atelier Sync</span>
           </div>
           <button
-            onClick={onClose}
+            onClick={handleClose}
             className="px-5 py-2 rounded-xl bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-bold hover:bg-slate-300 dark:hover:bg-slate-700 transition-all cursor-pointer"
           >
             Close
