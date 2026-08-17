@@ -7,7 +7,8 @@ import {
   RunwaySession,
   LedgerTransaction,
   InventoryItem,
-  StudioSettings
+  StudioSettings,
+  UserAccountRecord
 } from '../types';
 
 // ==========================================
@@ -584,4 +585,49 @@ export async function signInSupabaseUser(email: string, password: string) {
     return { success: false, error: err.message || 'Login failed' };
   }
 }
+
+// ==========================================
+// USER ACCOUNTS & LICENSE APPROVAL SYNCRONIZATION
+// ==========================================
+
+export async function fetchUserAccountsFromSupabase(): Promise<UserAccountRecord[] | null> {
+  try {
+    const { data, error } = await supabase.from('user_accounts').select('*');
+    if (error || !data) return null;
+
+    return data.map((row: any) => ({
+      id: row.id,
+      email: row.email,
+      fullName: row.full_name || '',
+      studioName: row.studio_name || '',
+      role: row.role || '',
+      licenseKey: row.license_key || undefined,
+      status: row.status || 'pending',
+      registeredAt: row.registered_at || new Date().toISOString()
+    }));
+  } catch (err) {
+    return null;
+  }
+}
+
+export async function upsertUserAccountToSupabase(userRecord: UserAccountRecord): Promise<boolean> {
+  try {
+    const dbRecord = {
+      id: userRecord.id,
+      email: userRecord.email.toLowerCase(),
+      full_name: userRecord.fullName,
+      studio_name: userRecord.studioName,
+      role: userRecord.role,
+      license_key: userRecord.licenseKey || null,
+      status: userRecord.status,
+      registered_at: userRecord.registeredAt || new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    };
+    const { error } = await supabase.from('user_accounts').upsert(dbRecord);
+    return !error;
+  } catch (err) {
+    return false;
+  }
+}
+
 

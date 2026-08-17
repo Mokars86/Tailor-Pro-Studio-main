@@ -1,4 +1,5 @@
 import { LicenseRecord, UserAccountRecord, LicenseDuration } from '../types';
+import { fetchUserAccountsFromSupabase, upsertUserAccountToSupabase } from './supabaseService';
 
 const STORAGE_KEY_LICENSES = 'tailor_license_keys';
 const STORAGE_KEY_USERS = 'tailor_user_accounts';
@@ -133,6 +134,7 @@ export function registerUserAccount(data: {
     if (providedKey) existing.licenseKey = providedKey;
     if (isKeyValid) existing.status = 'approved';
     saveUserAccountRecords(users);
+    upsertUserAccountToSupabase(existing);
     return existing;
   }
 
@@ -149,7 +151,45 @@ export function registerUserAccount(data: {
 
   users.unshift(newUser);
   saveUserAccountRecords(users);
+  upsertUserAccountToSupabase(newUser);
   return newUser;
+}
+
+export async function syncUserAccountsFromSupabase(): Promise<UserAccountRecord[]> {
+  try {
+    const dbUsers = await fetchUserAccountsFromSupabase();
+    if (dbUsers && dbUsers.length > 0) {
+      const localUsers = getUserAccountRecords();
+      const mergedMap = new Map<string, UserAccountRecord>();
+
+      localUsers.forEach((u) => mergedMap.set(u.email.toLowerCase(), u));
+
+      dbUsers.forEach((dbU) => {
+        const key = dbU.email.toLowerCase();
+        const existing = mergedMap.get(key);
+        if (!existing) {
+          mergedMap.set(key, dbU);
+        } else {
+          if (dbU.status === 'approved') {
+            existing.status = 'approved';
+            if (dbU.licenseKey) existing.licenseKey = dbU.licenseKey;
+          }
+        }
+      });
+
+      const updated = Array.from(mergedMap.values());
+      saveUserAccountRecords(updated);
+
+      const approvedUser = updated.find((u) => u.status === 'approved');
+      if (approvedUser) {
+        setWorkspaceActivated(true, approvedUser.licenseKey);
+      }
+      return updated;
+    }
+  } catch (err) {
+    console.warn('Failed to sync user accounts from Supabase:', err);
+  }
+  return getUserAccountRecords();
 }
 
 export function verifyAndActivateUserLicense(email: string, licenseKey: string): { success: boolean; message: string } {
@@ -168,12 +208,14 @@ export function verifyAndActivateUserLicense(email: string, licenseKey: string):
 
   // Update user account status
   const userIndex = users.findIndex((u) => u.email.toLowerCase() === email.toLowerCase());
+  let activeUser: UserAccountRecord;
   if (userIndex !== -1) {
     users[userIndex].status = 'approved';
     users[userIndex].licenseKey = keyUpper;
+    activeUser = users[userIndex];
   } else {
     // Create approved account for this email
-    users.unshift({
+    activeUser = {
       id: `user-${Date.now()}`,
       email: email.toLowerCase(),
       fullName: 'Atelier Designer',
@@ -182,7 +224,8 @@ export function verifyAndActivateUserLicense(email: string, licenseKey: string):
       licenseKey: keyUpper,
       status: 'approved',
       registeredAt: new Date().toISOString()
-    });
+    };
+    users.unshift(activeUser);
   }
 
   // Also approve all pending users on this device since key activated workspace
@@ -190,10 +233,12 @@ export function verifyAndActivateUserLicense(email: string, licenseKey: string):
     if (u.status === 'pending') {
       u.status = 'approved';
       if (!u.licenseKey) u.licenseKey = keyUpper;
+      upsertUserAccountToSupabase(u);
     }
   });
 
   saveUserAccountRecords(users);
+  upsertUserAccountToSupabase(activeUser);
 
   return { success: true, message: 'License Key verified successfully! Account activated.' };
 }
@@ -209,6 +254,7 @@ export function approveUserByAdmin(userId: string): boolean {
     }
     setWorkspaceActivated(true, user.licenseKey);
     saveUserAccountRecords(users);
+    upsertUserAccountToSupabase(user);
     return true;
   }
   return false;

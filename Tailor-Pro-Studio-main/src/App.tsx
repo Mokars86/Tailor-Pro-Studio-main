@@ -86,7 +86,9 @@ import {
   getUserAccountRecords,
   saveUserAccountRecords,
   registerUserAccount,
-  isWorkspaceActivated
+  isWorkspaceActivated,
+  syncUserAccountsFromSupabase,
+  setWorkspaceActivated
 } from './services/licenseService';
 
 export default function App() {
@@ -335,6 +337,8 @@ export default function App() {
       if (dbSettings) {
         setStudioSettings(dbSettings);
       }
+
+      await syncUserAccountsFromSupabase();
 
       setSupabaseStatus('connected');
     } catch (err) {
@@ -980,12 +984,14 @@ export default function App() {
     setStudioSettings((prev) => ({ ...prev, theme: newTheme }));
   };
 
-  const handleSignInSuccess = (email: string, selectedRole?: UserRole) => {
+  const handleSignInSuccess = async (email: string, selectedRole?: UserRole) => {
     performFullCloudSync();
     const userEmail = email.trim() || 'designer@tailorpro.com';
     setActiveUserEmail(userEmail);
-    const users = getUserAccountRecords();
-    const workspaceActivated = isWorkspaceActivated();
+
+    // Sync cloud user account approval status from Supabase
+    const users = await syncUserAccountsFromSupabase();
+    let workspaceActivated = isWorkspaceActivated();
 
     const isApprenticeEmail =
       userEmail.toLowerCase().includes('apprentice') ||
@@ -994,17 +1000,27 @@ export default function App() {
       userEmail.toLowerCase().includes('raeesa') ||
       userEmail.toLowerCase().includes('mubarick');
 
+    const isAdminEmail = userEmail.toLowerCase() === 'admin@tailorpro.com';
+
     let resolvedRole: UserRole = selectedRole || (isApprenticeEmail ? 'Apprentice (Trainee & CAD Blueprint View)' : 'Master (Studio Owner & Financial Control)');
 
-    const user = users.find((u) => u.email.toLowerCase() === userEmail.toLowerCase());
+    let user = users.find((u) => u.email.toLowerCase() === userEmail.toLowerCase());
+
+    // Auto-approve Admin & Apprentice accounts
+    if (isAdminEmail || isApprenticeEmail || resolvedRole.startsWith('Apprentice')) {
+      workspaceActivated = true;
+      setWorkspaceActivated(true);
+      if (user) user.status = 'approved';
+    }
 
     if (user) {
       if (selectedRole) {
         resolvedRole = selectedRole;
         user.role = selectedRole;
       }
-      if (workspaceActivated) {
+      if (user.status === 'approved' || workspaceActivated) {
         user.status = 'approved';
+        setWorkspaceActivated(true, user.licenseKey);
       }
       saveUserAccountRecords(users);
 
@@ -1026,7 +1042,9 @@ export default function App() {
 
       setUserRole(resolvedRole);
 
-      if (registered.status === 'approved' || workspaceActivated) {
+      if (registered.status === 'approved' || workspaceActivated || isApprenticeEmail || isAdminEmail) {
+        registered.status = 'approved';
+        setWorkspaceActivated(true, registered.licenseKey);
         setIsLicensePromptOpen(false);
         setAuthScreen('app');
       } else {
