@@ -75,6 +75,7 @@ import { ApprenticeMasterGraduationModal } from './components/modals/ApprenticeM
 import { FullMeasurementsModal } from './components/modals/FullMeasurementsModal';
 import { FabricColorScannerModal } from './components/modals/FabricColorScannerModal';
 import { LogoutConfirmationModal } from './components/modals/LogoutConfirmationModal';
+import { InstallAppModal } from './components/modals/InstallAppModal';
 
 import { ApprenticeAppView } from './components/apprentice/ApprenticeAppView';
 import { SplashScreen } from './components/SplashScreen';
@@ -384,6 +385,7 @@ export default function App() {
   const [isMasterCertOpen, setIsMasterCertOpen] = useState<boolean>(false);
   const [isFabricScannerOpen, setIsFabricScannerOpen] = useState<boolean>(false);
   const [isLogoutConfirmOpen, setIsLogoutConfirmOpen] = useState<boolean>(false);
+  const [isInstallAppOpen, setIsInstallAppOpen] = useState<boolean>(false);
 
   const handlePromptLogout = () => {
     setIsLogoutConfirmOpen(true);
@@ -1104,6 +1106,11 @@ export default function App() {
           onGoToRegister={() => setAuthScreen('register')}
           onOpenCustomerTracker={() => setIsCustomerTrackerOpen(true)}
           onOpenAdminPortal={() => setIsAdminPortalOpen(true)}
+          onOpenInstallApp={() => setIsInstallAppOpen(true)}
+        />
+        <InstallAppModal
+          isOpen={isInstallAppOpen}
+          onClose={() => setIsInstallAppOpen(false)}
         />
         {isLicensePromptOpen && (
           <LicenseKeyVerificationModal
@@ -1312,6 +1319,7 @@ export default function App() {
         userRole={userRole}
         onOpenMasterCertificate={() => setIsMasterCertOpen(true)}
         onOpenFabricScanner={() => setIsFabricScannerOpen(true)}
+        onOpenInstallApp={() => setIsInstallAppOpen(true)}
         onOpenAdminPortal={() => setIsAdminPortalOpen(true)}
         theme={theme}
         onToggleTheme={handleToggleTheme}
@@ -1680,6 +1688,11 @@ export default function App() {
         isOpen={isLogoutConfirmOpen}
         onClose={() => setIsLogoutConfirmOpen(false)}
         onConfirm={handleConfirmLogout}
+      />
+
+      <InstallAppModal
+        isOpen={isInstallAppOpen}
+        onClose={() => setIsInstallAppOpen(false)}
       />
     </div>
   );

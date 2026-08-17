@@ -1,5 +1,5 @@
 import React from 'react';
-import { Settings, Award, Sun, Moon, Palette, UserCircle2 } from 'lucide-react';
+import { Settings, Award, Sun, Moon, Palette, UserCircle2, Download } from 'lucide-react';
 import { StudioSettings } from '../types';
 
 interface HeaderProps {
@@ -11,6 +11,7 @@ interface HeaderProps {
   userRole?: string;
   onOpenMasterCertificate?: () => void;
   onOpenFabricScanner?: () => void;
+  onOpenInstallApp?: () => void;
   onOpenAdminPortal?: () => void;
   theme?: 'light' | 'dark';
   onToggleTheme?: (newTheme: 'light' | 'dark') => void;
@@ -22,6 +23,7 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenStudioSettings,
   onOpenMasterCertificate,
   onOpenFabricScanner,
+  onOpenInstallApp,
   theme = 'light',
   onToggleTheme,
   supabaseStatus = 'connected'
@@ -74,6 +76,19 @@ export const Header: React.FC<HeaderProps> = ({
 
         {/* Right: Badges & Settings */}
         <div className="flex items-center justify-end w-full sm:w-auto gap-2 flex-wrap sm:flex-nowrap">
+          {/* Download & Install App Button */}
+          {onOpenInstallApp && (
+            <button
+              type="button"
+              onClick={onOpenInstallApp}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-700 hover:bg-emerald-800 text-amber-300 text-xs font-black border border-amber-400/50 transition-all shadow-xs cursor-pointer"
+              title="Download / Install Desktop & Mobile App"
+            >
+              <Download className="w-3.5 h-3.5 text-amber-300 animate-bounce" />
+              <span>Download App</span>
+            </button>
+          )}
+
           {/* Snap Fabric & Thread Matcher Button */}
           {onOpenFabricScanner && (
             <button

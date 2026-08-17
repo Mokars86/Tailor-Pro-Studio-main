@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Scissors, Lock, Mail, MessageCircle, Coffee, Sparkles, UserCheck } from 'lucide-react';
+import { Scissors, Lock, Mail, MessageCircle, Coffee, Sparkles, UserCheck, Download } from 'lucide-react';
 import { UserRole } from '../../types';
 
 interface SignInViewProps {
@@ -7,13 +7,15 @@ interface SignInViewProps {
   onGoToRegister: () => void;
   onOpenCustomerTracker: () => void;
   onOpenAdminPortal?: () => void;
+  onOpenInstallApp?: () => void;
 }
 
 export const SignInView: React.FC<SignInViewProps> = ({
   onSignInSuccess,
   onGoToRegister,
   onOpenCustomerTracker,
-  onOpenAdminPortal
+  onOpenAdminPortal,
+  onOpenInstallApp
 }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -62,6 +64,18 @@ export const SignInView: React.FC<SignInViewProps> = ({
               Bespoke Atelier Management System
             </p>
           </div>
+
+          {/* Download App Banner Button */}
+          {onOpenInstallApp && (
+            <button
+              type="button"
+              onClick={onOpenInstallApp}
+              className="w-full py-2.5 px-4 rounded-2xl bg-[#0D3B36] hover:bg-[#082824] text-amber-300 font-extrabold text-xs flex items-center justify-center gap-2 border border-amber-400/40 shadow-md hover:shadow-lg transition-all cursor-pointer"
+            >
+              <Download className="w-4 h-4 text-amber-300 animate-bounce" />
+              <span>Download & Install Desktop / Mobile App</span>
+            </button>
+          )}
         </div>
 
         {/* Form Block inside Enhanced Frosted Light Card */}
