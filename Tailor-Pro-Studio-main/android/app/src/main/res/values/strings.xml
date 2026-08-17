@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">TailorPro</string>
+    <string name="title_activity_main">TailorPro</string>
+    <string name="package_name">com.tailorpro.studio</string>
+    <string name="custom_url_scheme">com.tailorpro.studio</string>
+</resources>

@@ -1,0 +1,17 @@
+{
+  "short_name": "Tailor Pro",
+  "name": "Tailor Pro — Premium Tailoring Studio",
+  "icons": [
+    {
+      "src": "/tailor_pro_logo.jpg",
+      "type": "image/jpeg",
+      "sizes": "192x192 512x512",
+      "purpose": "any maskable"
+    }
+  ],
+  "start_url": "/",
+  "background_color": "#061E1B",
+  "theme_color": "#0D3B36",
+  "display": "standalone",
+  "orientation": "portrait"
+}
