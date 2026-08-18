@@ -33,6 +33,8 @@ export interface GarmentMeasurements {
   ankle?: string;
   inseam?: string;
   garmentType?: string;
+  customMeasurements?: Record<string, string>;
+  [key: string]: any;
 }
 
 export interface SpecSheetGarment {

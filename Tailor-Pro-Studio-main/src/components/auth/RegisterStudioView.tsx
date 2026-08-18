@@ -100,7 +100,10 @@ export const RegisterStudioView: React.FC<RegisterStudioViewProps> = ({
         {/* Header Area */}
         <div className="text-center space-y-2">
           <div className="relative inline-block group">
-            <div className="w-18 h-18 mx-auto rounded-[24px] bg-[#061E1B] border-2 border-[#0D3B36] overflow-hidden shadow-xl relative">
+            {/* Ambient Gold Glow Halo */}
+            <div className="absolute -inset-2 rounded-[28px] bg-gradient-to-r from-[#DCA134]/40 via-amber-300/30 to-[#DCA134]/40 blur-sm opacity-50 group-hover:opacity-80 transition-opacity" />
+
+            <div className="w-18 h-18 mx-auto rounded-[24px] bg-[#061E1B] border-4 border-[#DCA134] overflow-hidden shadow-xl relative">
               <img src="/tailor_pro_logo.jpg" alt="Tailor Pro Logo" className="w-full h-full object-cover" />
             </div>
             <div className="absolute -top-1.5 -right-1.5 w-6 h-6 rounded-full bg-[#0D3B36] text-white border border-white flex items-center justify-center shadow-sm">

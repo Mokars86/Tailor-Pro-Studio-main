@@ -149,7 +149,7 @@ export const ApprenticeCertificateModal: React.FC<ApprenticeCertificateModalProp
               
               {/* Left Side: Master Studio Brand Logo & Title in Solid Black */}
               <div className="flex items-center gap-3 relative z-20">
-                <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-[#061E1B] border-2 border-[#DCA134] overflow-hidden shadow-md flex items-center justify-center shrink-0">
+                <div className="w-14 h-14 sm:w-18 sm:h-18 md:w-20 md:h-20 rounded-2xl bg-[#061E1B] border-3 border-[#DCA134] overflow-hidden shadow-md flex items-center justify-center shrink-0">
                   <img
                     src={logoSrc}
                     alt="Master Studio Brand Logo"
@@ -173,14 +173,14 @@ export const ApprenticeCertificateModal: React.FC<ApprenticeCertificateModalProp
 
               {/* Center: Tailor Pro Emblem */}
               <div className="flex flex-col items-center justify-center">
-                <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-[#061E1B] border-2 border-[#DCA134] overflow-hidden shadow-md relative p-0.5">
+                <div className="w-20 h-20 sm:w-24 sm:h-24 md:w-28 md:h-28 rounded-2xl bg-[#061E1B] border-4 border-[#DCA134] overflow-hidden shadow-xl relative p-0.5">
                   <img
                     src="/tailor_pro_logo.jpg"
                     alt="Tailor Pro Logo"
                     className="w-full h-full object-cover rounded-xl"
                   />
                 </div>
-                <span className="text-[8px] sm:text-[9px] font-black text-black tracking-[0.3em] uppercase mt-1">
+                <span className="text-xs sm:text-sm md:text-base font-black text-[#0D3B36] tracking-[0.35em] uppercase mt-1.5">
                   TAILOR PRO
                 </span>
               </div>
@@ -196,7 +196,7 @@ export const ApprenticeCertificateModal: React.FC<ApprenticeCertificateModalProp
                   </p>
                 </div>
 
-                <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-white border-2 border-[#DCA134] shadow-md flex items-center justify-center p-1 shrink-0 overflow-hidden">
+                <div className="w-14 h-14 sm:w-18 sm:h-18 md:w-20 md:h-20 rounded-full bg-white border-3 border-[#DCA134] shadow-md flex items-center justify-center p-1 shrink-0 overflow-hidden">
                   <img
                     src="/mokars_tech_logo.png"
                     alt="Mokars Tech Corp Logo"

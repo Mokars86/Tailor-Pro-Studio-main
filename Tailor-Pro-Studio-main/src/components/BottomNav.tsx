@@ -89,23 +89,19 @@ export const BottomNav: React.FC<BottomNavProps> = ({
       </div>
 
       {/* 2. DESKTOP SIDEBAR NAVIGATION TAB (Visible on desktop screens >= md) */}
-      <aside className="hidden md:flex flex-col fixed top-0 left-0 bottom-0 w-64 bg-[#061E1B] text-white border-r-2 border-[#DCA134]/30 z-50 p-4 font-['Outfit'] shadow-2xl overflow-y-auto">
+      <aside className="hidden md:flex flex-col fixed top-0 left-0 bottom-0 w-64 bg-[#EBF5F0] dark:bg-[#061E1B] text-[#0D3B36] dark:text-white border-r-2 border-[#0D3B36]/15 dark:border-white/20 z-50 p-4 font-['Outfit'] shadow-2xl overflow-y-auto transition-colors duration-200">
         {/* Brand Header & Atelier Badge */}
-        <div className="flex items-center gap-3 pb-5 border-b border-white/10 pt-2">
-          <div className="w-12 h-12 rounded-2xl bg-[#0D3B36] border-2 border-[#DCA134] overflow-hidden shadow-md flex items-center justify-center shrink-0">
-            {studioLogoUrl ? (
-              <img src={studioLogoUrl} alt="Studio Brand Logo" className="w-full h-full object-cover" />
-            ) : (
-              <UserCircle2 className="w-7 h-7 text-[#DCA134]" />
-            )}
+        <div className="flex items-center gap-3 pb-5 border-b border-[#0D3B36]/15 dark:border-white/10 pt-2">
+          <div className="w-12 h-12 rounded-2xl bg-[#061E1B] border-2 border-[#DCA134] overflow-hidden shadow-md flex items-center justify-center shrink-0">
+            <img src={studioLogoUrl || '/tailor_pro_logo.jpg'} alt="Studio Brand Logo" className="w-full h-full object-cover" />
           </div>
           <div className="min-w-0 flex-1">
-            <h2 className="font-extrabold text-sm uppercase tracking-tight text-white truncate">
+            <h2 className="font-black text-sm uppercase tracking-tight text-[#0D3B36] dark:text-white truncate">
               {studioName}
             </h2>
             <div className="flex items-center gap-1 mt-0.5">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-              <p className="text-[10px] text-amber-300/90 font-bold uppercase tracking-wider truncate">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+              <p className="text-[10px] text-emerald-800 dark:text-amber-300/90 font-black uppercase tracking-wider truncate">
                 {ownerName ? ownerName : 'Master Atelier'}
               </p>
             </div>
@@ -116,15 +112,15 @@ export const BottomNav: React.FC<BottomNavProps> = ({
         <div className="my-5">
           <button
             onClick={onOpenQuickAdd}
-            className="w-full py-3.5 px-4 rounded-2xl bg-gradient-to-r from-[#DCA134] via-amber-400 to-amber-500 hover:from-amber-400 hover:to-amber-600 text-[#061E1B] font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-xl hover:shadow-amber-500/20 hover:scale-[1.02] active:scale-95 transition-all cursor-pointer border border-amber-300/50"
+            className="w-full py-3.5 px-4 rounded-2xl bg-[#0D3B36] dark:bg-gradient-to-r dark:from-[#DCA134] dark:to-amber-500 hover:bg-[#082824] dark:hover:from-amber-400 dark:hover:to-amber-600 text-amber-300 dark:text-[#061E1B] font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg hover:shadow-xl hover:scale-[1.02] active:scale-95 transition-all cursor-pointer border border-[#DCA134]/40"
           >
-            <Plus className="w-4 h-4 stroke-[3]" />
+            <Plus className="w-4 h-4 stroke-[3] text-amber-300 dark:text-[#061E1B]" />
             <span>+ Quick Add Client</span>
           </button>
         </div>
 
         {/* Section Title */}
-        <div className="text-[10px] font-black text-white/40 uppercase tracking-widest px-3 mb-2">
+        <div className="text-[10px] font-black text-[#0D3B36]/50 dark:text-white/40 uppercase tracking-widest px-3 mb-2">
           Atelier Navigation Tabs
         </div>
 
@@ -138,23 +134,27 @@ export const BottomNav: React.FC<BottomNavProps> = ({
               <button
                 key={tab.id}
                 onClick={() => onTabChange(tab.id)}
-                className={`w-full flex items-center justify-between px-3.5 py-3 rounded-2xl transition-all duration-200 cursor-pointer font-bold text-xs ${
+                className={`w-full flex items-center justify-between px-3.5 py-3 rounded-2xl transition-all duration-200 cursor-pointer font-extrabold text-xs ${
                   isActive
-                    ? 'bg-[#0D3B36] text-white border-2 border-[#DCA134] shadow-lg transform translate-x-1'
-                    : 'text-white/70 hover:text-white hover:bg-white/5 border border-transparent'
+                    ? 'bg-[#0D3B36] dark:bg-amber-400 text-white dark:text-[#0D3B36] border-2 border-[#DCA134] shadow-lg transform translate-x-1'
+                    : 'text-[#0D3B36]/80 dark:text-white/70 hover:text-[#0D3B36] dark:hover:text-white hover:bg-[#0D3B36]/10 dark:hover:bg-white/10 border border-transparent'
                 }`}
               >
                 <div className="flex items-center gap-3">
-                  <div className={`p-2 rounded-xl transition-colors ${isActive ? 'bg-[#DCA134] text-[#061E1B]' : 'bg-white/10 text-amber-300'}`}>
+                  <div className={`p-2 rounded-xl transition-colors ${
+                    isActive
+                      ? 'bg-[#DCA134] dark:bg-[#061E1B] text-[#061E1B] dark:text-amber-300'
+                      : 'bg-[#0D3B36]/10 dark:bg-white/10 text-[#0D3B36] dark:text-amber-300'
+                  }`}>
                     <Icon className="w-4 h-4" />
                   </div>
                   <div className="text-left">
                     <span className="tracking-wide text-sm block leading-tight">{tab.label}</span>
-                    <span className="text-[9px] font-medium text-white/50 block leading-tight">{tab.badge}</span>
+                    <span className={`text-[9px] font-bold block leading-tight ${isActive ? 'text-emerald-300 dark:text-[#0D3B36]/80' : 'text-slate-500 dark:text-white/50'}`}>{tab.badge}</span>
                   </div>
                 </div>
                 {isActive && (
-                  <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 text-[9px] font-black border border-emerald-500/40 uppercase">
+                  <span className="px-2 py-0.5 rounded-full bg-amber-400/20 dark:bg-[#061E1B]/20 text-amber-300 dark:text-[#0D3B36] text-[9px] font-black border border-[#DCA134] uppercase">
                     Active
                   </span>
                 )}
@@ -164,35 +164,35 @@ export const BottomNav: React.FC<BottomNavProps> = ({
           {onOpenStudioSettings && (
             <button
               onClick={onOpenStudioSettings}
-              className="w-full flex items-center justify-between px-3.5 py-3 rounded-2xl transition-all duration-200 cursor-pointer font-bold text-xs text-white/80 hover:text-white hover:bg-white/10 border border-white/10 hover:border-amber-400/50 mt-3 shadow-xs"
+              className="w-full flex items-center justify-between px-3.5 py-3 rounded-2xl transition-all duration-200 cursor-pointer font-extrabold text-xs text-[#0D3B36]/80 dark:text-white/80 hover:text-[#0D3B36] dark:hover:text-white hover:bg-[#0D3B36]/10 dark:hover:bg-white/10 border border-[#0D3B36]/15 dark:border-white/10 hover:border-[#DCA134] mt-3 shadow-2xs"
               title="Open Master Studio Settings"
             >
               <div className="flex items-center gap-3">
-                <div className="p-2 rounded-xl bg-amber-500/20 text-amber-300">
+                <div className="p-2 rounded-xl bg-[#0D3B36]/10 dark:bg-amber-500/20 text-[#0D3B36] dark:text-amber-300">
                   <Settings className="w-4 h-4" />
                 </div>
                 <div className="text-left">
                   <span className="tracking-wide text-sm block leading-tight">Master Settings</span>
-                  <span className="text-[9px] font-medium text-amber-300/80 block leading-tight">Branding & Unbind</span>
+                  <span className="text-[9px] font-bold text-slate-500 dark:text-amber-300/80 block leading-tight">Branding & Unbind</span>
                 </div>
               </div>
-              <span className="text-amber-400 font-bold text-xs">⚙</span>
+              <span className="text-[#DCA134] font-black text-xs">⚙</span>
             </button>
           )}
         </nav>
 
         {/* Master Workshop Sync Key Display Card */}
         {pairCode && (
-          <div className="mt-auto pt-4 border-t border-white/10 space-y-2">
-            <div className="p-3.5 rounded-2xl bg-[#082824] border border-[#DCA134]/40 shadow-inner space-y-1">
-              <div className="flex items-center justify-between text-[9px] font-black text-amber-300 uppercase tracking-widest">
+          <div className="mt-auto pt-4 border-t border-[#0D3B36]/15 dark:border-white/10 space-y-2">
+            <div className="p-3.5 rounded-2xl bg-white dark:bg-[#082824] border border-[#0D3B36]/20 dark:border-[#DCA134]/40 shadow-xs space-y-1">
+              <div className="flex items-center justify-between text-[9px] font-black text-[#0D3B36] dark:text-amber-300 uppercase tracking-widest">
                 <span className="flex items-center gap-1">
                   <KeyRound className="w-3 h-3 text-[#DCA134]" />
                   Workshop Key
                 </span>
-                <span className="text-emerald-400 font-bold">● Active</span>
+                <span className="text-emerald-600 dark:text-emerald-400 font-black">● Active</span>
               </div>
-              <p className="font-mono text-xs font-black text-white tracking-wider">
+              <p className="font-mono text-xs font-black text-[#0D3B36] dark:text-white tracking-wider">
                 {pairCode}
               </p>
             </div>

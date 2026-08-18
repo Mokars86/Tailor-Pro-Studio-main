@@ -776,15 +776,15 @@ export const StudioSettingsModal: React.FC<StudioSettingsModalProps> = ({
           </div>
 
           {/* Paired Apprentices & Workshop Unbinding Section */}
-          <div className="p-4 rounded-2xl bg-rose-500/10 dark:bg-rose-950/30 border border-rose-300/60 dark:border-rose-800/60 space-y-3 font-['Outfit']">
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
-              <label className="text-xs font-extrabold uppercase tracking-wider text-[#0D3B36] dark:text-amber-300 flex items-center gap-1.5">
-                <UserX className="w-4.5 h-4.5 text-rose-600 dark:text-rose-400" />
-                <span>PAIRED APPRENTICES & WORKSHOP UNBINDING</span>
+          <div className="p-3 sm:p-4 rounded-2xl bg-rose-500/10 dark:bg-rose-950/30 border border-rose-300/60 dark:border-rose-800/60 space-y-3 font-['Outfit']">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+              <label className="text-xs font-black uppercase tracking-wider text-[#0D3B36] dark:text-amber-300 flex items-center gap-1.5 leading-snug">
+                <UserX className="w-4 h-4 text-rose-600 dark:text-rose-400 shrink-0" />
+                <span className="break-words">PAIRED APPRENTICES & WORKSHOP UNBINDING</span>
               </label>
-              <div className="flex items-center gap-2">
-                <span className="text-[10px] font-extrabold text-rose-800 dark:text-rose-300 bg-rose-100 dark:bg-rose-900/60 px-2.5 py-0.5 rounded-full border border-rose-300 dark:border-rose-700">
-                  {apprentices?.length || 0} Synced Apprentice(s)
+              <div className="flex items-center gap-1.5 shrink-0 flex-wrap">
+                <span className="text-[10px] font-extrabold text-rose-800 dark:text-rose-300 bg-rose-100 dark:bg-rose-900/60 px-2 py-0.5 rounded-full border border-rose-300 dark:border-rose-700 whitespace-nowrap">
+                  {apprentices?.length || 0} Synced
                 </span>
                 {apprentices && apprentices.length > 1 && (
                   <button
@@ -798,7 +798,7 @@ export const StudioSettingsModal: React.FC<StudioSettingsModalProps> = ({
                         setTimeout(() => setUnbindNotice(null), 3500);
                       }
                     }}
-                    className="px-2.5 py-1 rounded-full bg-rose-600 hover:bg-rose-700 text-white text-[10px] font-black transition-all cursor-pointer shadow-xs active:scale-95 flex items-center gap-1"
+                    className="px-2.5 py-1 rounded-full bg-rose-600 hover:bg-rose-700 text-white text-[10px] font-black transition-all cursor-pointer shadow-xs active:scale-95 flex items-center gap-1 whitespace-nowrap"
                     title="Unbind all active apprentices from studio"
                   >
                     <UserX className="w-3 h-3" />
@@ -820,7 +820,7 @@ export const StudioSettingsModal: React.FC<StudioSettingsModalProps> = ({
                   value={unbindFilterQuery}
                   onChange={(e) => setUnbindFilterQuery(e.target.value)}
                   placeholder="Search apprentice name, role or mentor to unbind..."
-                  className="w-full px-3 py-1.5 rounded-xl bg-white dark:bg-slate-900 border border-rose-200 dark:border-rose-800 text-xs font-semibold text-[#0D3B36] dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-rose-500"
+                  className="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-rose-200 dark:border-rose-800 text-xs font-semibold text-[#0D3B36] dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-rose-500"
                 />
               </div>
             )}
@@ -830,24 +830,24 @@ export const StudioSettingsModal: React.FC<StudioSettingsModalProps> = ({
                 No apprentices currently paired with this studio key.
               </div>
             ) : (
-              <div className="space-y-2 max-h-52 overflow-y-auto pr-1 custom-scrollbar">
+              <div className="space-y-2.5 max-h-60 overflow-y-auto pr-1 custom-scrollbar">
                 {filteredApprenticesForUnbind.map((apprentice) => (
                   <div
                     key={apprentice.id}
-                    className="p-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 flex items-center justify-between gap-3 text-xs shadow-2xs"
+                    className="p-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs shadow-2xs"
                   >
-                    <div className="flex items-center gap-2.5 min-w-0">
+                    <div className="flex items-center gap-2.5 min-w-0 w-full sm:w-auto">
                       <div className="w-9 h-9 rounded-full bg-[#0D3B36] text-[#DCA134] font-black flex items-center justify-center text-xs shrink-0 border border-[#DCA134]">
                         {apprentice.initials || (apprentice.name ? apprentice.name.substring(0, 2).toUpperCase() : 'AP')}
                       </div>
-                      <div className="min-w-0">
-                        <span className="font-extrabold text-[#0D3B36] dark:text-white truncate block">
+                      <div className="min-w-0 flex-1">
+                        <span className="font-extrabold text-[#0D3B36] dark:text-white truncate block text-xs sm:text-sm">
                           {apprentice.name}
                         </span>
                         <div className="flex items-center gap-1.5 text-[10px] text-slate-500 dark:text-slate-400 font-semibold flex-wrap">
                           <span>{apprentice.role || 'Apprentice Trainee'}</span>
-                          <span>•</span>
-                          <span>Mentor: {apprentice.mentor || 'Kausar Mohammed'}</span>
+                          <span className="hidden sm:inline">•</span>
+                          <span className="block sm:inline">Mentor: {apprentice.mentor || 'Kausar Mohammed'}</span>
                           <span>•</span>
                           <span className="text-emerald-700 dark:text-emerald-400 font-bold">{apprentice.hoursCompleted || 0} hrs</span>
                         </div>
@@ -857,10 +857,10 @@ export const StudioSettingsModal: React.FC<StudioSettingsModalProps> = ({
                     <button
                       type="button"
                       onClick={() => setApprenticeToUnbind(apprentice)}
-                      className="px-3 py-1.5 rounded-xl bg-rose-50 dark:bg-rose-950/60 hover:bg-rose-100 dark:hover:bg-rose-900/80 text-rose-700 dark:text-rose-300 font-extrabold text-xs border border-rose-300 dark:border-rose-800 flex items-center gap-1.5 transition-all cursor-pointer shrink-0 shadow-2xs active:scale-95"
+                      className="w-full sm:w-auto justify-center px-3 py-2 sm:py-1.5 rounded-xl bg-rose-50 dark:bg-rose-950/60 hover:bg-rose-100 dark:hover:bg-rose-900/80 text-rose-700 dark:text-rose-300 font-extrabold text-xs border border-rose-300 dark:border-rose-800 flex items-center gap-1.5 transition-all cursor-pointer shrink-0 shadow-2xs active:scale-95 text-center"
                       title="Unbind / Unlink Apprentice from Master Studio"
                     >
-                      <UserX className="w-3.5 h-3.5 text-rose-600 dark:text-rose-400" />
+                      <UserX className="w-3.5 h-3.5 text-rose-600 dark:text-rose-400 shrink-0" />
                       <span>Unbind Apprentice</span>
                     </button>
                   </div>
@@ -870,10 +870,10 @@ export const StudioSettingsModal: React.FC<StudioSettingsModalProps> = ({
 
             {/* Inline Unbind Confirmation Dialog */}
             {apprenticeToUnbind && (
-              <div className="p-4 rounded-2xl bg-rose-100 dark:bg-rose-950/90 border-2 border-rose-500 text-rose-950 dark:text-rose-100 space-y-3 animate-fade-in shadow-lg">
+              <div className="p-3.5 sm:p-4 rounded-2xl bg-rose-100 dark:bg-rose-950/90 border-2 border-rose-500 text-rose-950 dark:text-rose-100 space-y-3 animate-fade-in shadow-lg">
                 <div className="flex items-center gap-2">
-                  <UserX className="w-5 h-5 text-rose-600 dark:text-rose-400 shrink-0" />
-                  <h4 className="font-black text-sm uppercase tracking-wide">
+                  <UserX className="w-4.5 h-4.5 text-rose-600 dark:text-rose-400 shrink-0" />
+                  <h4 className="font-black text-xs sm:text-sm uppercase tracking-wide">
                     Confirm Apprentice Unbinding
                   </h4>
                 </div>
@@ -881,11 +881,11 @@ export const StudioSettingsModal: React.FC<StudioSettingsModalProps> = ({
                   Are you sure you want to unbind <strong className="font-black underline">{apprenticeToUnbind.name}</strong> from <strong>{form.studioName}</strong>?
                   This action will disconnect their live workshop sync key and remove them from your active registry.
                 </p>
-                <div className="flex items-center justify-end gap-2 pt-1">
+                <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-2 pt-1">
                   <button
                     type="button"
                     onClick={() => setApprenticeToUnbind(null)}
-                    className="px-3 py-1.5 rounded-xl bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 font-extrabold text-xs border border-slate-300 dark:border-slate-600 hover:bg-slate-50 cursor-pointer"
+                    className="w-full sm:w-auto px-3.5 py-2 sm:py-1.5 rounded-xl bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 font-extrabold text-xs border border-slate-300 dark:border-slate-600 hover:bg-slate-50 cursor-pointer text-center"
                   >
                     Cancel
                   </button>
@@ -899,9 +899,9 @@ export const StudioSettingsModal: React.FC<StudioSettingsModalProps> = ({
                         setTimeout(() => setUnbindNotice(null), 3500);
                       }
                     }}
-                    className="px-3.5 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-extrabold text-xs shadow-md active:scale-95 cursor-pointer flex items-center gap-1.5"
+                    className="w-full sm:w-auto px-4 py-2 sm:py-1.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-extrabold text-xs shadow-md active:scale-95 cursor-pointer flex items-center justify-center gap-1.5"
                   >
-                    <UserX className="w-3.5 h-3.5" />
+                    <UserX className="w-3.5 h-3.5 shrink-0" />
                     <span>Confirm Unbind & Disconnect</span>
                   </button>
                 </div>

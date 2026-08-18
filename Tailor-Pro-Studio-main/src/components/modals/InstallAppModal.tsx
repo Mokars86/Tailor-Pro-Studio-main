@@ -52,8 +52,8 @@ export const InstallAppModal: React.FC<InstallAppModalProps> = ({ isOpen, onClos
         <div className="bg-[#0D3B36] text-white p-5 flex items-center justify-between relative overflow-hidden">
           <div className="absolute -right-6 -bottom-6 w-32 h-32 bg-[#DCA134]/10 rounded-full blur-2xl pointer-events-none" />
           <div className="flex items-center gap-3.5 z-10">
-            <div className="w-12 h-12 rounded-2xl bg-[#061E1B] border border-[#DCA134]/50 flex items-center justify-center shadow-md shrink-0">
-              <Download className="w-6 h-6 text-[#DCA134] animate-bounce" />
+            <div className="w-12 h-12 rounded-2xl bg-[#061E1B] border-2 border-[#DCA134] overflow-hidden shadow-md flex items-center justify-center shrink-0">
+              <img src="/tailor_pro_logo.jpg" alt="Tailor Pro Logo" className="w-full h-full object-cover" />
             </div>
             <div>
               <h2 className="font-['Outfit'] font-extrabold text-lg sm:text-xl text-amber-300 tracking-wide">

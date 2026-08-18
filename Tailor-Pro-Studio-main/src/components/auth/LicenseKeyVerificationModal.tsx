@@ -43,7 +43,7 @@ export const LicenseKeyVerificationModal: React.FC<LicenseKeyVerificationModalPr
         {/* Icon & Header */}
         <div className="space-y-3 relative z-10">
           <div className="relative inline-block group">
-            <div className="w-20 h-20 mx-auto rounded-3xl bg-[#061E1B] border-2 border-[#0D3B36] overflow-hidden shadow-xl relative">
+            <div className="w-20 h-20 mx-auto rounded-3xl bg-[#061E1B] border-4 border-[#DCA134] overflow-hidden shadow-xl relative">
               <img src="/tailor_pro_logo.jpg" alt="Tailor Pro Logo" className="w-full h-full object-cover" />
             </div>
             <div className="absolute -top-2 -right-2 w-7 h-7 rounded-full bg-[#0D3B36] text-white border border-white flex items-center justify-center shadow-md">

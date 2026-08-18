@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { ArrowLeft, Camera, Check, Mic, Sparkles, Ruler } from 'lucide-react';
+import { ArrowLeft, Camera, Check, Mic, Sparkles, Ruler, Plus, PlusCircle, Trash2 } from 'lucide-react';
 import { Client, GarmentMeasurements, StudioSettings } from '../../types';
 import { AiBodyScanModal } from './AiBodyScanModal';
 import { VoiceMeasurementAssistantModal } from './VoiceMeasurementAssistantModal';
@@ -12,7 +12,7 @@ interface GarmentMeasurementsModalProps {
   onClose: () => void;
 }
 
-type MeasurementKey = keyof Omit<GarmentMeasurements, 'genderCategory' | 'segment' | 'garmentType'>;
+type MeasurementKey = keyof Omit<GarmentMeasurements, 'genderCategory' | 'segment' | 'garmentType' | 'customMeasurements'>;
 
 interface FieldConfig {
   key: MeasurementKey;
@@ -84,6 +84,47 @@ export const GarmentMeasurementsModal: React.FC<GarmentMeasurementsModalProps> =
     inseam: existingMeas.inseam || '',
   });
 
+  // Dynamic Custom Measurements State
+  const [customMeas, setCustomMeas] = useState<Array<{ name: string; value: string }>>(() => {
+    const custom = existingMeas.customMeasurements || {};
+    return Object.entries(custom).map(([name, value]) => ({ name, value: String(value) }));
+  });
+  const [isAddingCustom, setIsAddingCustom] = useState(false);
+  const [newCustomName, setNewCustomName] = useState('');
+  const [newCustomValue, setNewCustomValue] = useState('');
+
+  const handleAddCustomItem = () => {
+    if (!newCustomName.trim()) return;
+    const name = newCustomName.trim();
+    const val = newCustomValue.trim();
+
+    setCustomMeas((prev) => {
+      const existsIdx = prev.findIndex((i) => i.name.toLowerCase() === name.toLowerCase());
+      if (existsIdx >= 0) {
+        const updated = [...prev];
+        updated[existsIdx] = { name: prev[existsIdx].name, value: val };
+        return updated;
+      }
+      return [...prev, { name, value: val }];
+    });
+
+    setNewCustomName('');
+    setNewCustomValue('');
+    setIsAddingCustom(false);
+  };
+
+  const handleCustomValueChange = (index: number, val: string) => {
+    setCustomMeas((prev) => {
+      const updated = [...prev];
+      updated[index] = { ...updated[index], value: val };
+      return updated;
+    });
+  };
+
+  const handleRemoveCustomItem = (index: number) => {
+    setCustomMeas((prev) => prev.filter((_, i) => i !== index));
+  };
+
   const [activeKey, setActiveKey] = useState<MeasurementKey>('bust');
   const [clientPhoto, setClientPhoto] = useState<string | null>(null);
   const [savedNotice, setSavedNotice] = useState(false);
@@ -117,21 +158,31 @@ export const GarmentMeasurementsModal: React.FC<GarmentMeasurementsModalProps> =
     }
   };
 
-  const getMergedMeasurements = (): GarmentMeasurements => ({
-    ...existingMeas,
-    ...measValues,
-    genderCategory,
-    segment,
-    bustOrChest: (genderCategory === 'Female' ? (measValues.bust || measValues.bustOrChest) : (measValues.chest || measValues.bustOrChest)) || existingMeas.bustOrChest || '',
-    bust: measValues.bust || measValues.bustOrChest || existingMeas.bust || '',
-    chest: measValues.chest || measValues.bustOrChest || existingMeas.chest || '',
-    shoulderWidth: measValues.shoulder || measValues.shoulderWidth || existingMeas.shoulderWidth || '',
-    shoulder: measValues.shoulder || measValues.shoulderWidth || existingMeas.shoulder || '',
-    waist: measValues.waist || existingMeas.waist || '',
-    hips: measValues.hips || existingMeas.hips || '',
-    sleeveLength: measValues.sleeveLength || existingMeas.sleeveLength || '',
-    fullLength: measValues.fullLength || existingMeas.fullLength || '',
-  });
+  const getMergedMeasurements = (): GarmentMeasurements => {
+    const customObj: Record<string, string> = {};
+    customMeas.forEach((item) => {
+      if (item.name.trim()) {
+        customObj[item.name.trim()] = item.value;
+      }
+    });
+
+    return {
+      ...existingMeas,
+      ...measValues,
+      customMeasurements: customObj,
+      genderCategory,
+      segment,
+      bustOrChest: (genderCategory === 'Female' ? (measValues.bust || measValues.bustOrChest) : (measValues.chest || measValues.bustOrChest)) || existingMeas.bustOrChest || '',
+      bust: measValues.bust || measValues.bustOrChest || existingMeas.bust || '',
+      chest: measValues.chest || measValues.bustOrChest || existingMeas.chest || '',
+      shoulderWidth: measValues.shoulder || measValues.shoulderWidth || existingMeas.shoulderWidth || '',
+      shoulder: measValues.shoulder || measValues.shoulderWidth || existingMeas.shoulder || '',
+      waist: measValues.waist || existingMeas.waist || '',
+      hips: measValues.hips || existingMeas.hips || '',
+      sleeveLength: measValues.sleeveLength || existingMeas.sleeveLength || '',
+      fullLength: measValues.fullLength || existingMeas.fullLength || '',
+    };
+  };
 
   const handleSave = () => {
     const updated = getMergedMeasurements();
@@ -339,7 +390,7 @@ export const GarmentMeasurementsModal: React.FC<GarmentMeasurementsModalProps> =
                       type="text"
                       value={val}
                       onFocus={() => setActiveKey(field.key)}
-                      onChange={(e) => handleInputChange(field.key, e.target.value)}
+                      onChange={(e) => handleInputChange(String(field.key), e.target.value)}
                       onKeyDown={(e) => handleFieldKeyDown(e, field.key)}
                       placeholder="Tap to enter"
                       className="w-full bg-transparent font-extrabold text-slate-900 dark:text-slate-100 text-lg focus:outline-none placeholder:text-slate-400 dark:placeholder:text-slate-600 placeholder:font-normal"
@@ -351,6 +402,114 @@ export const GarmentMeasurementsModal: React.FC<GarmentMeasurementsModalProps> =
                 </div>
               );
             })}
+          </div>
+
+          {/* Custom & Additional Measurement Types Section */}
+          <div className="bg-white dark:bg-[#092825] rounded-2xl p-4 border border-[#0D3B36]/20 dark:border-amber-400/20 shadow-2xs space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-1.5 text-xs font-black text-[#0D3B36] dark:text-amber-300 uppercase tracking-wider">
+                <PlusCircle className="w-4 h-4 text-[#DCA134]" />
+                <span>Custom / Additional Measurements ({customMeas.length})</span>
+              </div>
+              {!isAddingCustom && (
+                <button
+                  type="button"
+                  onClick={() => setIsAddingCustom(true)}
+                  className="px-3 py-1.5 rounded-full bg-[#0D3B36] dark:bg-amber-400 hover:bg-[#082824] dark:hover:bg-amber-300 text-white dark:text-[#0D3B36] font-bold text-xs flex items-center gap-1 cursor-pointer transition-all shadow-xs"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Add Measurement Type</span>
+                </button>
+              )}
+            </div>
+
+            {/* Inline Form to Add New Custom Measurement Type */}
+            {isAddingCustom && (
+              <div className="p-3.5 rounded-2xl bg-amber-500/10 dark:bg-amber-400/10 border border-amber-500/30 dark:border-amber-400/30 space-y-2.5">
+                <div className="text-xs font-bold text-[#0D3B36] dark:text-amber-300">
+                  Add New Custom Measurement Type
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <input
+                    type="text"
+                    value={newCustomName}
+                    onChange={(e) => setNewCustomName(e.target.value)}
+                    placeholder="e.g. Cap Sleeve, Wrist, Armhole, Cross Back..."
+                    className="px-3 py-2 rounded-xl bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-xs font-bold text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-[#0D3B36] dark:focus:ring-amber-400"
+                  />
+                  <div className="flex items-center gap-1.5">
+                    <input
+                      type="text"
+                      value={newCustomValue}
+                      onChange={(e) => setNewCustomValue(e.target.value)}
+                      placeholder="Value (e.g. 14.5)"
+                      className="flex-1 px-3 py-2 rounded-xl bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-xs font-bold text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-[#0D3B36] dark:focus:ring-amber-400"
+                    />
+                    <span className="text-xs font-bold text-slate-400">in</span>
+                  </div>
+                </div>
+                <div className="flex items-center justify-end gap-2 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsAddingCustom(false);
+                      setNewCustomName('');
+                      setNewCustomValue('');
+                    }}
+                    className="px-3 py-1.5 rounded-lg bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 font-semibold text-xs cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleAddCustomItem}
+                    className="px-4 py-1.5 rounded-lg bg-[#0D3B36] dark:bg-amber-400 text-white dark:text-[#0D3B36] font-bold text-xs cursor-pointer"
+                  >
+                    Add to Tape
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* List of Custom Measurement Cards */}
+            {customMeas.length === 0 && !isAddingCustom && (
+              <p className="text-[11px] text-slate-400 dark:text-slate-500 font-medium italic text-center py-1">
+                No custom measurements added yet. Tap "+ Add Measurement Type" above to add any custom metric.
+              </p>
+            )}
+
+            {customMeas.map((item, index) => (
+              <div
+                key={index}
+                className="bg-slate-50 dark:bg-slate-800/80 rounded-xl p-3 border border-slate-200 dark:border-slate-700 flex items-center justify-between gap-3"
+              >
+                <div className="flex-1 min-w-0">
+                  <label className="block text-xs font-black text-[#0D3B36] dark:text-amber-300 mb-0.5 truncate">
+                    {item.name}
+                  </label>
+                  <div className="flex items-center gap-1.5">
+                    <input
+                      type="text"
+                      value={item.value}
+                      onChange={(e) => handleCustomValueChange(index, e.target.value)}
+                      placeholder="Tap to enter"
+                      className="w-full bg-transparent font-extrabold text-slate-900 dark:text-slate-100 text-base focus:outline-none placeholder:text-slate-400"
+                    />
+                    <span className="text-xs font-extrabold text-slate-400 shrink-0">
+                      in
+                    </span>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handleRemoveCustomItem(index)}
+                  className="p-1.5 rounded-xl text-rose-500 hover:bg-rose-100 dark:hover:bg-rose-950/60 transition-colors cursor-pointer shrink-0"
+                  title="Remove custom measurement"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
+            ))}
           </div>
 
           {/* Bottom Card: ACTIVE FITTING TELEMETRY & VISUAL CROQUIS */}

@@ -15,6 +15,7 @@ import { generateMasterWorkshopCode, validateWorkshopCode } from './utils/worksh
 import {
   fetchClientsFromSupabase,
   upsertClientToSupabase,
+  deleteClientFromSupabase,
   fetchApprenticesFromSupabase,
   upsertApprenticeToSupabase,
   deleteApprenticeFromSupabase,
@@ -286,8 +287,19 @@ export default function App() {
 
   // Comprehensive Cross-Device Cloud Synchronization (Desktop <-> Mobile)
   const performFullCloudSync = React.useCallback(async () => {
+    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+      console.log('[Supabase Sync] Device offline. Operating in local storage mode.');
+      setSupabaseStatus('offline');
+      return;
+    }
+
     try {
       setSupabaseStatus('syncing');
+
+      // 1. Flush offline queue first so local additions/edits reach Supabase before fetching
+      await flushOfflineQueue();
+
+      // 2. Seed initial data if DB tables are completely empty
       await seedInitialSupabaseData(
         initialClients,
         initialApprentices,
@@ -298,39 +310,140 @@ export default function App() {
         defaultStudioSettings
       );
 
+      // 3. Fetch remote DB records & merge safely with local storage records
       const dbClients = await fetchClientsFromSupabase();
       if (dbClients !== null) {
-        setClients(dbClients);
+        setClients((prevLocal) => {
+          let stored: Client[] = [];
+          try {
+            const raw = localStorage.getItem('tailor_clients');
+            if (raw) {
+              const parsed = JSON.parse(raw);
+              if (Array.isArray(parsed)) stored = parsed.filter((c) => c && !isMockId(c.id));
+            }
+          } catch (e) {}
+
+          const localMap = new Map<string, Client>();
+          stored.forEach((c) => localMap.set(c.id, c));
+          prevLocal.forEach((c) => localMap.set(c.id, c));
+          const combinedLocal = Array.from(localMap.values());
+
+          const remoteMap = new Map(dbClients.map((c) => [c.id, c]));
+          const merged: Client[] = [...dbClients];
+
+          for (const loc of combinedLocal) {
+            if (!loc || isMockId(loc.id)) continue;
+            if (!remoteMap.has(loc.id)) {
+              merged.unshift(loc);
+              upsertClientToSupabase(loc);
+            }
+          }
+
+          localStorage.setItem('tailor_clients', JSON.stringify(merged));
+          return merged;
+        });
       }
 
       const dbApprentices = await fetchApprenticesFromSupabase();
       if (dbApprentices !== null) {
-        setApprentices(dbApprentices);
+        setApprentices((prevLocal) => {
+          const remoteMap = new Map(dbApprentices.map((a) => [a.id, a]));
+          const merged: Apprentice[] = [...dbApprentices];
+
+          for (const loc of prevLocal) {
+            if (!loc || isMockId(loc.id)) continue;
+            if (!remoteMap.has(loc.id)) {
+              merged.unshift(loc);
+              upsertApprenticeToSupabase(loc);
+            }
+          }
+          return merged;
+        });
       }
 
       const dbTasks = await fetchApprenticeTasksFromSupabase();
       if (dbTasks !== null) {
-        setApprenticeTasks(dbTasks);
+        setApprenticeTasks((prevLocal) => {
+          const remoteMap = new Map(dbTasks.map((t) => [t.id, t]));
+          const merged: ApprenticeTask[] = [...dbTasks];
+
+          for (const loc of prevLocal) {
+            if (!loc || isMockId(loc.id)) continue;
+            if (!remoteMap.has(loc.id)) {
+              merged.unshift(loc);
+              upsertApprenticeTaskToSupabase(loc);
+            }
+          }
+          return merged;
+        });
       }
 
       const dbDeposits = await fetchUnpaidDepositsFromSupabase();
       if (dbDeposits !== null) {
-        setUnpaidDeposits(dbDeposits);
+        setUnpaidDeposits((prevLocal) => {
+          const remoteMap = new Map(dbDeposits.map((d) => [d.id, d]));
+          const merged: UnpaidDeposit[] = [...dbDeposits];
+
+          for (const loc of prevLocal) {
+            if (!loc || isMockId(loc.id)) continue;
+            if (!remoteMap.has(loc.id)) {
+              merged.unshift(loc);
+              upsertUnpaidDepositToSupabase(loc);
+            }
+          }
+          return merged;
+        });
       }
 
       const dbSessions = await fetchRunwaySessionsFromSupabase();
       if (dbSessions !== null) {
-        setSessions(dbSessions);
+        setSessions((prevLocal) => {
+          const remoteMap = new Map(dbSessions.map((s) => [s.id, s]));
+          const merged: RunwaySession[] = [...dbSessions];
+
+          for (const loc of prevLocal) {
+            if (!loc || isMockId(loc.id)) continue;
+            if (!remoteMap.has(loc.id)) {
+              merged.unshift(loc);
+              upsertRunwaySessionToSupabase(loc);
+            }
+          }
+          return merged;
+        });
       }
 
       const dbTx = await fetchLedgerTransactionsFromSupabase();
       if (dbTx !== null) {
-        setTransactions(dbTx);
+        setTransactions((prevLocal) => {
+          const remoteMap = new Map(dbTx.map((t) => [t.id, t]));
+          const merged: LedgerTransaction[] = [...dbTx];
+
+          for (const loc of prevLocal) {
+            if (!loc || isMockId(loc.id)) continue;
+            if (!remoteMap.has(loc.id)) {
+              merged.unshift(loc);
+              upsertLedgerTransactionToSupabase(loc);
+            }
+          }
+          return merged;
+        });
       }
 
       const dbInv = await fetchInventoryItemsFromSupabase();
       if (dbInv !== null) {
-        setInventory(dbInv);
+        setInventory((prevLocal) => {
+          const remoteMap = new Map(dbInv.map((i) => [i.id, i]));
+          const merged: InventoryItem[] = [...dbInv];
+
+          for (const loc of prevLocal) {
+            if (!loc || isMockId(loc.id)) continue;
+            if (!remoteMap.has(loc.id)) {
+              merged.unshift(loc);
+              upsertInventoryItemToSupabase(loc);
+            }
+          }
+          return merged;
+        });
       }
 
       const dbSettings = await fetchStudioSettingsFromSupabase();
@@ -418,24 +531,6 @@ export default function App() {
   const [isLogoutConfirmOpen, setIsLogoutConfirmOpen] = useState<boolean>(false);
   const [isInstallAppOpen, setIsInstallAppOpen] = useState<boolean>(false);
 
-  // Auto-prompt Desktop PWA install on Chrome when visiting Netlify link
-  useEffect(() => {
-    const isStandalone =
-      window.matchMedia('(display-mode: standalone)').matches ||
-      (navigator as any).standalone === true ||
-      document.referrer.includes('android-app://');
-
-    const dismissed = sessionStorage.getItem('tailor_pwa_prompt_dismissed');
-
-    if (!isStandalone && !dismissed) {
-      const timer = setTimeout(() => {
-        setIsInstallAppOpen(true);
-      }, 1200);
-
-      return () => clearTimeout(timer);
-    }
-  }, []);
-
   const handlePromptLogout = () => {
     setIsLogoutConfirmOpen(true);
   };
@@ -444,6 +539,9 @@ export default function App() {
     setIsLogoutConfirmOpen(false);
     setIsStudioSettingsOpen(false);
     setIsLicensePromptOpen(false);
+    setSearchQuery('');
+    setSelectedFilter('all');
+    setSelectedArtistFilter('all');
     document.documentElement.classList.remove('dark');
     setAuthScreen('signin');
   };
@@ -639,13 +737,21 @@ export default function App() {
   const handleSaveClient = (savedClient: Client) => {
     setClients((prev) => {
       const exists = prev.some((c) => c.id === savedClient.id);
+      let updated: Client[];
       if (exists) {
-        return prev.map((c) => (c.id === savedClient.id ? savedClient : c));
+        updated = prev.map((c) => (c.id === savedClient.id ? savedClient : c));
+      } else {
+        updated = [savedClient, ...prev];
       }
-      return [savedClient, ...prev];
+      localStorage.setItem('tailor_clients', JSON.stringify(updated));
+      return updated;
     });
     upsertClientToSupabase(savedClient);
     queueOfflineAction('client', savedClient);
+
+    setSearchQuery('');
+    setSelectedFilter('all');
+    setSelectedArtistFilter('all');
   };
 
   const handleUpdateMeasurements = (clientId: string, measurements: GarmentMeasurements) => {
@@ -985,13 +1091,11 @@ export default function App() {
   };
 
   const handleSignInSuccess = async (email: string, selectedRole?: UserRole) => {
-    performFullCloudSync();
+    setSearchQuery('');
+    setSelectedFilter('all');
+    setSelectedArtistFilter('all');
     const userEmail = email.trim() || 'designer@tailorpro.com';
     setActiveUserEmail(userEmail);
-
-    // Sync cloud user account approval status from Supabase
-    const users = await syncUserAccountsFromSupabase();
-    let workspaceActivated = isWorkspaceActivated();
 
     const isApprenticeEmail =
       userEmail.toLowerCase().includes('apprentice') ||
@@ -1003,6 +1107,10 @@ export default function App() {
     const isAdminEmail = userEmail.toLowerCase() === 'admin@tailorpro.com';
 
     let resolvedRole: UserRole = selectedRole || (isApprenticeEmail ? 'Apprentice (Trainee & CAD Blueprint View)' : 'Master (Studio Owner & Financial Control)');
+
+    // Sync cloud user account approval status from Supabase (or immediate local fallback if offline)
+    const users = await syncUserAccountsFromSupabase();
+    let workspaceActivated = isWorkspaceActivated();
 
     let user = users.find((u) => u.email.toLowerCase() === userEmail.toLowerCase());
 
@@ -1051,6 +1159,11 @@ export default function App() {
         setIsLicensePromptOpen(true);
       }
     }
+
+    // Trigger cloud sync asynchronously in background without delaying login UI
+    setTimeout(() => {
+      performFullCloudSync();
+    }, 100);
   };
 
   const handleRegisterSuccess = (
@@ -1462,6 +1575,7 @@ export default function App() {
               onSelectClient={(client) => setProfileClient(client)}
               onDeleteClient={(clientId) => {
                 setClients((prev) => prev.filter((c) => c.id !== clientId));
+                deleteClientFromSupabase(clientId);
               }}
               onAssignDuty={() => setIsCustomTaskOpen(true)}
             />

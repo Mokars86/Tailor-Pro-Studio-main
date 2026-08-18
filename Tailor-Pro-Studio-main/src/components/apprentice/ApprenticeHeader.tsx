@@ -36,15 +36,9 @@ export const ApprenticeHeader: React.FC<ApprenticeHeaderProps> = ({
         <div className="bg-white/90 dark:bg-[#061E1B]/95 backdrop-blur-md rounded-2xl sm:rounded-3xl p-2.5 sm:p-4 border-2 border-[#DCA134] shadow-md flex flex-col xs:flex-row items-start xs:items-center justify-between gap-2.5 sm:gap-3">
           {/* Left Logo + Titles */}
           <div className="flex items-center gap-3">
-            {studioLogoUrl ? (
-              <div className="w-12 h-12 rounded-2xl bg-[#061E1B] border-2 border-[#DCA134] overflow-hidden shadow-sm shrink-0">
-                <img src={studioLogoUrl} alt="Master Brand Logo" className="w-full h-full object-cover" />
-              </div>
-            ) : (
-              <div className="w-12 h-12 rounded-2xl bg-[#061E1B] border-2 border-[#DCA134] shadow-sm flex items-center justify-center shrink-0">
-                <UserCircle2 className="w-7 h-7 text-[#DCA134]" />
-              </div>
-            )}
+            <div className="w-12 h-12 rounded-2xl bg-[#061E1B] border-2 border-[#DCA134] overflow-hidden shadow-sm shrink-0">
+              <img src={studioLogoUrl || '/tailor_pro_logo.jpg'} alt="Master Brand Logo" className="w-full h-full object-cover" />
+            </div>
 
             <div>
               <div className="flex items-center gap-2 flex-wrap">

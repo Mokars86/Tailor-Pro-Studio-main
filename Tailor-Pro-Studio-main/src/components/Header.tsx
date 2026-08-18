@@ -36,15 +36,13 @@ export const Header: React.FC<HeaderProps> = ({
         {/* Left: Branding & Studio Title */}
         <div className="flex items-center justify-between w-full sm:w-auto gap-2.5 sm:gap-3">
           <div className="flex items-center gap-2.5 sm:gap-3">
-            {studioSettings.logoUrl ? (
-              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-[#061E1B] border-2 border-[#DCA134] overflow-hidden shadow-md shrink-0 flex items-center justify-center">
-                <img src={studioSettings.logoUrl} alt="Studio Brand Logo" className="w-full h-full object-cover" />
-              </div>
-            ) : (
-              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-[#061E1B] border-2 border-[#DCA134] shadow-md flex items-center justify-center shrink-0">
-                <UserCircle2 className="w-6 h-6 sm:w-7 sm:h-7 text-[#DCA134]" />
-              </div>
-            )}
+            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-[#061E1B] border-2 border-[#DCA134] overflow-hidden shadow-md shrink-0 flex items-center justify-center">
+              <img
+                src={studioSettings.logoUrl || '/tailor_pro_logo.jpg'}
+                alt="Studio Brand Logo"
+                className="w-full h-full object-cover"
+              />
+            </div>
             <div className="flex flex-col">
               <h1 className="font-['Outfit'] font-black text-xs xs:text-sm sm:text-xl text-[#0D3B36] dark:text-[#DCA134] tracking-tight uppercase leading-snug">
                 {studioSettings.studioName || 'MOKARS STITCHES STUDIO'}
@@ -77,19 +75,6 @@ export const Header: React.FC<HeaderProps> = ({
 
         {/* Right: Badges & Settings */}
         <div className="flex items-center justify-end w-full sm:w-auto gap-2 flex-wrap sm:flex-nowrap">
-          {/* Download & Install App Button */}
-          {onOpenInstallApp && (
-            <button
-              type="button"
-              onClick={onOpenInstallApp}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-700 hover:bg-emerald-800 text-amber-300 text-xs font-black border border-amber-400/50 transition-all shadow-xs cursor-pointer"
-              title="Download / Install Desktop & Mobile App"
-            >
-              <Download className="w-3.5 h-3.5 text-amber-300 animate-bounce" />
-              <span>Download App</span>
-            </button>
-          )}
-
           {/* Snap Fabric & Thread Matcher Button */}
           {onOpenFabricScanner && (
             <button

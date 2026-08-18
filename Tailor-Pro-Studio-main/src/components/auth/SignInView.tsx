@@ -44,10 +44,10 @@ export const SignInView: React.FC<SignInViewProps> = ({
         {/* App Brand Logo Header */}
         <div className="text-center space-y-3">
           <div className="relative inline-block group">
-            {/* Ambient Emerald Glow Halo */}
-            <div className="absolute -inset-2 rounded-[32px] bg-gradient-to-r from-emerald-600/40 via-[#0D3B36] to-emerald-600/40 blur-sm opacity-40 group-hover:opacity-70 transition-opacity" />
+            {/* Ambient Gold Glow Halo */}
+            <div className="absolute -inset-2 rounded-[32px] bg-gradient-to-r from-[#DCA134]/40 via-amber-300/30 to-[#DCA134]/40 blur-sm opacity-50 group-hover:opacity-80 transition-opacity" />
             
-            <div className="w-22 h-22 sm:w-24 sm:h-24 mx-auto rounded-[28px] bg-[#061E1B] border-2 border-[#0D3B36] overflow-hidden shadow-2xl relative">
+            <div className="w-22 h-22 sm:w-24 sm:h-24 mx-auto rounded-[28px] bg-[#061E1B] border-4 border-[#DCA134] overflow-hidden shadow-2xl relative">
               <img src="/tailor_pro_logo.jpg" alt="Tailor Pro Logo" className="w-full h-full object-cover" />
             </div>
 
@@ -64,18 +64,6 @@ export const SignInView: React.FC<SignInViewProps> = ({
               Bespoke Atelier Management System
             </p>
           </div>
-
-          {/* Download App Banner Button */}
-          {onOpenInstallApp && (
-            <button
-              type="button"
-              onClick={onOpenInstallApp}
-              className="w-full py-2.5 px-4 rounded-2xl bg-[#0D3B36] hover:bg-[#082824] text-amber-300 font-extrabold text-xs flex items-center justify-center gap-2 border border-amber-400/40 shadow-md hover:shadow-lg transition-all cursor-pointer"
-            >
-              <Download className="w-4 h-4 text-amber-300 animate-bounce" />
-              <span>Download & Install Desktop / Mobile App</span>
-            </button>
-          )}
         </div>
 
         {/* Form Block inside Enhanced Frosted Light Card */}

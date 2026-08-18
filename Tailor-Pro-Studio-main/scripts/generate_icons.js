@@ -4,7 +4,7 @@ import path from 'path';
 
 const sourceImage = path.resolve('public/tailor_pro_logo.jpg');
 const resDir = path.resolve('android/app/src/main/res');
-const BRAND_BG = 0x01312FFF; // #01312F with 100% opacity
+const BRAND_BG = 0x0D3B36FF; // #0D3B36 with 100% opacity
 
 const iconSpecs = [
   { dir: 'mipmap-mdpi', size: 48, fgSize: 108 },
@@ -76,7 +76,14 @@ async function generateIcons() {
     console.log(`Generated splash for ${spec.dir} (${spec.w}x${spec.h})`);
   }
 
-  // 3. Generate PWA icons in public folder
+  // 3. Generate PWA and Browser Favicons in public folder
+  const fav32 = image.clone().resize({ w: 32, h: 32 });
+  await fav32.write(path.resolve('public/favicon-32x32.png'));
+  await fav32.write(path.resolve('public/favicon.png'));
+
+  const fav16 = image.clone().resize({ w: 16, h: 16 });
+  await fav16.write(path.resolve('public/favicon-16x16.png'));
+
   const pwa192 = image.clone().resize({ w: 192, h: 192 });
   await pwa192.write(path.resolve('public/pwa-192x192.png'));
 
@@ -86,7 +93,7 @@ async function generateIcons() {
   const appleIcon = image.clone().resize({ w: 180, h: 180 });
   await appleIcon.write(path.resolve('public/apple-touch-icon.png'));
 
-  console.log('Successfully generated all Android launcher icons, splash screens, and PWA custom brand icons!');
+  console.log('Successfully generated all Android launcher icons, splash screens, favicons, and Desktop/PWA icons!');
 }
 
 generateIcons().catch((err) => {

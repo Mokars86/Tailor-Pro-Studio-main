@@ -156,6 +156,9 @@ export function registerUserAccount(data: {
 }
 
 export async function syncUserAccountsFromSupabase(): Promise<UserAccountRecord[]> {
+  if (typeof navigator !== 'undefined' && !navigator.onLine) {
+    return getUserAccountRecords();
+  }
   try {
     const dbUsers = await fetchUserAccountsFromSupabase();
     if (dbUsers && dbUsers.length > 0) {

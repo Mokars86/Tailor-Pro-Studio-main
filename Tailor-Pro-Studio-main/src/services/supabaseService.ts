@@ -11,12 +11,35 @@ import {
   UserAccountRecord
 } from '../types';
 
+/**
+ * Helper to wrap network promises with an offline check and fast timeout
+ * to prevent UI lag/freezes when device is offline or connection is poor.
+ */
+export async function withTimeout<T>(fn: () => Promise<T>, timeoutMs: number = 2500): Promise<T | null> {
+  if (typeof navigator !== 'undefined' && !navigator.onLine) {
+    return null;
+  }
+  let timer: any;
+  const timeoutPromise = new Promise<null>((resolve) => {
+    timer = setTimeout(() => resolve(null), timeoutMs);
+  });
+
+  try {
+    const result = await Promise.race([fn(), timeoutPromise]);
+    clearTimeout(timer);
+    return result;
+  } catch (err) {
+    clearTimeout(timer);
+    return null;
+  }
+}
+
 // ==========================================
 // CLIENTS SYNCRONIZATION
 // ==========================================
 
 export async function fetchClientsFromSupabase(): Promise<Client[] | null> {
-  try {
+  return withTimeout(async () => {
     const { data, error } = await supabase.from('clients').select('*');
     if (error) {
       console.warn('[Supabase DB] Error fetching clients:', error.message);
@@ -43,13 +66,11 @@ export async function fetchClientsFromSupabase(): Promise<Client[] | null> {
       assignedDesigner: row.assigned_designer || '',
       tags: row.tags || []
     }));
-  } catch (err) {
-    console.error('[Supabase DB] Failed to fetch clients:', err);
-    return null;
-  }
+  }, 2500);
 }
 
 export async function upsertClientToSupabase(client: Client): Promise<boolean> {
+  if (typeof navigator !== 'undefined' && !navigator.onLine) return false;
   try {
     const dbRecord = {
       id: client.id,
@@ -72,12 +93,11 @@ export async function upsertClientToSupabase(client: Client): Promise<boolean> {
       updated_at: new Date().toISOString()
     };
 
-    const { error } = await supabase.from('clients').upsert(dbRecord);
-    if (error) {
-      console.warn('[Supabase DB] Upsert client error:', error.message);
-      return false;
-    }
-    return true;
+    const res = await withTimeout(async () => {
+      const { error } = await supabase.from('clients').upsert(dbRecord);
+      return !error;
+    }, 3000);
+    return Boolean(res);
   } catch (err) {
     console.error('[Supabase DB] Failed to upsert client:', err);
     return false;
@@ -85,13 +105,13 @@ export async function upsertClientToSupabase(client: Client): Promise<boolean> {
 }
 
 export async function deleteClientFromSupabase(clientId: string): Promise<boolean> {
+  if (typeof navigator !== 'undefined' && !navigator.onLine) return false;
   try {
-    const { error } = await supabase.from('clients').delete().eq('id', clientId);
-    if (error) {
-      console.warn('[Supabase DB] Delete client error:', error.message);
-      return false;
-    }
-    return true;
+    const res = await withTimeout(async () => {
+      const { error } = await supabase.from('clients').delete().eq('id', clientId);
+      return !error;
+    }, 3000);
+    return Boolean(res);
   } catch (err) {
     console.error('[Supabase DB] Failed to delete client:', err);
     return false;
@@ -103,7 +123,7 @@ export async function deleteClientFromSupabase(clientId: string): Promise<boolea
 // ==========================================
 
 export async function fetchApprenticesFromSupabase(): Promise<Apprentice[] | null> {
-  try {
+  return withTimeout(async () => {
     const { data, error } = await supabase.from('apprentices').select('*');
     if (error || !data) return null;
     if (data.length === 0) return [];
@@ -125,13 +145,11 @@ export async function fetchApprenticesFromSupabase(): Promise<Apprentice[] | nul
       status: row.status || 'On Track',
       specialty: row.specialty || ''
     }));
-  } catch (err) {
-    console.error('[Supabase DB] Failed to fetch apprentices:', err);
-    return null;
-  }
+  }, 2500);
 }
 
 export async function upsertApprenticeToSupabase(apprentice: Apprentice): Promise<boolean> {
+  if (typeof navigator !== 'undefined' && !navigator.onLine) return false;
   try {
     const dbRecord = {
       id: apprentice.id,
@@ -152,24 +170,25 @@ export async function upsertApprenticeToSupabase(apprentice: Apprentice): Promis
       updated_at: new Date().toISOString()
     };
 
-    const { error } = await supabase.from('apprentices').upsert(dbRecord);
-    if (error) return false;
-    return true;
+    const res = await withTimeout(async () => {
+      const { error } = await supabase.from('apprentices').upsert(dbRecord);
+      return !error;
+    }, 3000);
+    return Boolean(res);
   } catch (err) {
     return false;
   }
 }
 
 export async function deleteApprenticeFromSupabase(apprenticeId: string): Promise<boolean> {
+  if (typeof navigator !== 'undefined' && !navigator.onLine) return false;
   try {
-    const { error } = await supabase.from('apprentices').delete().eq('id', apprenticeId);
-    if (error) {
-      console.warn('[Supabase DB] Delete apprentice error:', error.message);
-      return false;
-    }
-    return true;
+    const res = await withTimeout(async () => {
+      const { error } = await supabase.from('apprentices').delete().eq('id', apprenticeId);
+      return !error;
+    }, 3000);
+    return Boolean(res);
   } catch (err) {
-    console.error('[Supabase DB] Failed to delete apprentice:', err);
     return false;
   }
 }
@@ -179,7 +198,7 @@ export async function deleteApprenticeFromSupabase(apprenticeId: string): Promis
 // ==========================================
 
 export async function fetchApprenticeTasksFromSupabase(): Promise<ApprenticeTask[] | null> {
-  try {
+  return withTimeout(async () => {
     const { data, error } = await supabase.from('apprentice_tasks').select('*');
     if (error || !data) return null;
     if (data.length === 0) return [];
@@ -196,12 +215,11 @@ export async function fetchApprenticeTasksFromSupabase(): Promise<ApprenticeTask
       passedAt: row.passed_at || '',
       masterNotes: row.master_notes || ''
     }));
-  } catch (err) {
-    return null;
-  }
+  }, 2500);
 }
 
 export async function upsertApprenticeTaskToSupabase(task: ApprenticeTask): Promise<boolean> {
+  if (typeof navigator !== 'undefined' && !navigator.onLine) return false;
   try {
     const dbRecord = {
       id: task.id,
@@ -216,8 +234,11 @@ export async function upsertApprenticeTaskToSupabase(task: ApprenticeTask): Prom
       master_notes: task.masterNotes || '',
       updated_at: new Date().toISOString()
     };
-    const { error } = await supabase.from('apprentice_tasks').upsert(dbRecord);
-    return !error;
+    const res = await withTimeout(async () => {
+      const { error } = await supabase.from('apprentice_tasks').upsert(dbRecord);
+      return !error;
+    }, 3000);
+    return Boolean(res);
   } catch (err) {
     return false;
   }
@@ -228,7 +249,7 @@ export async function upsertApprenticeTaskToSupabase(task: ApprenticeTask): Prom
 // ==========================================
 
 export async function fetchUnpaidDepositsFromSupabase(): Promise<UnpaidDeposit[] | null> {
-  try {
+  return withTimeout(async () => {
     const { data, error } = await supabase.from('unpaid_deposits').select('*');
     if (error || !data) return null;
     if (data.length === 0) return [];
@@ -242,12 +263,11 @@ export async function fetchUnpaidDepositsFromSupabase(): Promise<UnpaidDeposit[]
       dueDate: row.due_date || '',
       phone: row.phone || ''
     }));
-  } catch (err) {
-    return null;
-  }
+  }, 2500);
 }
 
 export async function upsertUnpaidDepositToSupabase(deposit: UnpaidDeposit): Promise<boolean> {
+  if (typeof navigator !== 'undefined' && !navigator.onLine) return false;
   try {
     const dbRecord = {
       id: deposit.id,
@@ -258,17 +278,24 @@ export async function upsertUnpaidDepositToSupabase(deposit: UnpaidDeposit): Pro
       due_date: deposit.dueDate,
       phone: deposit.phone
     };
-    const { error } = await supabase.from('unpaid_deposits').upsert(dbRecord);
-    return !error;
+    const res = await withTimeout(async () => {
+      const { error } = await supabase.from('unpaid_deposits').upsert(dbRecord);
+      return !error;
+    }, 3000);
+    return Boolean(res);
   } catch (err) {
     return false;
   }
 }
 
 export async function deleteUnpaidDepositFromSupabase(depositId: string): Promise<boolean> {
+  if (typeof navigator !== 'undefined' && !navigator.onLine) return false;
   try {
-    const { error } = await supabase.from('unpaid_deposits').delete().eq('id', depositId);
-    return !error;
+    const res = await withTimeout(async () => {
+      const { error } = await supabase.from('unpaid_deposits').delete().eq('id', depositId);
+      return !error;
+    }, 3000);
+    return Boolean(res);
   } catch (err) {
     return false;
   }
@@ -279,7 +306,7 @@ export async function deleteUnpaidDepositFromSupabase(depositId: string): Promis
 // ==========================================
 
 export async function fetchRunwaySessionsFromSupabase(): Promise<RunwaySession[] | null> {
-  try {
+  return withTimeout(async () => {
     const { data, error } = await supabase.from('runway_sessions').select('*');
     if (error || !data) return null;
     if (data.length === 0) return [];
@@ -297,12 +324,11 @@ export async function fetchRunwaySessionsFromSupabase(): Promise<RunwaySession[]
       depositPaid: Number(row.deposit_paid || 0),
       status: row.status || 'Confirmed'
     }));
-  } catch (err) {
-    return null;
-  }
+  }, 2500);
 }
 
 export async function upsertRunwaySessionToSupabase(session: RunwaySession): Promise<boolean> {
+  if (typeof navigator !== 'undefined' && !navigator.onLine) return false;
   try {
     const dbRecord = {
       id: session.id,
@@ -317,8 +343,11 @@ export async function upsertRunwaySessionToSupabase(session: RunwaySession): Pro
       deposit_paid: session.depositPaid,
       status: session.status
     };
-    const { error } = await supabase.from('runway_sessions').upsert(dbRecord);
-    return !error;
+    const res = await withTimeout(async () => {
+      const { error } = await supabase.from('runway_sessions').upsert(dbRecord);
+      return !error;
+    }, 3000);
+    return Boolean(res);
   } catch (err) {
     return false;
   }
@@ -329,7 +358,7 @@ export async function upsertRunwaySessionToSupabase(session: RunwaySession): Pro
 // ==========================================
 
 export async function fetchLedgerTransactionsFromSupabase(): Promise<LedgerTransaction[] | null> {
-  try {
+  return withTimeout(async () => {
     const { data, error } = await supabase.from('ledger_transactions').select('*');
     if (error || !data) return null;
     if (data.length === 0) return [];
@@ -345,12 +374,11 @@ export async function fetchLedgerTransactionsFromSupabase(): Promise<LedgerTrans
       status: row.status || 'cleared',
       method: row.method || 'MoMo'
     }));
-  } catch (err) {
-    return null;
-  }
+  }, 2500);
 }
 
 export async function upsertLedgerTransactionToSupabase(tx: LedgerTransaction): Promise<boolean> {
+  if (typeof navigator !== 'undefined' && !navigator.onLine) return false;
   try {
     const dbRecord = {
       id: tx.id,
@@ -363,8 +391,11 @@ export async function upsertLedgerTransactionToSupabase(tx: LedgerTransaction): 
       status: tx.status,
       method: tx.method
     };
-    const { error } = await supabase.from('ledger_transactions').upsert(dbRecord);
-    return !error;
+    const res = await withTimeout(async () => {
+      const { error } = await supabase.from('ledger_transactions').upsert(dbRecord);
+      return !error;
+    }, 3000);
+    return Boolean(res);
   } catch (err) {
     return false;
   }
@@ -375,7 +406,7 @@ export async function upsertLedgerTransactionToSupabase(tx: LedgerTransaction): 
 // ==========================================
 
 export async function fetchInventoryItemsFromSupabase(): Promise<InventoryItem[] | null> {
-  try {
+  return withTimeout(async () => {
     const { data, error } = await supabase.from('inventory_items').select('*');
     if (error || !data) return null;
     if (data.length === 0) return [];
@@ -391,12 +422,11 @@ export async function fetchInventoryItemsFromSupabase(): Promise<InventoryItem[]
       status: row.status || 'In Stock',
       supplier: row.supplier || ''
     }));
-  } catch (err) {
-    return null;
-  }
+  }, 2500);
 }
 
 export async function upsertInventoryItemToSupabase(item: InventoryItem): Promise<boolean> {
+  if (typeof navigator !== 'undefined' && !navigator.onLine) return false;
   try {
     const dbRecord = {
       id: item.id,
@@ -409,17 +439,24 @@ export async function upsertInventoryItemToSupabase(item: InventoryItem): Promis
       status: item.status,
       supplier: item.supplier
     };
-    const { error } = await supabase.from('inventory_items').upsert(dbRecord);
-    return !error;
+    const res = await withTimeout(async () => {
+      const { error } = await supabase.from('inventory_items').upsert(dbRecord);
+      return !error;
+    }, 3000);
+    return Boolean(res);
   } catch (err) {
     return false;
   }
 }
 
 export async function deleteInventoryItemFromSupabase(itemId: string): Promise<boolean> {
+  if (typeof navigator !== 'undefined' && !navigator.onLine) return false;
   try {
-    const { error } = await supabase.from('inventory_items').delete().eq('id', itemId);
-    return !error;
+    const res = await withTimeout(async () => {
+      const { error } = await supabase.from('inventory_items').delete().eq('id', itemId);
+      return !error;
+    }, 3000);
+    return Boolean(res);
   } catch (err) {
     return false;
   }
@@ -430,7 +467,7 @@ export async function deleteInventoryItemFromSupabase(itemId: string): Promise<b
 // ==========================================
 
 export async function fetchStudioSettingsFromSupabase(): Promise<StudioSettings | null> {
-  try {
+  return withTimeout(async () => {
     const { data, error } = await supabase.from('studio_settings').select('*').eq('id', 'default').single();
     if (error || !data) return null;
 
@@ -445,12 +482,11 @@ export async function fetchStudioSettingsFromSupabase(): Promise<StudioSettings 
       safetyPin: data.safety_pin || '1234',
       theme: (data.theme as 'light' | 'dark') || 'light'
     };
-  } catch (err) {
-    return null;
-  }
+  }, 2500);
 }
 
 export async function upsertStudioSettingsToSupabase(settings: StudioSettings): Promise<boolean> {
+  if (typeof navigator !== 'undefined' && !navigator.onLine) return false;
   try {
     const dbRecord = {
       id: 'default',
@@ -465,8 +501,11 @@ export async function upsertStudioSettingsToSupabase(settings: StudioSettings): 
       theme: settings.theme,
       updated_at: new Date().toISOString()
     };
-    const { error } = await supabase.from('studio_settings').upsert(dbRecord);
-    return !error;
+    const res = await withTimeout(async () => {
+      const { error } = await supabase.from('studio_settings').upsert(dbRecord);
+      return !error;
+    }, 3000);
+    return Boolean(res);
   } catch (err) {
     return false;
   }
@@ -485,6 +524,7 @@ export async function seedInitialSupabaseData(
   initialInventoryItems: InventoryItem[],
   defaultStudioSettings: StudioSettings
 ) {
+  if (typeof navigator !== 'undefined' && !navigator.onLine) return;
   try {
     const existingClients = await fetchClientsFromSupabase();
     if (existingClients && existingClients.length === 0) {
@@ -548,40 +588,50 @@ export async function signUpSupabaseUser(
   password: string,
   metadata?: Record<string, any>
 ) {
+  if (typeof navigator !== 'undefined' && !navigator.onLine) {
+    return { success: false, error: 'Offline mode: Registration saved locally.' };
+  }
   try {
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: metadata || {}
+    const res = await withTimeout(async () => {
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: metadata || {}
+        }
+      });
+      if (error) {
+        console.warn('[Supabase Auth] Sign up warning:', error.message);
+        return { success: false, error: error.message };
       }
-    });
-    if (error) {
-      console.warn('[Supabase Auth] Sign up warning:', error.message);
-      return { success: false, error: error.message };
-    }
-    console.log('[Supabase Auth] User registered successfully in auth.users:', data.user?.id);
-    return { success: true, user: data.user };
+      return { success: true, user: data.user };
+    }, 4000);
+
+    return res || { success: false, error: 'Registration saved locally.' };
   } catch (err: any) {
-    console.error('[Supabase Auth] Exception during sign up:', err);
     return { success: false, error: err.message || 'Registration failed' };
   }
 }
 
 export async function signInSupabaseUser(email: string, password: string) {
+  if (typeof navigator !== 'undefined' && !navigator.onLine) {
+    return { success: false, error: 'Offline mode: local authentication active' };
+  }
   try {
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password
-    });
-    if (error) {
-      console.warn('[Supabase Auth] Sign in warning:', error.message);
-      return { success: false, error: error.message };
-    }
-    console.log('[Supabase Auth] User signed in successfully:', data.user?.id);
-    return { success: true, user: data.user };
+    const res = await withTimeout(async () => {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      });
+      if (error) {
+        console.warn('[Supabase Auth] Sign in warning:', error.message);
+        return { success: false, error: error.message };
+      }
+      return { success: true, user: data.user };
+    }, 4000);
+
+    return res || { success: false, error: 'Network timeout during sign in' };
   } catch (err: any) {
-    console.error('[Supabase Auth] Exception during sign in:', err);
     return { success: false, error: err.message || 'Login failed' };
   }
 }
@@ -591,7 +641,7 @@ export async function signInSupabaseUser(email: string, password: string) {
 // ==========================================
 
 export async function fetchUserAccountsFromSupabase(): Promise<UserAccountRecord[] | null> {
-  try {
+  return withTimeout(async () => {
     const { data, error } = await supabase.from('user_accounts').select('*');
     if (error || !data) return null;
 
@@ -605,12 +655,11 @@ export async function fetchUserAccountsFromSupabase(): Promise<UserAccountRecord
       status: row.status || 'pending',
       registeredAt: row.registered_at || new Date().toISOString()
     }));
-  } catch (err) {
-    return null;
-  }
+  }, 2500);
 }
 
 export async function upsertUserAccountToSupabase(userRecord: UserAccountRecord): Promise<boolean> {
+  if (typeof navigator !== 'undefined' && !navigator.onLine) return false;
   try {
     const dbRecord = {
       id: userRecord.id,
@@ -623,11 +672,15 @@ export async function upsertUserAccountToSupabase(userRecord: UserAccountRecord)
       registered_at: userRecord.registeredAt || new Date().toISOString(),
       updated_at: new Date().toISOString()
     };
-    const { error } = await supabase.from('user_accounts').upsert(dbRecord);
-    return !error;
+    const res = await withTimeout(async () => {
+      const { error } = await supabase.from('user_accounts').upsert(dbRecord);
+      return !error;
+    }, 3000);
+    return Boolean(res);
   } catch (err) {
     return false;
   }
 }
+
 
 
