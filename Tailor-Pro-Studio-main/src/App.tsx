@@ -1738,6 +1738,7 @@ export default function App() {
           onClose={() => setIsStudioSettingsOpen(false)}
           apprentices={apprentices}
           onUnlinkApprentice={handleUnlinkApprentice}
+          userRole={userRole}
         />
       )}
 

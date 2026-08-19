@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { X, Sun, Moon, QrCode, Copy, Printer, LogOut, Check, Upload, ShieldCheck, Download, Cloud, UserX, UserCircle2, Share2, Clipboard, ClipboardCheck, FileText } from 'lucide-react';
+import { X, Sun, Moon, QrCode, Copy, Printer, LogOut, Check, Upload, ShieldCheck, Download, Cloud, UserX, UserCircle2, Share2, Clipboard, ClipboardCheck, FileText, CreditCard, BadgeCheck } from 'lucide-react';
 import { StudioSettings, Apprentice } from '../../types';
 import { generateMasterWorkshopCode } from '../../utils/workshopCode';
 import { exportAtelierDataBackup, restoreAtelierDataBackup, restoreAtelierDataFromText, copyBackupToClipboard, clearAllAtelierData } from '../../utils/dataBackup';
+import { TailorProMembershipCardModal } from './TailorProMembershipCardModal';
 
 interface StudioSettingsModalProps {
   settings: StudioSettings;
@@ -12,6 +13,8 @@ interface StudioSettingsModalProps {
   apprentices?: Apprentice[];
   onUnlinkApprentice?: (apprenticeId: string) => void;
   onToggleTheme?: (newTheme: 'light' | 'dark') => void;
+  onOpenMembershipCard?: () => void;
+  userRole?: string;
 }
 
 export const StudioSettingsModal: React.FC<StudioSettingsModalProps> = ({
@@ -21,8 +24,11 @@ export const StudioSettingsModal: React.FC<StudioSettingsModalProps> = ({
   onClose,
   apprentices = [],
   onUnlinkApprentice,
-  onToggleTheme
+  onToggleTheme,
+  onOpenMembershipCard,
+  userRole
 }) => {
+  const [showMembershipCardModal, setShowMembershipCardModal] = useState<boolean>(false);
   const [form, setForm] = useState<StudioSettings>(() => ({
     studioName: settings?.studioName || 'MOKARS STITCHES STUDIO',
     ownerName: settings?.ownerName || 'Mubarik Tuahir Ali',
@@ -232,6 +238,35 @@ export const StudioSettingsModal: React.FC<StudioSettingsModalProps> = ({
                 </div>
               </div>
             </div>
+          </div>
+
+          {/* Tailor Pro Membership & Workshop ID Card Block */}
+          <div className="p-4 rounded-2xl bg-gradient-to-br from-[#0D3B36]/10 via-amber-500/10 to-[#0D3B36]/10 border-2 border-[#DCA134] dark:border-[#DCA134]/80 space-y-3 shadow-xs">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-black uppercase tracking-wider text-[#0D3B36] dark:text-amber-300 flex items-center gap-1.5">
+                <CreditCard className="w-4.5 h-4.5 text-[#DCA134]" />
+                <span>TAILOR PRO MEMBERSHIP & WORKSHOP ID CARD</span>
+              </label>
+              <span className="text-[10px] font-black text-[#0D3B36] bg-[#DCA134] px-2.5 py-0.5 rounded-full uppercase shadow-2xs">
+                Official Badge
+              </span>
+            </div>
+
+            <p className="text-xs text-slate-700 dark:text-slate-300 font-semibold leading-relaxed">
+              Design, customize, and print official vertical <strong>Tailor Pro Workshop Training & Membership ID Badges</strong> featuring dual sponsor logos, participant photo, unique ID, event date, and venue details.
+            </p>
+
+            <button
+              type="button"
+              onClick={() => {
+                setShowMembershipCardModal(true);
+                if (onOpenMembershipCard) onOpenMembershipCard();
+              }}
+              className="w-full py-3 px-4 rounded-xl bg-[#0D3B36] dark:bg-amber-400 hover:bg-[#061E1B] dark:hover:bg-amber-300 text-white dark:text-[#061E1B] font-extrabold text-xs sm:text-sm flex items-center justify-center gap-2 border border-[#DCA134] shadow-md transition-all active:scale-[0.99] cursor-pointer"
+            >
+              <BadgeCheck className="w-4.5 h-4.5 text-[#DCA134] dark:text-[#061E1B]" />
+              <span>Generate & Customize Tailor Pro Membership Card</span>
+            </button>
           </div>
 
           {/* Apprentice Workshop Key & QR Code Block */}
@@ -1159,6 +1194,15 @@ export const StudioSettingsModal: React.FC<StudioSettingsModalProps> = ({
         </form>
 
       </div>
+
+      {showMembershipCardModal && (
+        <TailorProMembershipCardModal
+          isOpen={showMembershipCardModal}
+          onClose={() => setShowMembershipCardModal(false)}
+          studioSettings={settings}
+          userRole={userRole}
+        />
+      )}
     </div>
   );
 };
