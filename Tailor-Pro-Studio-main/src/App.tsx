@@ -1468,7 +1468,7 @@ export default function App() {
   }
 
   return (
-    <div className={`min-h-screen md:pl-64 pt-36 sm:pt-32 md:pt-44 pb-32 sm:pb-36 transition-colors duration-300 font-['Plus_Jakarta_Sans',sans-serif] ${
+    <div className={`min-h-screen md:pl-64 pt-[max(136px,calc(120px+env(safe-area-inset-top)))] sm:pt-28 md:pt-28 pb-32 sm:pb-36 transition-colors duration-300 font-['Plus_Jakarta_Sans',sans-serif] ${
       theme === 'dark'
         ? 'bg-[#061E1B] text-slate-100 dark'
         : 'bg-[#EBF5F0] text-[#0D3B36]'

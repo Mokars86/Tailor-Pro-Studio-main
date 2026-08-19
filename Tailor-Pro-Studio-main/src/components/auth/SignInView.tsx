@@ -67,7 +67,7 @@ export const SignInView: React.FC<SignInViewProps> = ({
         </div>
 
         {/* Form Block inside Enhanced Frosted Light Card */}
-        <div className="rounded-[32px] p-6 sm:p-8 space-y-5 border border-white/80 shadow-xl bg-white/85 backdrop-blur-md text-[#0D3B36]">
+        <div className="rounded-[32px] p-4 xs:p-6 sm:p-8 space-y-5 border border-white/80 shadow-xl bg-white/85 backdrop-blur-md text-[#0D3B36]">
           <form onSubmit={handleSubmit} className="space-y-4">
             
             {/* Login Role Selector */}
@@ -76,29 +76,30 @@ export const SignInView: React.FC<SignInViewProps> = ({
                 <UserCheck className="w-3.5 h-3.5 text-[#0D3B36]" />
                 <span>SIGN IN ROLE</span>
               </label>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-2 gap-1.5 sm:gap-2">
                 <button
                   type="button"
                   onClick={() => setSelectedRole('Master (Studio Owner & Financial Control)')}
-                  className={`py-2.5 px-3 rounded-2xl font-black text-xs transition-all border cursor-pointer flex items-center justify-center gap-1.5 ${
+                  className={`py-2.5 px-2 xs:px-3 rounded-2xl font-black text-[11px] xs:text-xs transition-all border cursor-pointer flex items-center justify-center gap-1 sm:gap-1.5 leading-tight ${
                     selectedRole.startsWith('Master')
                       ? 'bg-[#0D3B36] text-amber-300 border-[#0D3B36] shadow-sm'
                       : 'bg-white/80 text-slate-700 border-slate-200 hover:bg-white'
                   }`}
                 >
-                  <span>👑 Master Owner</span>
+                  <span className="truncate">👑 Master Owner</span>
                 </button>
 
                 <button
                   type="button"
                   onClick={() => setSelectedRole('Apprentice (Trainee & CAD Blueprint View)')}
-                  className={`py-2.5 px-3 rounded-2xl font-black text-xs transition-all border cursor-pointer flex items-center justify-center gap-1.5 ${
+                  className={`py-2.5 px-2 xs:px-3 rounded-2xl font-black text-[11px] xs:text-xs transition-all border cursor-pointer flex items-center justify-center gap-1 sm:gap-1.5 leading-tight ${
                     selectedRole.startsWith('Apprentice')
                       ? 'bg-[#0D3B36] text-amber-300 border-[#0D3B36] shadow-sm'
                       : 'bg-white/80 text-slate-700 border-slate-200 hover:bg-white'
                   }`}
                 >
-                  <span>🎓 Apprentice Trainee</span>
+                  <span className="hidden xs:inline truncate">🎓 Apprentice Trainee</span>
+                  <span className="xs:hidden">🎓 Apprentice</span>
                 </button>
               </div>
             </div>

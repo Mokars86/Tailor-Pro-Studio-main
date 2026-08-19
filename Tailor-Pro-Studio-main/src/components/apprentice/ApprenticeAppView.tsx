@@ -87,7 +87,7 @@ export const ApprenticeAppView: React.FC<ApprenticeAppViewProps> = ({
       />
 
       {/* Main Dynamic View Area */}
-      <main className="max-w-4xl mx-auto px-3 sm:px-6 pt-52 sm:pt-48 md:pt-48">
+      <main className="max-w-4xl mx-auto px-3 sm:px-6 pt-[max(136px,calc(120px+env(safe-area-inset-top)))] sm:pt-28 md:pt-28">
         {/* TAB 1: PRODUCTION */}
         {activeTab === 'production' && (
           <ApprenticeProductionTab

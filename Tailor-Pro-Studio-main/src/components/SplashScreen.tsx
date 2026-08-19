@@ -68,9 +68,9 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({ onFinish }) => {
               scale: { delay: 0.3, type: 'spring', stiffness: 300, damping: 15 },
               rotate: { duration: 10, repeat: Infinity, ease: 'linear' },
             }}
-            className="absolute -top-2.5 -right-2.5 sm:-top-3 sm:-right-3 z-20 w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-[#0D3B36] text-white border-2 border-white flex items-center justify-center shadow-lg"
+            className="absolute -top-2 -right-2 sm:-top-2.5 sm:-right-2.5 z-20 w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-[#0D3B36] text-white border-2 border-white flex items-center justify-center shadow-lg"
           >
-            <Sparkles className="w-5 h-5 text-emerald-300" />
+            <Sparkles className="w-4 h-4 text-emerald-300" />
           </motion.div>
 
           {/* Main Logo Card with Heart Pump (Heartbeat) Animation & Gold Stroke */}
@@ -84,7 +84,7 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({ onFinish }) => {
               repeatDelay: 0.3,
               ease: 'easeInOut',
             }}
-            className="w-48 h-48 sm:w-56 sm:h-56 rounded-3xl overflow-hidden shadow-2xl border-4 border-[#DCA134] bg-[#061E1B] relative z-10"
+            className="w-36 h-36 sm:w-44 sm:h-44 rounded-3xl overflow-hidden shadow-2xl border-4 border-[#DCA134] bg-[#061E1B] relative z-10"
           >
             <img
               src="/tailor_pro_logo.jpg"
