@@ -448,6 +448,54 @@ export const TailorProMembershipCardModal: React.FC<TailorProMembershipCardModal
             margin: 10mm;
           }
 
+          @media (max-width: 480px) {
+            body {
+              padding: 55px 10px 15px 10px !important;
+            }
+            .top-bar {
+              padding: 8px 12px !important;
+              flex-wrap: wrap !important;
+              gap: 6px !important;
+            }
+            .top-bar > div:first-child {
+              font-size: 10px !important;
+              width: 100% !important;
+              text-align: center !important;
+            }
+            .top-bar > div:last-child {
+              width: 100% !important;
+              justify-content: center !important;
+            }
+            .btn-print, .btn-close {
+              padding: 6px 14px !important;
+              font-size: 11px !important;
+            }
+            .badge-card {
+              width: 100% !important;
+              max-width: 350px !important;
+              height: auto !important;
+              min-height: 600px !important;
+              border-width: 3.5px !important;
+              border-radius: 22px !important;
+            }
+            .avatar-wrapper {
+              width: 100px !important;
+              height: 100px !important;
+            }
+            .details-box {
+              padding: 0 10px !important;
+              gap: 6px !important;
+            }
+            .detail-row {
+              padding: 5px 8px !important;
+              font-size: 10.5px !important;
+            }
+            .detail-val {
+              max-width: 120px !important;
+              font-size: 10.5px !important;
+            }
+          }
+
           @media print {
             .no-print { display: none !important; }
             html, body {
@@ -606,54 +654,56 @@ export const TailorProMembershipCardModal: React.FC<TailorProMembershipCardModal
   const detailRoleTitle = formatCleanDetailRole(category);
 
   return (
-    <div className="fixed inset-0 z-[100] bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-2 sm:p-4 overflow-y-auto animate-fade-in font-['Outfit'] select-none">
-      <div className="w-full max-w-4xl my-auto space-y-4">
+    <div className="fixed inset-0 z-[100] bg-slate-950/85 backdrop-blur-md flex flex-col items-center justify-start sm:justify-center p-2 sm:p-4 overflow-y-auto animate-fade-in font-['Outfit'] select-none min-h-screen">
+      <div className="w-full max-w-4xl my-auto space-y-3 sm:space-y-4 max-h-full">
 
         {/* Top Control Bar */}
-        <div className="flex items-center justify-between bg-slate-900/95 border border-amber-400/30 rounded-2xl px-4 py-3 text-white shadow-2xl">
-          <div className="flex items-center gap-2.5">
-            <div className="p-2 rounded-xl bg-amber-400/20 border border-amber-400/40 text-amber-300">
-              <CreditCard className="w-5 h-5" />
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between bg-slate-900/95 border border-amber-400/30 rounded-2xl p-3 sm:px-4 sm:py-3 text-white shadow-2xl gap-2.5 sm:gap-3 w-full">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="p-1.5 sm:p-2 rounded-xl bg-amber-400/20 border border-amber-400/40 text-amber-300 shrink-0">
+              <CreditCard className="w-4 h-4 sm:w-5 sm:h-5" />
             </div>
-            <div>
-              <h3 className="text-sm font-black tracking-wide uppercase text-amber-300 flex items-center gap-1.5">
-                Official Tailor Pro Membership & Workshop Badge
+            <div className="min-w-0">
+              <h3 className="text-xs sm:text-sm font-black tracking-wide uppercase text-amber-300 flex items-center gap-1.5 flex-wrap truncate">
+                Official Tailor Pro Membership & ID Badge
               </h3>
-              <p className="text-[11px] text-slate-400 font-semibold">
-                Auto-populated from studio account settings. Upload participant photo below.
+              <p className="text-[10px] sm:text-[11px] text-slate-400 font-semibold truncate leading-tight">
+                Auto-populated from studio settings. Upload participant photo below.
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center justify-between sm:justify-end gap-2 w-full sm:w-auto shrink-0 pt-1 sm:pt-0 border-t sm:border-t-0 border-slate-800 sm:border-transparent">
             <button
               type="button"
               onClick={handlePrintCard}
-              className="px-4.5 py-2 rounded-xl bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-[#061E1B] text-xs font-black flex items-center gap-2 shadow-md transition-all active:scale-95 cursor-pointer"
+              className="flex-1 sm:flex-none px-3.5 sm:px-4.5 py-2 rounded-xl bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-[#061E1B] text-[11px] sm:text-xs font-black flex items-center justify-center gap-1.5 shadow-md transition-all active:scale-95 cursor-pointer truncate"
             >
-              <Printer className="w-4 h-4" />
-              <span>Preview & Print / Save PDF</span>
+              <Printer className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
+              <span className="truncate">Preview & Print / Save PDF</span>
             </button>
 
             <button
               type="button"
               onClick={onClose}
-              className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-slate-300 hover:text-white transition-all cursor-pointer border border-white/10"
+              className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-slate-300 hover:text-white transition-all cursor-pointer border border-white/10 shrink-0"
               title="Close Modal"
             >
-              <X className="w-5 h-5" />
+              <X className="w-4.5 h-4.5 sm:w-5 sm:h-5" />
             </button>
           </div>
         </div>
 
         {/* Live Interactive Card Preview Container */}
-        <div className="flex flex-col items-center justify-center p-2">
+        <div className="flex flex-col items-center justify-center p-1 sm:p-2 w-full">
           
           {/* Quick Photo Upload Action Banner */}
-          <div className="mb-3 flex items-center gap-2.5 bg-amber-400/10 border border-amber-400/30 text-amber-300 px-4.5 py-2.5 rounded-2xl text-xs font-bold shadow-sm">
-            <Camera className="w-4.5 h-4.5 text-amber-400 shrink-0" />
-            <span>Upload participant photo to personalize this official badge:</span>
-            <label className="ml-1 px-3.5 py-1.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-[#061E1B] font-black text-xs cursor-pointer transition-all shadow-xs flex items-center gap-1.5 active:scale-95">
+          <div className="mb-2 sm:mb-3 flex flex-col xs:flex-row items-center justify-between gap-2 bg-amber-400/10 border border-amber-400/30 text-amber-300 p-2.5 sm:px-4.5 sm:py-2.5 rounded-2xl text-[11px] sm:text-xs font-bold shadow-xs w-full max-w-[370px] text-center xs:text-left">
+            <div className="flex items-center gap-2 min-w-0">
+              <Camera className="w-4 h-4 sm:w-4.5 sm:h-4.5 text-amber-400 shrink-0" />
+              <span className="truncate">Upload participant photo:</span>
+            </div>
+            <label className="w-full xs:w-auto px-3.5 py-1.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-[#061E1B] font-black text-[11px] sm:text-xs cursor-pointer transition-all shadow-xs flex items-center justify-center gap-1.5 active:scale-95 shrink-0">
               <Upload className="w-3.5 h-3.5" />
               <span>{avatarUrl ? 'Change Photo' : 'Upload Photo'}</span>
               <input type="file" accept="image/*" onChange={handleAvatarUpload} className="hidden" />
@@ -663,21 +713,21 @@ export const TailorProMembershipCardModal: React.FC<TailorProMembershipCardModal
           {/* Modal Preview Card */}
           <div
             ref={cardRef}
-            className="w-[370px] max-w-full h-[660px] bg-gradient-to-b from-white via-slate-50 to-slate-100 rounded-[32px] border-[5px] border-[#DCA134] shadow-2xl overflow-hidden flex flex-col justify-between relative font-['Outfit'] select-none transition-transform hover:scale-[1.01]"
+            className="w-full max-w-[370px] min-h-[600px] xs:h-[660px] bg-gradient-to-b from-white via-slate-50 to-slate-100 rounded-[24px] sm:rounded-[32px] border-[4px] sm:border-[5px] border-[#DCA134] shadow-2xl overflow-hidden flex flex-col justify-between relative font-['Outfit'] select-none transition-transform hover:scale-[1.01] my-1"
           >
             {/* Background Texture Overlay */}
             <div className="absolute inset-0 bg-[radial-gradient(#DCA134_1px,transparent_1px)] [background-size:16px_16px] opacity-10 pointer-events-none" />
 
             {/* Header Top Section */}
-            <div className="relative z-10 bg-gradient-to-b from-[#0D3B36] to-[#061E1B] text-white px-4 pt-3.5 pb-4 text-center border-b-4 border-[#DCA134] rounded-b-[22px] shadow-lg">
+            <div className="relative z-10 bg-gradient-to-b from-[#0D3B36] to-[#061E1B] text-white px-3 sm:px-4 pt-3 sm:pt-3.5 pb-3 sm:pb-4 text-center border-b-4 border-[#DCA134] rounded-b-[18px] sm:rounded-b-[22px] shadow-lg">
               
               {/* Lanyard Slot */}
-              <div className="w-14 h-2.5 bg-[#041614] border-2 border-[#DCA134] rounded-full mx-auto mb-2.5 shadow-inner" />
+              <div className="w-12 sm:w-14 h-2 sm:h-2.5 bg-[#041614] border-2 border-[#DCA134] rounded-full mx-auto mb-2 sm:mb-2.5 shadow-inner" />
 
               {/* Logos Row */}
-              <div className="flex items-center justify-between gap-2.5 mb-2">
+              <div className="flex items-center justify-between gap-2 sm:gap-2.5 mb-1.5 sm:mb-2">
                 {/* Studio Logo Left */}
-                <div className="w-12 h-12 rounded-2xl bg-[#041614] border-2 border-[#DCA134] overflow-hidden flex items-center justify-center shrink-0 shadow-md">
+                <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-[#041614] border-2 border-[#DCA134] overflow-hidden flex items-center justify-center shrink-0 shadow-md">
                   <img
                     src={studioLogoUrl || '/tailor_pro_logo.jpg'}
                     alt="Studio Logo"
@@ -689,23 +739,23 @@ export const TailorProMembershipCardModal: React.FC<TailorProMembershipCardModal
                       }
                     }}
                   />
-                  <div className="hidden w-full h-full bg-[#041614] text-[#DCA134] items-center justify-center font-black text-base">
+                  <div className="hidden w-full h-full bg-[#041614] text-[#DCA134] items-center justify-center font-black text-sm sm:text-base">
                     M
                   </div>
                 </div>
 
                 {/* Studio Title Middle */}
                 <div className="flex-1 min-w-0 text-center">
-                  <h2 className="font-serif font-black text-xs sm:text-sm text-[#DCA134] tracking-wide uppercase leading-tight truncate">
+                  <h2 className="font-serif font-black text-[11px] sm:text-sm text-[#DCA134] tracking-wide uppercase leading-tight truncate">
                     {studioBrandTitle}
                   </h2>
-                  <p className="text-[7.5px] font-bold text-slate-300 uppercase tracking-widest mt-0.5">
+                  <p className="text-[6.5px] sm:text-[7.5px] font-bold text-slate-300 uppercase tracking-widest mt-0.5 truncate">
                     AUTHENTICATED TAILORING ATELIER
                   </p>
                 </div>
 
                 {/* Tailor Pro App Logo Right */}
-                <div className="w-12 h-12 rounded-2xl bg-[#041614] border-2 border-[#DCA134] overflow-hidden flex items-center justify-center shrink-0 shadow-md">
+                <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-[#041614] border-2 border-[#DCA134] overflow-hidden flex items-center justify-center shrink-0 shadow-md">
                   <img
                     src={appLogoUrl || '/tailor_pro_logo.jpg'}
                     alt="Tailor Pro Logo"
@@ -724,109 +774,109 @@ export const TailorProMembershipCardModal: React.FC<TailorProMembershipCardModal
               </div>
 
               {/* Official Badge Pill Banner */}
-              <div className="inline-flex items-center gap-1.5 bg-gradient-to-r from-[#DCA134] to-[#C98A2B] text-[#041614] text-[9px] font-black tracking-[2px] uppercase px-4 py-0.5 rounded-full shadow-md">
-                <BadgeCheck className="w-3.5 h-3.5 text-[#041614]" />
+              <div className="inline-flex items-center gap-1.5 bg-gradient-to-r from-[#DCA134] to-[#C98A2B] text-[#041614] text-[8px] sm:text-[9px] font-black tracking-[1.5px] sm:tracking-[2px] uppercase px-3 sm:px-4 py-0.5 rounded-full shadow-md">
+                <BadgeCheck className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-[#041614] shrink-0" />
                 <span>OFFICIAL MEMBERSHIP & ID BADGE</span>
               </div>
             </div>
 
             {/* Photo & Security Badge Section */}
-            <div className="relative z-10 pt-4 pb-2 text-center px-4">
-              <div className="relative w-32 h-32 mx-auto mb-2">
+            <div className="relative z-10 pt-3 sm:pt-4 pb-1.5 sm:pb-2 text-center px-3 sm:px-4">
+              <div className="relative w-28 h-28 sm:w-32 sm:h-32 mx-auto mb-1.5 sm:mb-2">
                 <div className="w-full h-full rounded-full bg-slate-200 border-4 border-[#DCA134] ring-4 ring-white shadow-xl overflow-hidden flex items-center justify-center">
                   {avatarUrl ? (
                     <img src={avatarUrl} alt={memberName} className="w-full h-full object-cover" />
                   ) : (
-                    <User className="w-16 h-16 text-slate-400" />
+                    <User className="w-14 h-14 sm:w-16 sm:h-16 text-slate-400" />
                   )}
                 </div>
 
                 {/* Dark Green Circular Sparkle Corner Badge matching uploaded image */}
-                <div className="absolute bottom-0 right-0 w-8 h-8 rounded-full bg-[#041614] border-2 border-white ring-1 ring-[#DCA134] flex items-center justify-center shadow-md">
-                  <Sparkles className="w-4 h-4 text-[#34D399]" />
+                <div className="absolute bottom-0 right-0 w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-[#041614] border-2 border-white ring-1 ring-[#DCA134] flex items-center justify-center shadow-md">
+                  <Sparkles className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#34D399]" />
                 </div>
               </div>
 
-              <h3 className="text-sm sm:text-base font-black text-[#0D3B36] uppercase tracking-wider leading-snug px-2">
+              <h3 className="text-xs sm:text-base font-black text-[#0D3B36] uppercase tracking-wider leading-snug px-2 truncate">
                 {badgeRoleTitle}
               </h3>
 
               <div className="flex items-center justify-center gap-2 my-1">
-                <span className="w-10 h-[1.5px] bg-gradient-to-r from-transparent to-[#DCA134]" />
-                <span className="text-[9px] font-extrabold text-[#DCA134] uppercase tracking-widest">VERIFIED MEMBER</span>
-                <span className="w-10 h-[1.5px] bg-gradient-to-l from-transparent to-[#DCA134]" />
+                <span className="w-8 sm:w-10 h-[1.5px] bg-gradient-to-r from-transparent to-[#DCA134]" />
+                <span className="text-[8.5px] sm:text-[9px] font-extrabold text-[#DCA134] uppercase tracking-widest">VERIFIED MEMBER</span>
+                <span className="w-8 sm:w-10 h-[1.5px] bg-gradient-to-l from-transparent to-[#DCA134]" />
               </div>
             </div>
 
             {/* Glassmorphic Details Cards */}
-            <div className="relative z-10 px-5 space-y-2.5 my-auto py-1 flex-1 flex flex-col justify-center">
-              <div className="bg-white border border-slate-200 border-l-4 border-l-[#DCA134] rounded-xl p-2.5 flex items-center justify-between shadow-2xs">
-                <div className="flex items-center gap-2">
-                  <div className="w-7 h-7 rounded-lg bg-[#EBF5F0] text-[#0D3B36] flex items-center justify-center font-extrabold text-xs">
-                    <User className="w-4 h-4" />
+            <div className="relative z-10 px-3.5 sm:px-5 space-y-2 sm:space-y-2.5 my-auto py-1 flex-1 flex flex-col justify-center">
+              <div className="bg-white border border-slate-200 border-l-4 border-l-[#DCA134] rounded-xl p-2 sm:p-2.5 flex items-center justify-between shadow-2xs">
+                <div className="flex items-center gap-1.5 sm:gap-2">
+                  <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-lg bg-[#EBF5F0] text-[#0D3B36] flex items-center justify-center font-extrabold text-xs shrink-0">
+                    <User className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                   </div>
-                  <span className="text-[10px] font-black text-slate-500 uppercase tracking-wider">MEMBER NAME</span>
+                  <span className="text-[9px] sm:text-[10px] font-black text-slate-500 uppercase tracking-wider">MEMBER NAME</span>
                 </div>
-                <span className="text-xs font-black text-[#0D3B36] truncate max-w-[170px]">{memberName}</span>
+                <span className="text-[11px] sm:text-xs font-black text-[#0D3B36] truncate max-w-[130px] sm:max-w-[170px]">{memberName}</span>
               </div>
 
-              <div className="bg-white border border-slate-200 border-l-4 border-l-[#DCA134] rounded-xl p-2.5 flex items-center justify-between shadow-2xs">
-                <div className="flex items-center gap-2">
-                  <div className="w-7 h-7 rounded-lg bg-[#EBF5F0] text-[#0D3B36] flex items-center justify-center font-extrabold text-xs">
-                    <Hash className="w-4 h-4" />
+              <div className="bg-white border border-slate-200 border-l-4 border-l-[#DCA134] rounded-xl p-2 sm:p-2.5 flex items-center justify-between shadow-2xs">
+                <div className="flex items-center gap-1.5 sm:gap-2">
+                  <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-lg bg-[#EBF5F0] text-[#0D3B36] flex items-center justify-center font-extrabold text-xs shrink-0">
+                    <Hash className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                   </div>
-                  <span className="text-[10px] font-black text-slate-500 uppercase tracking-wider">BADGE ID</span>
+                  <span className="text-[9px] sm:text-[10px] font-black text-slate-500 uppercase tracking-wider">BADGE ID</span>
                 </div>
-                <span className="text-xs font-mono font-black text-[#DCA134] bg-[#061E1B] px-2 py-0.5 rounded-md tracking-wider">
+                <span className="text-[11px] sm:text-xs font-mono font-black text-[#DCA134] bg-[#061E1B] px-2 py-0.5 rounded-md tracking-wider">
                   {idNumber}
                 </span>
               </div>
 
-              <div className="bg-white border border-slate-200 border-l-4 border-l-[#DCA134] rounded-xl p-2.5 flex items-center justify-between shadow-2xs">
-                <div className="flex items-center gap-2">
-                  <div className="w-7 h-7 rounded-lg bg-[#EBF5F0] text-[#0D3B36] flex items-center justify-center font-extrabold text-xs">
-                    <Layers className="w-4 h-4" />
+              <div className="bg-white border border-slate-200 border-l-4 border-l-[#DCA134] rounded-xl p-2 sm:p-2.5 flex items-center justify-between shadow-2xs">
+                <div className="flex items-center gap-1.5 sm:gap-2">
+                  <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-lg bg-[#EBF5F0] text-[#0D3B36] flex items-center justify-center font-extrabold text-xs shrink-0">
+                    <Layers className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                   </div>
-                  <span className="text-[10px] font-black text-slate-500 uppercase tracking-wider">ROLE / CLASS</span>
+                  <span className="text-[9px] sm:text-[10px] font-black text-slate-500 uppercase tracking-wider">ROLE / CLASS</span>
                 </div>
-                <span className="text-xs font-bold text-slate-800 truncate max-w-[170px]">{detailRoleTitle}</span>
+                <span className="text-[11px] sm:text-xs font-bold text-slate-800 truncate max-w-[130px] sm:max-w-[170px]">{detailRoleTitle}</span>
               </div>
 
-              <div className="bg-white border border-slate-200 border-l-4 border-l-[#DCA134] rounded-xl p-2.5 flex items-center justify-between shadow-2xs">
-                <div className="flex items-center gap-2">
-                  <div className="w-7 h-7 rounded-lg bg-[#EBF5F0] text-[#0D3B36] flex items-center justify-center font-extrabold text-xs">
-                    <Calendar className="w-4 h-4" />
+              <div className="bg-white border border-slate-200 border-l-4 border-l-[#DCA134] rounded-xl p-2 sm:p-2.5 flex items-center justify-between shadow-2xs">
+                <div className="flex items-center gap-1.5 sm:gap-2">
+                  <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-lg bg-[#EBF5F0] text-[#0D3B36] flex items-center justify-center font-extrabold text-xs shrink-0">
+                    <Calendar className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                   </div>
-                  <span className="text-[10px] font-black text-slate-500 uppercase tracking-wider">ISSUE DATE</span>
+                  <span className="text-[9px] sm:text-[10px] font-black text-slate-500 uppercase tracking-wider">ISSUE DATE</span>
                 </div>
-                <span className="text-xs font-bold text-slate-800">{issueDate}</span>
+                <span className="text-[11px] sm:text-xs font-bold text-slate-800">{issueDate}</span>
               </div>
 
-              <div className="bg-white border border-slate-200 border-l-4 border-l-[#DCA134] rounded-xl p-2.5 flex items-center justify-between shadow-2xs">
-                <div className="flex items-center gap-2">
-                  <div className="w-7 h-7 rounded-lg bg-[#EBF5F0] text-[#0D3B36] flex items-center justify-center font-extrabold text-xs">
-                    <MapPin className="w-4 h-4" />
+              <div className="bg-white border border-slate-200 border-l-4 border-l-[#DCA134] rounded-xl p-2 sm:p-2.5 flex items-center justify-between shadow-2xs">
+                <div className="flex items-center gap-1.5 sm:gap-2">
+                  <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-lg bg-[#EBF5F0] text-[#0D3B36] flex items-center justify-center font-extrabold text-xs shrink-0">
+                    <MapPin className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                   </div>
-                  <span className="text-[10px] font-black text-slate-500 uppercase tracking-wider">LOCATION</span>
+                  <span className="text-[9px] sm:text-[10px] font-black text-slate-500 uppercase tracking-wider">LOCATION</span>
                 </div>
-                <span className="text-xs font-bold text-slate-800 truncate max-w-[170px]">{venue}</span>
+                <span className="text-[11px] sm:text-xs font-bold text-slate-800 truncate max-w-[130px] sm:max-w-[170px]">{venue}</span>
               </div>
             </div>
 
             {/* Footer Section */}
-            <div className="relative z-10 bg-gradient-to-b from-[#0D3B36] to-[#041614] border-t-4 border-[#DCA134] p-3 text-center text-white">
-              <p className="text-[10px] font-black tracking-widest text-[#DCA134] uppercase mb-1.5">
+            <div className="relative z-10 bg-gradient-to-b from-[#0D3B36] to-[#041614] border-t-4 border-[#DCA134] p-2.5 sm:p-3 text-center text-white">
+              <p className="text-[9px] sm:text-[10px] font-black tracking-widest text-[#DCA134] uppercase mb-1 sm:mb-1.5">
                 MODERNIZE YOUR CRAFT. GROW YOUR BUSINESS.
               </p>
 
-              <div className="bg-white py-1.5 px-4 rounded-lg inline-flex flex-col items-center gap-0.5 shadow-sm">
+              <div className="bg-white py-1 sm:py-1.5 px-3 sm:px-4 rounded-lg inline-flex flex-col items-center gap-0.5 shadow-sm">
                 <div
-                  className="w-40 h-4.5 bg-[#000]"
+                  className="w-32 sm:w-40 h-3.5 sm:h-4.5 bg-[#000]"
                   style={{
                     backgroundImage: 'repeating-linear-gradient(90deg, #000 0, #000 2px, #fff 2px, #fff 4px, #000 4px, #000 7px, #fff 7px, #fff 9px, #000 9px, #000 10px, #fff 10px, #fff 13px, #000 13px, #000 16px)'
                   }}
                 />
-                <span className="font-mono text-[8.5px] font-bold text-slate-900 tracking-widest">
+                <span className="font-mono text-[8px] sm:text-[8.5px] font-bold text-slate-900 tracking-widest">
                   {idNumber}
                 </span>
               </div>

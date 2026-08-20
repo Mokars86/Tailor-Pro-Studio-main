@@ -241,18 +241,20 @@ export const StudioSettingsModal: React.FC<StudioSettingsModalProps> = ({
           </div>
 
           {/* Tailor Pro Membership & Workshop ID Card Block */}
-          <div className="p-4 rounded-2xl bg-gradient-to-br from-[#0D3B36]/10 via-amber-500/10 to-[#0D3B36]/10 border-2 border-[#DCA134] dark:border-[#DCA134]/80 space-y-3 shadow-xs">
-            <div className="flex items-center justify-between">
-              <label className="text-xs font-black uppercase tracking-wider text-[#0D3B36] dark:text-amber-300 flex items-center gap-1.5">
-                <CreditCard className="w-4.5 h-4.5 text-[#DCA134]" />
-                <span>TAILOR PRO MEMBERSHIP & WORKSHOP ID CARD</span>
-              </label>
-              <span className="text-[10px] font-black text-[#0D3B36] bg-[#DCA134] px-2.5 py-0.5 rounded-full uppercase shadow-2xs">
+          <div className="p-3.5 sm:p-4 rounded-2xl bg-gradient-to-br from-[#0D3B36]/10 via-amber-500/10 to-[#0D3B36]/10 border-2 border-[#DCA134] dark:border-[#DCA134]/80 space-y-2.5 sm:space-y-3 shadow-xs overflow-hidden">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                <CreditCard className="w-4 h-4 sm:w-4.5 sm:h-4.5 text-[#DCA134] shrink-0" />
+                <h3 className="text-[11px] sm:text-xs font-black uppercase tracking-wider text-[#0D3B36] dark:text-amber-300 leading-snug break-words">
+                  TAILOR PRO MEMBERSHIP & WORKSHOP ID CARD
+                </h3>
+              </div>
+              <span className="text-[9px] sm:text-[10px] font-black text-[#0D3B36] bg-[#DCA134] px-2.5 py-0.5 rounded-full uppercase shadow-2xs shrink-0">
                 Official Badge
               </span>
             </div>
 
-            <p className="text-xs text-slate-700 dark:text-slate-300 font-semibold leading-relaxed">
+            <p className="text-[11px] sm:text-xs text-slate-700 dark:text-slate-300 font-semibold leading-relaxed">
               Design, customize, and print official vertical <strong>Tailor Pro Workshop Training & Membership ID Badges</strong> featuring dual sponsor logos, participant photo, unique ID, event date, and venue details.
             </p>
 
@@ -262,10 +264,10 @@ export const StudioSettingsModal: React.FC<StudioSettingsModalProps> = ({
                 setShowMembershipCardModal(true);
                 if (onOpenMembershipCard) onOpenMembershipCard();
               }}
-              className="w-full py-3 px-4 rounded-xl bg-[#0D3B36] dark:bg-amber-400 hover:bg-[#061E1B] dark:hover:bg-amber-300 text-white dark:text-[#061E1B] font-extrabold text-xs sm:text-sm flex items-center justify-center gap-2 border border-[#DCA134] shadow-md transition-all active:scale-[0.99] cursor-pointer"
+              className="w-full py-2.5 sm:py-3 px-3 sm:px-4 rounded-xl bg-[#0D3B36] dark:bg-amber-400 hover:bg-[#061E1B] dark:hover:bg-amber-300 text-white dark:text-[#061E1B] font-extrabold text-xs sm:text-sm flex items-center justify-center gap-2 border border-[#DCA134] shadow-md transition-all active:scale-[0.99] cursor-pointer text-center"
             >
-              <BadgeCheck className="w-4.5 h-4.5 text-[#DCA134] dark:text-[#061E1B]" />
-              <span>Generate & Customize Tailor Pro Membership Card</span>
+              <BadgeCheck className="w-4 h-4 sm:w-4.5 sm:h-4.5 text-[#DCA134] dark:text-[#061E1B] shrink-0" />
+              <span className="truncate">Generate & Customize Membership Card</span>
             </button>
           </div>
 

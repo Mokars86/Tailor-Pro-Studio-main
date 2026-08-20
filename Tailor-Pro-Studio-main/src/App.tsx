@@ -749,6 +749,47 @@ export default function App() {
     upsertClientToSupabase(savedClient);
     queueOfflineAction('client', savedClient);
 
+    // Automatically record consultation deposit & settlement transactions in Cashflow Ledger
+    if (savedClient.depositPaid > 0) {
+      const consultTx: LedgerTransaction = {
+        id: `tx-consult-${savedClient.id}`,
+        date: savedClient.timestamp ? savedClient.timestamp.split('T')[0] : new Date().toISOString().split('T')[0],
+        type: 'deposit',
+        category: 'Consultation Deposit',
+        description: `Consult Deposit Paid - ${savedClient.name} (${savedClient.garmentTag || 'Custom Order'})`,
+        amount: savedClient.depositPaid,
+        clientOrVendor: savedClient.name,
+        status: 'cleared',
+        method: 'Cash'
+      };
+      setTransactions((prev) => {
+        const exists = prev.some((t) => t.id === consultTx.id || t.description.includes(savedClient.name));
+        if (exists) return prev;
+        upsertLedgerTransactionToSupabase(consultTx);
+        return [consultTx, ...prev];
+      });
+    }
+
+    if (savedClient.balanceDue === 0 && savedClient.totalCost > 0) {
+      const fullSettlementTx: LedgerTransaction = {
+        id: `tx-full-${savedClient.id}`,
+        date: new Date().toISOString().split('T')[0],
+        type: 'revenue',
+        category: 'Full Settlement',
+        description: `Full Payment Completed - ${savedClient.name} (${savedClient.garmentTag || 'Custom Order'})`,
+        amount: savedClient.totalCost,
+        clientOrVendor: savedClient.name,
+        status: 'cleared',
+        method: 'Cash'
+      };
+      setTransactions((prev) => {
+        const exists = prev.some((t) => t.id === fullSettlementTx.id);
+        if (exists) return prev;
+        upsertLedgerTransactionToSupabase(fullSettlementTx);
+        return [fullSettlementTx, ...prev];
+      });
+    }
+
     setSearchQuery('');
     setSelectedFilter('all');
     setSelectedArtistFilter('all');
