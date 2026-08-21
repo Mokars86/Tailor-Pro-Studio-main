@@ -405,47 +405,50 @@ export const GarmentMeasurementsModal: React.FC<GarmentMeasurementsModalProps> =
           </div>
 
           {/* Custom & Additional Measurement Types Section */}
-          <div className="bg-white dark:bg-[#092825] rounded-2xl p-4 border border-[#0D3B36]/20 dark:border-amber-400/20 shadow-2xs space-y-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-1.5 text-xs font-black text-[#0D3B36] dark:text-amber-300 uppercase tracking-wider">
-                <PlusCircle className="w-4 h-4 text-[#DCA134]" />
-                <span>Custom / Additional Measurements ({customMeas.length})</span>
+          <div className="bg-white dark:bg-[#092825] rounded-2xl p-3.5 sm:p-4 border border-[#0D3B36]/20 dark:border-amber-400/20 shadow-2xs space-y-3">
+            <div className="flex flex-col xs:flex-row xs:items-center justify-between gap-2.5">
+              <div className="flex items-center gap-1.5 text-xs font-black text-[#0D3B36] dark:text-amber-300 uppercase tracking-wider min-w-0">
+                <PlusCircle className="w-4 h-4 text-[#DCA134] shrink-0" />
+                <span className="truncate">Custom / Additional ({customMeas.length})</span>
               </div>
               {!isAddingCustom && (
                 <button
                   type="button"
                   onClick={() => setIsAddingCustom(true)}
-                  className="px-3 py-1.5 rounded-full bg-[#0D3B36] dark:bg-amber-400 hover:bg-[#082824] dark:hover:bg-amber-300 text-white dark:text-[#0D3B36] font-bold text-xs flex items-center gap-1 cursor-pointer transition-all shadow-xs"
+                  className="w-full xs:w-auto px-3.5 py-2 rounded-xl bg-[#0D3B36] dark:bg-amber-400 hover:bg-[#082824] dark:hover:bg-amber-300 text-amber-300 dark:text-[#0D3B36] font-black text-xs flex items-center justify-center gap-1.5 cursor-pointer transition-all shadow-md active:scale-95 shrink-0 border border-[#DCA134]/30"
                 >
-                  <Plus className="w-3.5 h-3.5" />
-                  <span>Add Measurement Type</span>
+                  <Plus className="w-4 h-4 text-amber-300 dark:text-[#0D3B36] shrink-0 stroke-[3]" />
+                  <span>+ Add Measurement Type</span>
                 </button>
               )}
             </div>
 
             {/* Inline Form to Add New Custom Measurement Type */}
             {isAddingCustom && (
-              <div className="p-3.5 rounded-2xl bg-amber-500/10 dark:bg-amber-400/10 border border-amber-500/30 dark:border-amber-400/30 space-y-2.5">
-                <div className="text-xs font-bold text-[#0D3B36] dark:text-amber-300">
-                  Add New Custom Measurement Type
+              <div className="p-3.5 rounded-2xl bg-amber-500/10 dark:bg-amber-400/10 border-2 border-[#DCA134]/40 dark:border-amber-400/30 space-y-3 font-['Outfit']">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-xs font-black text-[#0D3B36] dark:text-amber-300 uppercase tracking-wider">
+                    Add New Custom Measurement Type
+                  </span>
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                   <input
                     type="text"
                     value={newCustomName}
                     onChange={(e) => setNewCustomName(e.target.value)}
-                    placeholder="e.g. Cap Sleeve, Wrist, Armhole, Cross Back..."
-                    className="px-3 py-2 rounded-xl bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-xs font-bold text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-[#0D3B36] dark:focus:ring-amber-400"
+                    placeholder="Name (e.g. Cap Sleeve, Wrist...)"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-xs font-bold text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0D3B36] dark:focus:ring-amber-400 shadow-xs"
+                    autoFocus
                   />
-                  <div className="flex items-center gap-1.5">
+                  <div className="flex items-center gap-2">
                     <input
                       type="text"
                       value={newCustomValue}
                       onChange={(e) => setNewCustomValue(e.target.value)}
                       placeholder="Value (e.g. 14.5)"
-                      className="flex-1 px-3 py-2 rounded-xl bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-xs font-bold text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-[#0D3B36] dark:focus:ring-amber-400"
+                      className="w-full flex-1 px-3.5 py-2.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-xs font-bold text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0D3B36] dark:focus:ring-amber-400 shadow-xs"
                     />
-                    <span className="text-xs font-bold text-slate-400">in</span>
+                    <span className="text-xs font-black text-slate-500 dark:text-slate-400 shrink-0">in</span>
                   </div>
                 </div>
                 <div className="flex items-center justify-end gap-2 pt-1">
@@ -456,16 +459,17 @@ export const GarmentMeasurementsModal: React.FC<GarmentMeasurementsModalProps> =
                       setNewCustomName('');
                       setNewCustomValue('');
                     }}
-                    className="px-3 py-1.5 rounded-lg bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 font-semibold text-xs cursor-pointer"
+                    className="px-3.5 py-2 rounded-xl bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 text-slate-700 dark:text-slate-200 font-bold text-xs transition-all cursor-pointer"
                   >
                     Cancel
                   </button>
                   <button
                     type="button"
                     onClick={handleAddCustomItem}
-                    className="px-4 py-1.5 rounded-lg bg-[#0D3B36] dark:bg-amber-400 text-white dark:text-[#0D3B36] font-bold text-xs cursor-pointer"
+                    className="px-4 py-2 rounded-xl bg-[#0D3B36] dark:bg-amber-400 hover:bg-[#082824] dark:hover:bg-amber-300 text-amber-300 dark:text-[#0D3B36] font-black text-xs shadow-md transition-all active:scale-95 cursor-pointer flex items-center gap-1"
                   >
-                    Add to Tape
+                    <Check className="w-4 h-4" />
+                    <span>Add to Tape</span>
                   </button>
                 </div>
               </div>

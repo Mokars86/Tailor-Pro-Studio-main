@@ -3,7 +3,7 @@ import { Scissors, Lock, Mail, MessageCircle, Coffee, Sparkles, UserCheck, Downl
 import { UserRole } from '../../types';
 
 interface SignInViewProps {
-  onSignInSuccess: (email: string, role?: UserRole) => void;
+  onSignInSuccess: (email: string, role?: UserRole, password?: string) => void;
   onGoToRegister: () => void;
   onOpenCustomerTracker: () => void;
   onOpenAdminPortal?: () => void;
@@ -27,7 +27,7 @@ export const SignInView: React.FC<SignInViewProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSignInSuccess(email, selectedRole);
+    onSignInSuccess(email, selectedRole, password);
   };
 
   return (

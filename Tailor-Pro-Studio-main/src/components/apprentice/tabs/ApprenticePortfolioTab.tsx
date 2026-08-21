@@ -647,16 +647,18 @@ export const ApprenticePortfolioTab: React.FC<ApprenticePortfolioTabProps> = ({
                     </button>
                   </div>
                 ) : (
-                  <div className="flex items-center gap-2.5">
+                  <div className="flex items-center gap-2.5 flex-wrap">
                     <h2 className="font-['Outfit'] font-black text-2xl sm:text-3xl text-[#0D3B36] dark:text-amber-300 tracking-tight uppercase">
                       {currentApprenticeName}
                     </h2>
                     <button
+                      type="button"
                       onClick={() => setIsEditingName(true)}
-                      className="p-1.5 rounded-xl bg-white/90 dark:bg-slate-800 text-slate-500 hover:text-[#0D3B36] dark:hover:text-amber-300 border border-slate-200 dark:border-slate-700 transition-all cursor-pointer shadow-2xs"
+                      className="px-2.5 py-1.5 rounded-xl bg-white/90 dark:bg-slate-800 text-slate-700 dark:text-amber-300 hover:text-[#0D3B36] border border-slate-300 dark:border-amber-400/40 transition-all cursor-pointer shadow-2xs flex items-center gap-1.5 text-xs font-bold shrink-0"
                       title="Edit Apprentice Name"
                     >
-                      <Edit className="w-3.5 h-3.5" />
+                      <Edit className="w-3.5 h-3.5 text-[#DCA134] shrink-0" />
+                      <span>Edit Name</span>
                     </button>
                   </div>
                 )}

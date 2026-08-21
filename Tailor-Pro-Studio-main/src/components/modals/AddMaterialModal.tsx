@@ -172,7 +172,7 @@ export const AddMaterialModal: React.FC<AddMaterialModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 overflow-y-auto font-['Outfit'] animate-fade-in">
+    <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 pt-10 sm:pt-12 pb-6 sm:pb-8 overflow-y-auto font-['Outfit'] animate-fade-in">
       <div className="w-full max-w-xl bg-white dark:bg-[#061E1B] rounded-[32px] sm:rounded-[36px] shadow-2xl border border-white/80 dark:border-white/10 my-auto max-h-[92vh] sm:max-h-[90vh] flex flex-col relative overflow-hidden">
         
         {/* Modal Decorative Header Bar */}

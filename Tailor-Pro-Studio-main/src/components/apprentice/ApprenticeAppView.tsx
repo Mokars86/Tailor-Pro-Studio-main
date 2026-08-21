@@ -56,8 +56,12 @@ export const ApprenticeAppView: React.FC<ApprenticeAppViewProps> = ({
   const [activeTab, setActiveTab] = useState<ApprenticeTab>('production');
 
   // Find active linked apprentice record or fall back
-  const activeApprenticeRecord = apprentices.find((a) => a.isLinked || (apprenticeName && a.name.toLowerCase() === apprenticeName.toLowerCase())) || apprentices[0];
-  const resolvedApprenticeName = activeApprenticeRecord?.name || apprenticeName || 'Apprentice Trainee';
+  const activeApprenticeRecord = (apprenticeName && apprenticeName !== 'Apprentice Trainee')
+    ? apprentices.find((a) => a.name.toLowerCase() === apprenticeName.toLowerCase()) || apprentices.find((a) => a.isLinked) || apprentices[0]
+    : apprentices.find((a) => a.isLinked) || apprentices[0];
+  const resolvedApprenticeName = (apprenticeName && apprenticeName !== 'Apprentice Trainee')
+    ? apprenticeName
+    : (activeApprenticeRecord?.name && !activeApprenticeRecord.name.includes('@') ? activeApprenticeRecord.name : 'Apprentice Trainee');
 
   // Modal states
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -87,7 +91,7 @@ export const ApprenticeAppView: React.FC<ApprenticeAppViewProps> = ({
       />
 
       {/* Main Dynamic View Area */}
-      <main className="max-w-4xl mx-auto px-3 sm:px-6 pt-[max(136px,calc(120px+env(safe-area-inset-top)))] sm:pt-28 md:pt-28">
+      <main className="max-w-4xl mx-auto px-3 sm:px-6 pt-[max(150px,calc(140px+env(safe-area-inset-top)))] sm:pt-40 md:pt-44">
         {/* TAB 1: PRODUCTION */}
         {activeTab === 'production' && (
           <ApprenticeProductionTab

@@ -34,7 +34,8 @@ import {
   upsertStudioSettingsToSupabase,
   seedInitialSupabaseData,
   signUpSupabaseUser,
-  signInSupabaseUser
+  signInSupabaseUser,
+  fetchUserAccountsFromSupabase
 } from './services/supabaseService';
 import {
   subscribeNetworkStatus,
@@ -105,6 +106,7 @@ export default function App() {
   const [isLicensePromptOpen, setIsLicensePromptOpen] = useState<boolean>(false);
   const [isGraduationPromptOpen, setIsGraduationPromptOpen] = useState<boolean>(false);
   const [activeUserEmail, setActiveUserEmail] = useState<string>('');
+  const [activeUserFullName, setActiveUserFullName] = useState<string>('');
 
   // Navigation tab state
   const [activeTab, setActiveTab] = useState<TabType>('clients');
@@ -285,13 +287,17 @@ export default function App() {
     return () => unsubscribe();
   }, []);
 
+  const isSyncingRef = React.useRef(false);
+
   // Comprehensive Cross-Device Cloud Synchronization (Desktop <-> Mobile)
   const performFullCloudSync = React.useCallback(async () => {
+    if (isSyncingRef.current) return;
     if (typeof navigator !== 'undefined' && !navigator.onLine) {
-      console.log('[Supabase Sync] Device offline. Operating in local storage mode.');
       setSupabaseStatus('offline');
       return;
     }
+
+    isSyncingRef.current = true;
 
     try {
       setSupabaseStatus('syncing');
@@ -335,7 +341,6 @@ export default function App() {
             if (!loc || isMockId(loc.id)) continue;
             if (!remoteMap.has(loc.id)) {
               merged.unshift(loc);
-              upsertClientToSupabase(loc);
             }
           }
 
@@ -345,18 +350,58 @@ export default function App() {
       }
 
       const dbApprentices = await fetchApprenticesFromSupabase();
-      if (dbApprentices !== null) {
+      const dbUsers = await fetchUserAccountsFromSupabase();
+
+      let combinedApprentices: Apprentice[] = dbApprentices ? [...dbApprentices] : [];
+
+      if (dbUsers) {
+        const apprenticeUsers = dbUsers.filter((u) => u.role && u.role.startsWith('Apprentice'));
+        for (const u of apprenticeUsers) {
+          const rawName = u.fullName && u.fullName.trim() ? u.fullName.trim() : u.email.split('@')[0];
+          const appName = rawName.charAt(0).toUpperCase() + rawName.slice(1);
+          const emailTag = u.email.split('@')[0].toLowerCase().replace(/[^a-zA-Z0-9]/g, '_');
+          const synthId = `app_${emailTag}`;
+
+          const exists = combinedApprentices.some(
+            (a) => a.id === synthId || a.name.toLowerCase() === appName.toLowerCase()
+          );
+
+          if (!exists) {
+            const initials = appName.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2) || 'AT';
+            const synthRecord: Apprentice = {
+              id: synthId,
+              name: appName,
+              initials,
+              role: 'Apprentice Trainee',
+              mentor: studioSettings.ownerName || 'Master Atelier',
+              isLinked: true,
+              handshakeLocked: true,
+              hasCert: false,
+              hoursCompleted: 0,
+              totalRequiredHours: 120,
+              certifications: [],
+              tasksCount: 0,
+              status: 'On Track',
+              specialty: 'Couture Assembly & Garment Construction'
+            };
+            combinedApprentices.push(synthRecord);
+          }
+        }
+      }
+
+      if (combinedApprentices.length > 0) {
         setApprentices((prevLocal) => {
-          const remoteMap = new Map(dbApprentices.map((a) => [a.id, a]));
-          const merged: Apprentice[] = [...dbApprentices];
+          const remoteMap = new Map(combinedApprentices.map((a) => [a.id, a]));
+          const nameMap = new Map(combinedApprentices.map((a) => [a.name.toLowerCase(), a]));
+          const merged: Apprentice[] = [...combinedApprentices];
 
           for (const loc of prevLocal) {
             if (!loc || isMockId(loc.id)) continue;
-            if (!remoteMap.has(loc.id)) {
+            if (!remoteMap.has(loc.id) && !nameMap.has(loc.name.toLowerCase())) {
               merged.unshift(loc);
-              upsertApprenticeToSupabase(loc);
             }
           }
+          localStorage.setItem('tailor_apprentices', JSON.stringify(merged));
           return merged;
         });
       }
@@ -371,7 +416,6 @@ export default function App() {
             if (!loc || isMockId(loc.id)) continue;
             if (!remoteMap.has(loc.id)) {
               merged.unshift(loc);
-              upsertApprenticeTaskToSupabase(loc);
             }
           }
           return merged;
@@ -388,7 +432,6 @@ export default function App() {
             if (!loc || isMockId(loc.id)) continue;
             if (!remoteMap.has(loc.id)) {
               merged.unshift(loc);
-              upsertUnpaidDepositToSupabase(loc);
             }
           }
           return merged;
@@ -405,7 +448,6 @@ export default function App() {
             if (!loc || isMockId(loc.id)) continue;
             if (!remoteMap.has(loc.id)) {
               merged.unshift(loc);
-              upsertRunwaySessionToSupabase(loc);
             }
           }
           return merged;
@@ -422,7 +464,6 @@ export default function App() {
             if (!loc || isMockId(loc.id)) continue;
             if (!remoteMap.has(loc.id)) {
               merged.unshift(loc);
-              upsertLedgerTransactionToSupabase(loc);
             }
           }
           return merged;
@@ -439,7 +480,6 @@ export default function App() {
             if (!loc || isMockId(loc.id)) continue;
             if (!remoteMap.has(loc.id)) {
               merged.unshift(loc);
-              upsertInventoryItemToSupabase(loc);
             }
           }
           return merged;
@@ -457,6 +497,8 @@ export default function App() {
     } catch (err) {
       console.warn('[Supabase Sync] Cross-device sync operating in local mode:', err);
       setSupabaseStatus('offline');
+    } finally {
+      isSyncingRef.current = false;
     }
   }, []);
 
@@ -543,6 +585,8 @@ export default function App() {
     setSelectedFilter('all');
     setSelectedArtistFilter('all');
     document.documentElement.classList.remove('dark');
+    setActiveUserEmail('');
+    setActiveUserFullName('');
     setAuthScreen('signin');
   };
 
@@ -1046,20 +1090,17 @@ export default function App() {
   const handleSyncNewWorkshopCode = (newCode: string) => {
     setStudioSettings((prev) => ({ ...prev, pairCode: newCode }));
 
-    const rawName = activeUserEmail ? activeUserEmail.split('@')[0] : 'Raeesa Mohammed';
-    let apprenticeName = rawName.charAt(0).toUpperCase() + rawName.slice(1);
-    if (apprenticeName.toLowerCase() === 'mubareeq' || apprenticeName.toLowerCase() === 'apprentice trainee' || apprenticeName.toLowerCase() === 'designer') {
-      apprenticeName = 'Raeesa Mohammed';
-    }
-    const apprenticeId = 'app_raeesa_mohammed';
-    const initials = 'RM';
+    const rawName = activeUserFullName || (activeUserEmail ? activeUserEmail.split('@')[0] : 'Apprentice Scholar');
+    const apprenticeName = rawName.trim().charAt(0).toUpperCase() + rawName.trim().slice(1);
+    const initials = apprenticeName.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2) || 'AS';
+    const apprenticeId = `app_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
 
     const linkedApprentice: Apprentice = {
       id: apprenticeId,
-      name: 'Raeesa Mohammed',
-      initials: 'RM',
+      name: apprenticeName,
+      initials,
       role: 'Apprentice Trainee',
-      mentor: studioSettings.ownerName || 'Kausar Mohammed',
+      mentor: studioSettings.ownerName || 'Master Atelier',
       isLinked: true,
       handshakeLocked: true,
       hasCert: false,
@@ -1072,36 +1113,26 @@ export default function App() {
     };
 
     setApprentices((prev) => {
-      const exists = prev.some((a) => a.id === linkedApprentice.id || a.name.toLowerCase() === linkedApprentice.name.toLowerCase());
+      const exists = prev.some((a) => a.name.toLowerCase() === linkedApprentice.name.toLowerCase());
+      let updated: Apprentice[];
       if (exists) {
-        return prev.map((a) =>
-          a.id === linkedApprentice.id || a.name.toLowerCase() === linkedApprentice.name.toLowerCase()
+        updated = prev.map((a) =>
+          a.name.toLowerCase() === linkedApprentice.name.toLowerCase()
             ? { ...a, isLinked: true }
             : a
         );
+      } else {
+        updated = [linkedApprentice, ...prev];
       }
-      return [linkedApprentice, ...prev];
+      localStorage.setItem('tailor_apprentices', JSON.stringify(updated));
+      return updated;
     });
 
     upsertApprenticeToSupabase(linkedApprentice);
   };
 
   const handleRefreshApprentices = async () => {
-    const local = localStorage.getItem('tailor_apprentices');
-    if (local) {
-      try {
-        const parsed = JSON.parse(local);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          setApprentices(parsed);
-        }
-      } catch (e) {
-        console.error(e);
-      }
-    }
-    const dbApprentices = await fetchApprenticesFromSupabase();
-    if (dbApprentices && dbApprentices.length > 0) {
-      setApprentices(dbApprentices);
-    }
+    await performFullCloudSync();
   };
 
   const handleUnlinkApprentice = (apprenticeId: string) => {
@@ -1131,80 +1162,65 @@ export default function App() {
     setStudioSettings((prev) => ({ ...prev, theme: newTheme }));
   };
 
-  const handleSignInSuccess = async (email: string, selectedRole?: UserRole) => {
+  const handleSignInSuccess = (email: string, selectedRole?: UserRole, password?: string) => {
     setSearchQuery('');
     setSelectedFilter('all');
     setSelectedArtistFilter('all');
-    const userEmail = email.trim() || 'designer@tailorpro.com';
+    const userEmail = email.trim() || 'master@tailorpro.com';
     setActiveUserEmail(userEmail);
+
+    if (password && userEmail) {
+      signInSupabaseUser(userEmail, password).then((res) => {
+        if (res && res.success && 'user' in res && res.user) {
+          console.log('[Supabase Auth] Successfully authenticated user with Supabase:', res.user.email);
+        } else if (res && 'error' in res && res.error) {
+          console.warn('[Supabase Auth] Remote auth notice:', res.error);
+        }
+      });
+    }
 
     const isApprenticeEmail =
       userEmail.toLowerCase().includes('apprentice') ||
       userEmail.toLowerCase().includes('trainee') ||
-      userEmail.toLowerCase().includes('scholar') ||
-      userEmail.toLowerCase().includes('raeesa') ||
-      userEmail.toLowerCase().includes('mubarick');
+      userEmail.toLowerCase().includes('scholar');
 
-    const isAdminEmail = userEmail.toLowerCase() === 'admin@tailorpro.com';
+    const resolvedRole: UserRole = selectedRole || (isApprenticeEmail ? 'Apprentice (Trainee & CAD Blueprint View)' : 'Master (Studio Owner & Financial Control)');
 
-    let resolvedRole: UserRole = selectedRole || (isApprenticeEmail ? 'Apprentice (Trainee & CAD Blueprint View)' : 'Master (Studio Owner & Financial Control)');
+    // 1. Synchronously activate workspace & transition to main app dashboard
+    setWorkspaceActivated(true);
+    setUserRole(resolvedRole);
+    setIsLicensePromptOpen(false);
+    setAuthScreen('app');
 
-    // Sync cloud user account approval status from Supabase (or immediate local fallback if offline)
-    const users = await syncUserAccountsFromSupabase();
-    let workspaceActivated = isWorkspaceActivated();
-
+    // 2. Register/update user account record locally
+    const users = getUserAccountRecords();
     let user = users.find((u) => u.email.toLowerCase() === userEmail.toLowerCase());
-
-    // Auto-approve Admin & Apprentice accounts
-    if (isAdminEmail || isApprenticeEmail || resolvedRole.startsWith('Apprentice')) {
-      workspaceActivated = true;
-      setWorkspaceActivated(true);
-      if (user) user.status = 'approved';
-    }
-
     if (user) {
-      if (selectedRole) {
-        resolvedRole = selectedRole;
-        user.role = selectedRole;
-      }
-      if (user.status === 'approved' || workspaceActivated) {
-        user.status = 'approved';
-        setWorkspaceActivated(true, user.licenseKey);
-      }
+      user.status = 'approved';
+      if (selectedRole) user.role = selectedRole;
       saveUserAccountRecords(users);
-
-      setUserRole(resolvedRole);
-
-      if (user.status === 'approved' || workspaceActivated) {
-        setIsLicensePromptOpen(false);
-        setAuthScreen('app');
+      if (user.fullName && user.fullName.trim() && !user.fullName.includes('@')) {
+        setActiveUserFullName(user.fullName.trim());
       } else {
-        setIsLicensePromptOpen(true);
+        const appMatch = apprentices.find((a) => a.id.toLowerCase().includes(userEmail.split('@')[0].toLowerCase()) || a.name.toLowerCase() === userEmail.split('@')[0].toLowerCase());
+        if (appMatch && appMatch.name && !appMatch.name.includes('@')) {
+          setActiveUserFullName(appMatch.name);
+        }
       }
     } else {
-      const registered = registerUserAccount({
+      registerUserAccount({
         email: userEmail,
-        fullName: isApprenticeEmail ? 'Raeesa Mohammed' : 'Atelier Designer',
-        studioName: studioSettings.studioName || 'My Atelier Studio',
+        fullName: activeUserFullName || userEmail.split('@')[0] || 'Atelier Master',
+        studioName: studioSettings.studioName || 'TAILOR PRO STUDIO',
         role: resolvedRole
       });
-
-      setUserRole(resolvedRole);
-
-      if (registered.status === 'approved' || workspaceActivated || isApprenticeEmail || isAdminEmail) {
-        registered.status = 'approved';
-        setWorkspaceActivated(true, registered.licenseKey);
-        setIsLicensePromptOpen(false);
-        setAuthScreen('app');
-      } else {
-        setIsLicensePromptOpen(true);
-      }
     }
 
-    // Trigger cloud sync asynchronously in background without delaying login UI
+    // 3. Trigger cloud sync asynchronously in background
     setTimeout(() => {
+      syncUserAccountsFromSupabase();
       performFullCloudSync();
-    }, 100);
+    }, 50);
   };
 
   const handleRegisterSuccess = (
@@ -1244,21 +1260,21 @@ export default function App() {
 
     setUserRole(role);
     setActiveUserEmail(userEmail);
+    if (fullName && fullName.trim()) {
+      setActiveUserFullName(fullName.trim());
+    }
 
     if (role.startsWith('Apprentice')) {
-      const rawName = fullName && fullName.trim() ? fullName.trim() : (userEmail ? userEmail.split('@')[0] : 'Raeesa Mohammed');
-      let appName = rawName.charAt(0).toUpperCase() + rawName.slice(1);
-      if (appName.toLowerCase() === 'mubareeq' || appName.toLowerCase() === 'apprentice trainee' || appName.toLowerCase() === 'designer') {
-        appName = 'Raeesa Mohammed';
-      }
-      const initials = appName === 'Raeesa Mohammed' ? 'RM' : (appName.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2) || 'RM');
+      const rawName = fullName && fullName.trim() ? fullName.trim() : (userEmail ? userEmail.split('@')[0] : 'Apprentice Trainee');
+      const appName = rawName.charAt(0).toUpperCase() + rawName.slice(1);
+      const initials = appName.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2) || 'AT';
 
       const newApprenticeRecord: Apprentice = {
-        id: `app_${appName.toLowerCase().replace(/\s+/g, '_')}`,
+        id: `app_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
         name: appName,
         initials,
         role: 'Apprentice Trainee',
-        mentor: studioSettings.ownerName || 'Kausar Mohammed',
+        mentor: studioSettings.ownerName || 'Master Atelier',
         isLinked: true,
         handshakeLocked: true,
         hasCert: false,
@@ -1272,10 +1288,7 @@ export default function App() {
 
       setApprentices((prev) => {
         const filtered = prev.filter(
-          (a) =>
-            a.id !== 'app_raeesa_mubarick' &&
-            a.name.toLowerCase() !== 'mubareeq' &&
-            a.name.toLowerCase() !== appName.toLowerCase()
+          (a) => a.name.toLowerCase() !== appName.toLowerCase()
         );
         const updated = [newApprenticeRecord, ...filtered];
         localStorage.setItem('tailor_apprentices', JSON.stringify(updated));
@@ -1387,8 +1400,22 @@ export default function App() {
     const cleanName = newName.trim();
     if (!cleanName) return;
 
+    // 1. Update active user full name state
+    setActiveUserFullName(cleanName);
+
+    // 2. Update local user account records
+    if (activeUserEmail) {
+      const users = getUserAccountRecords();
+      const user = users.find((u) => u.email.toLowerCase() === activeUserEmail.toLowerCase());
+      if (user) {
+        user.fullName = cleanName;
+        saveUserAccountRecords(users);
+      }
+    }
+
+    // 3. Update apprentices array and persist to localStorage & Supabase
     setApprentices((prev) => {
-      const active = prev.find((a) => a.isLinked) || prev[0];
+      const active = prev.find((a) => (activeUserEmail && a.id.toLowerCase().includes(activeUserEmail.split('@')[0].toLowerCase())) || a.isLinked) || prev[0];
       const initials = cleanName.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2) || 'AT';
       
       let updatedList: Apprentice[];
@@ -1429,10 +1456,15 @@ export default function App() {
     });
   };
 
-  // Render Apprentice View if userRole is Apprentice
-  if (userRole.startsWith('Apprentice')) {
-    const activeAppRecord = apprentices.find((a) => a.isLinked) || apprentices[0];
-    const resolvedAppName = activeAppRecord?.name || (activeUserEmail ? activeUserEmail.split('@')[0] : 'Apprentice Trainee');
+  // Render Apprentice View if authScreen is 'app' and userRole is Apprentice
+  if (authScreen === 'app' && userRole.startsWith('Apprentice')) {
+    const targetName = activeUserFullName.trim();
+    const matchedAppRecord = targetName
+      ? apprentices.find((a) => a.name.toLowerCase() === targetName.toLowerCase())
+      : (activeUserEmail ? apprentices.find((a) => a.id.toLowerCase().includes(activeUserEmail.split('@')[0].toLowerCase()) || a.name.toLowerCase() === activeUserEmail.split('@')[0].toLowerCase()) : undefined);
+
+    const activeAppRecord = matchedAppRecord || apprentices.find((a) => a.isLinked) || apprentices[0];
+    const resolvedAppName = targetName || (activeAppRecord && !activeAppRecord.name.includes('@') ? activeAppRecord.name : '') || (activeUserEmail ? activeUserEmail.split('@')[0] : 'Apprentice Trainee');
 
     return (
       <>
@@ -1494,7 +1526,7 @@ export default function App() {
             setIsGraduationPromptOpen(false);
             sessionStorage.setItem('tailor_graduation_dismissed', 'true');
           }}
-          apprenticeName={activeUserEmail ? activeUserEmail.split('@')[0] : 'Raeesa Mubarick'}
+          apprenticeName={resolvedAppName}
           masterName={studioSettings.ownerName || 'Mubarik Tuahir Ali'}
           onGraduateToMasterStudio={handleGraduateToMasterStudio}
         />
@@ -1509,7 +1541,7 @@ export default function App() {
   }
 
   return (
-    <div className={`min-h-screen md:pl-64 pt-[max(136px,calc(120px+env(safe-area-inset-top)))] sm:pt-28 md:pt-28 pb-32 sm:pb-36 transition-colors duration-300 font-['Plus_Jakarta_Sans',sans-serif] ${
+    <div className={`min-h-screen md:pl-64 pt-[max(150px,calc(140px+env(safe-area-inset-top)))] sm:pt-40 md:pt-44 pb-32 sm:pb-36 transition-colors duration-300 font-['Plus_Jakarta_Sans',sans-serif] ${
       theme === 'dark'
         ? 'bg-[#061E1B] text-slate-100 dark'
         : 'bg-[#EBF5F0] text-[#0D3B36]'

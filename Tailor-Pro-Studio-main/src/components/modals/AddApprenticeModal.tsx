@@ -58,8 +58,8 @@ export const AddApprenticeModal: React.FC<AddApprenticeModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-md flex items-center justify-center p-4">
-      <div className="glass-card rounded-3xl p-6 sm:p-8 max-w-md w-full relative shadow-2xl border border-white/80">
+    <div className="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 pt-10 sm:pt-12 pb-6 sm:pb-8 overflow-y-auto animate-fade-in font-['Outfit']">
+      <div className="glass-card rounded-3xl p-5 sm:p-8 max-w-md w-full relative shadow-2xl border border-white/80 my-auto max-h-[90vh] overflow-y-auto custom-scrollbar">
         <button
           onClick={onClose}
           className="absolute top-5 right-5 p-2 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-800 transition-all"

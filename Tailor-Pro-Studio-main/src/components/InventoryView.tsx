@@ -386,11 +386,11 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
 
       {/* Dedicated Full-Screen All Materials Inventory Modal */}
       {isAllMaterialsModalOpen && (
-        <div className="fixed inset-0 z-[100] bg-slate-900/60 dark:bg-slate-950/85 backdrop-blur-md flex flex-col items-center justify-start p-2 sm:p-4 overflow-y-auto animate-fade-in font-['Outfit'] select-none min-h-screen">
-          <div className="w-full max-w-4xl my-auto space-y-3.5 sm:space-y-4">
+        <div className="fixed inset-0 z-[100] bg-slate-900/70 dark:bg-slate-950/90 backdrop-blur-md flex flex-col items-center justify-center p-2.5 sm:p-4 pt-10 sm:pt-12 pb-6 sm:pb-8 animate-fade-in font-['Outfit'] select-none h-screen w-screen overflow-hidden">
+          <div className="w-full max-w-4xl h-full flex flex-col gap-2.5 sm:gap-3.5 overflow-hidden">
             
-            {/* Modal Header Bar */}
-            <div className="bg-white dark:bg-slate-900/95 border border-slate-200 dark:border-amber-400/30 rounded-2xl p-3 sm:p-4 sm:px-5 text-slate-900 dark:text-white shadow-2xl space-y-2.5 sm:space-y-3 w-full">
+            {/* Modal Header Bar (Static) */}
+            <div className="bg-white dark:bg-slate-900/95 border border-slate-200 dark:border-amber-400/30 rounded-2xl p-3 sm:p-4 sm:px-5 text-slate-900 dark:text-white shadow-2xl space-y-2 sm:space-y-2.5 w-full shrink-0">
               {/* Top Row: Icon + Title + Close Button */}
               <div className="flex items-start justify-between gap-2.5">
                 <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
@@ -398,7 +398,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                     <Package className="w-4.5 h-4.5 sm:w-6 sm:h-6" />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <h3 className="text-xs sm:text-base font-black tracking-wide uppercase text-[#0D3B36] dark:text-amber-300 leading-snug break-words">
+                    <h3 className="text-xs xs:text-sm sm:text-base font-black tracking-wide uppercase text-[#0D3B36] dark:text-amber-300 leading-snug break-words">
                       ALL FABRICS & MATERIALS INVENTORY ({items.length})
                     </h3>
                     <p className="text-[10px] sm:text-xs text-slate-600 dark:text-slate-400 font-semibold leading-tight mt-0.5 hidden xs:block">
@@ -437,8 +437,8 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
               </div>
             </div>
 
-            {/* Modal Body Container */}
-            <div className="bg-slate-50 dark:bg-[#092825] border-2 border-slate-200 dark:border-amber-400/40 rounded-2xl sm:rounded-3xl p-3 sm:p-5 shadow-2xl space-y-4 text-slate-800 dark:text-slate-100 max-h-[75vh] overflow-y-auto custom-scrollbar">
+            {/* Modal Body Container (Scrollable) */}
+            <div className="bg-slate-50 dark:bg-[#092825] border-2 border-slate-200 dark:border-amber-400/40 rounded-2xl sm:rounded-3xl p-3 sm:p-5 shadow-2xl space-y-3 sm:space-y-4 text-slate-800 dark:text-slate-100 flex-1 min-h-0 overflow-y-auto custom-scrollbar">
               
               {/* Live Search Bar inside Modal */}
               <div className="relative w-full">
@@ -576,8 +576,8 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
 
             </div>
 
-            {/* Modal Footer Controls */}
-            <div className="flex flex-col sm:flex-row items-center justify-between bg-white dark:bg-slate-900/90 border border-slate-200 dark:border-amber-400/30 rounded-2xl p-3 px-4 text-slate-700 dark:text-white text-xs font-semibold gap-2 shadow-xl">
+            {/* Modal Footer Controls (Static) */}
+            <div className="flex flex-col sm:flex-row items-center justify-between bg-white dark:bg-slate-900/90 border border-slate-200 dark:border-amber-400/30 rounded-2xl p-3 px-4 text-slate-700 dark:text-white text-xs font-semibold gap-2 shadow-xl shrink-0">
               <span className="text-slate-600 dark:text-amber-200/80">
                 Showing {items.length} total inventory items in catalog
               </span>
