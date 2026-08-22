@@ -25,7 +25,7 @@ interface InventoryViewProps {
   items: InventoryItem[];
   onRestockItem: (id: string, amount: number) => void;
   onOpenAddMaterialModal: () => void;
-  onOpenFabricScanner?: () => void;
+  onOpenFabricScanner?: (tab?: 'color' | 'sides' | 'saved') => void;
   onRemoveItem?: (id: string) => void;
 }
 
@@ -113,7 +113,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
               className="flex-1 sm:flex-none px-3 sm:px-4 py-2.5 rounded-full bg-amber-500/10 hover:bg-amber-500/20 text-[#0D3B36] dark:text-amber-300 border border-[#DCA134] text-xs font-extrabold flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-2xs active:scale-95 text-center truncate"
             >
               <Palette className="w-4 h-4 text-[#DCA134] shrink-0" />
-              <span className="truncate">Snap Fabric</span>
+              <span className="truncate">Scan Fabric & Face Inspector</span>
             </button>
           )}
 
@@ -178,6 +178,37 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
             </span>
           </div>
         </div>
+      </div>
+
+      {/* Fabric Face & Back Inspector Quick Launch Banner */}
+      <div className="p-4 rounded-2xl bg-gradient-to-r from-[#0D3B36] via-[#092D29] to-[#134e47] border-2 border-amber-400/40 text-white shadow-md flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 animate-fade-in">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-2xl bg-amber-400/20 border border-amber-400/40 flex items-center justify-center text-[#DCA134] shrink-0">
+            <Layers className="w-5 h-5 text-amber-300" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <h4 className="font-extrabold text-sm text-amber-300 tracking-tight uppercase">
+                Fabric Face & Back Inspector
+              </h4>
+              <span className="px-2 py-0.5 rounded-full bg-emerald-500 text-slate-900 text-[9px] font-black uppercase">
+                AI Atelier Tool
+              </span>
+            </div>
+            <p className="text-xs text-slate-300 leading-snug">
+              Unsure which side is the front? Snap Side A & Side B to inspect weave, sheen, and tailor chalking advice.
+            </p>
+          </div>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => onOpenFabricScanner ? onOpenFabricScanner('sides') : null}
+          className="w-full sm:w-auto px-4 py-2 rounded-xl bg-[#DCA134] hover:bg-amber-400 text-[#0D3B36] text-xs font-black flex items-center justify-center gap-2 shadow-md transition-all hover:scale-102 cursor-pointer shrink-0"
+        >
+          <Eye className="w-4 h-4 text-[#0D3B36]" />
+          <span>Check Front vs Back Side</span>
+        </button>
       </div>
 
       {/* Search & Category Filter Navigation Bar */}

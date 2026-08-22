@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ShieldCheck, Key, UserCheck, XCircle, CheckCircle2, Copy, Plus, Lock, Search, AlertCircle, RefreshCw, Calendar, Clock, Sparkles, Settings, Trash2 } from 'lucide-react';
+import { ShieldCheck, Key, UserCheck, XCircle, CheckCircle2, Copy, Plus, Lock, Search, AlertCircle, RefreshCw, Calendar, Clock, Sparkles, Settings, Trash2, Printer, Download } from 'lucide-react';
 import { LicenseRecord, UserAccountRecord, LicenseDuration } from '../../types';
 import {
   getLicenseKeys,
@@ -32,6 +32,13 @@ export const SuperAdminPortal: React.FC<SuperAdminPortalProps> = ({ isOpen, onCl
   // License Duration Selection State
   const [isGenerateModalOpen, setIsGenerateModalOpen] = useState<boolean>(false);
 
+  // Workshop Batch Generator State
+  const [isBatchModalOpen, setIsBatchModalOpen] = useState<boolean>(false);
+  const [batchName, setBatchName] = useState<string>('Accra Atelier Workshop Batch #1');
+  const [batchCount, setBatchCount] = useState<number>(20);
+  const [isGeneratingBatch, setIsGeneratingBatch] = useState<boolean>(false);
+  const [generatedBatchKeys, setGeneratedBatchKeys] = useState<string[]>([]);
+
   // Change Admin PIN State
   const [isChangePinModalOpen, setIsChangePinModalOpen] = useState<boolean>(false);
   const [newPinInput, setNewPinInput] = useState<string>('');
@@ -45,6 +52,51 @@ export const SuperAdminPortal: React.FC<SuperAdminPortalProps> = ({ isOpen, onCl
   const refreshData = () => {
     setUsers(getUserAccountRecords());
     setLicenses(getLicenseKeys());
+  };
+
+  const handleGenerateWorkshopBatch = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (batchCount < 1 || batchCount > 100) {
+      alert('Please enter a batch quantity between 1 and 100.');
+      return;
+    }
+
+    setIsGeneratingBatch(true);
+    const newKeys: string[] = [];
+
+    const savedKeysRaw = localStorage.getItem('tailor_workshop_keys');
+    let savedKeys: Array<{ code: string; status: string; generatedAt: string; batchName: string }> = savedKeysRaw ? JSON.parse(savedKeysRaw) : [];
+
+    for (let i = 0; i < batchCount; i++) {
+      const randomPart = Math.floor(1000 + Math.random() * 9000);
+      const code = `TPS-WORKSHOP-${new Date().getFullYear()}-${randomPart}`;
+      generateNewLicenseKey('1_year', 'MASTER', `${batchName} (Card #${i + 1})`);
+      newKeys.push(code);
+      savedKeys.unshift({
+        code,
+        status: 'active',
+        generatedAt: new Date().toISOString(),
+        batchName
+      });
+    }
+
+    localStorage.setItem('tailor_workshop_keys', JSON.stringify(savedKeys));
+    setIsGeneratingBatch(false);
+    setGeneratedBatchKeys(newKeys);
+    refreshData();
+    setNoticeMessage(`Generated ${batchCount} Printable Workshop Voucher Keys for "${batchName}"!`);
+  };
+
+  const handleExportBatchCSV = () => {
+    if (generatedBatchKeys.length === 0) return;
+    const rows = ['Voucher Code,Batch Name,Duration,Tier,Status', ...generatedBatchKeys.map((k) => `${k},"${batchName}",1 Year,MASTER,ACTIVE`)].join('\n');
+    const encodedUri = 'data:text/csv;charset=utf-8,' + encodeURIComponent(rows);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', `Workshop_Voucher_Keys_${batchName.replace(/\s+/g, '_')}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   if (!isOpen) return null;
@@ -335,11 +387,20 @@ export const SuperAdminPortal: React.FC<SuperAdminPortalProps> = ({ isOpen, onCl
                 </button>
 
                 <button
+                  onClick={() => setIsBatchModalOpen(true)}
+                  className="px-3.5 py-2 rounded-xl bg-amber-400/20 hover:bg-amber-400/30 text-amber-300 text-xs font-black border border-amber-400/40 flex items-center gap-1.5 shadow-sm transition-all shrink-0 cursor-pointer"
+                  title="Generate Batch Workshop Voucher Keys"
+                >
+                  <Printer className="w-4 h-4 text-amber-300" />
+                  <span>Workshop Keys 🖨️</span>
+                </button>
+
+                <button
                   onClick={() => setIsGenerateModalOpen(true)}
                   className="px-3.5 py-2 rounded-xl bg-[#DCA134] hover:bg-[#c9902b] text-[#0D3B36] text-xs font-black flex items-center gap-1.5 shadow-sm transition-all shrink-0 cursor-pointer"
                 >
                   <Plus className="w-4 h-4" />
-                  <span>Generate Key</span>
+                  <span>Generate Single Key</span>
                 </button>
               </div>
             </div>
@@ -733,6 +794,126 @@ export const SuperAdminPortal: React.FC<SuperAdminPortalProps> = ({ isOpen, onCl
               </button>
 
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* WORKSHOP BATCH GENERATOR MODAL */}
+      {isBatchModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-sm animate-fade-in font-['Outfit']">
+          <div className="relative w-full max-w-xl bg-white dark:bg-[#092825] rounded-3xl shadow-2xl border border-slate-200 dark:border-white/10 overflow-hidden space-y-4 p-6">
+            <div className="flex items-center justify-between border-b border-slate-200 dark:border-white/10 pb-3">
+              <div className="flex items-center gap-2">
+                <Printer className="w-5 h-5 text-[#DCA134]" />
+                <h3 className="font-extrabold text-base text-[#0D3B36] dark:text-amber-300 uppercase tracking-tight">
+                  Batch Workshop Voucher Key Generator
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsBatchModalOpen(false)}
+                className="p-1 rounded-lg bg-slate-100 dark:bg-white/10 text-slate-500 hover:text-slate-800 dark:text-slate-300 transition-colors cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleGenerateWorkshopBatch} className="space-y-4">
+              <div>
+                <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">
+                  Workshop Batch Title / Event Name:
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={batchName}
+                  onChange={(e) => setBatchName(e.target.value)}
+                  placeholder="e.g. Accra Atelier Workshop Batch #1"
+                  className="w-full px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-900 dark:text-slate-100"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">
+                  Quantity of 1-Year Master Voucher Keys to Generate:
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  max="100"
+                  required
+                  value={batchCount}
+                  onChange={(e) => setBatchCount(parseInt(e.target.value) || 1)}
+                  className="w-full px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-900 dark:text-slate-100"
+                />
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setIsBatchModalOpen(false)}
+                  className="px-4 py-2.5 rounded-xl bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold text-xs cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isGeneratingBatch}
+                  className="px-6 py-2.5 rounded-xl bg-[#0D3B36] hover:bg-[#082824] text-amber-300 font-black text-xs flex items-center gap-2 shadow-md cursor-pointer disabled:opacity-60"
+                >
+                  {isGeneratingBatch ? (
+                    <>
+                      <RefreshCw className="w-4 h-4 text-amber-300 animate-spin" />
+                      <span>GENERATING BATCH...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Printer className="w-4 h-4 text-amber-300" />
+                      <span>GENERATE {batchCount} WORKSHOP KEYS 🖨️</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
+
+            {/* Generated Batch Output & Export */}
+            {generatedBatchKeys.length > 0 && (
+              <div className="p-4 rounded-2xl bg-slate-900 border border-amber-400/40 space-y-3 animate-fade-in text-white">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-black text-amber-300 flex items-center gap-1.5">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                    Generated {generatedBatchKeys.length} Voucher Keys!
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={handleExportBatchCSV}
+                      className="px-3 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-slate-900 font-black text-[11px] flex items-center gap-1 cursor-pointer shadow-sm"
+                    >
+                      <Download className="w-3.5 h-3.5" />
+                      <span>Export CSV 📄</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => window.print()}
+                      className="px-3 py-1.5 rounded-xl bg-[#DCA134] hover:bg-amber-400 text-[#0D3B36] font-black text-[11px] flex items-center gap-1 cursor-pointer shadow-sm"
+                    >
+                      <Printer className="w-3.5 h-3.5" />
+                      <span>Print Vouchers 🖨️</span>
+                    </button>
+                  </div>
+                </div>
+
+                <div className="max-h-40 overflow-y-auto font-mono text-[11px] p-3 rounded-xl bg-black/60 border border-white/10 space-y-1 select-all">
+                  {generatedBatchKeys.map((key, idx) => (
+                    <div key={idx} className="flex items-center justify-between border-b border-white/5 py-1">
+                      <span className="text-amber-300 font-bold">{key}</span>
+                      <span className="text-slate-400 text-[10px]">1-Year Master Voucher</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}

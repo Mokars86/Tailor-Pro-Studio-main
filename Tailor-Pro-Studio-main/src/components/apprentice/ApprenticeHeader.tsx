@@ -30,28 +30,28 @@ export const ApprenticeHeader: React.FC<ApprenticeHeaderProps> = ({
   const displayBrandName = studioName && studioName !== 'My Atelier Studio' ? studioName : 'MOKARS STITCHES STUDIO';
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-40 md:pl-64 pt-[max(10px,env(safe-area-inset-top))] sm:pt-4 pb-2 px-3 sm:px-6 bg-[#EBF5F0]/95 dark:bg-[#061E1B]/95 backdrop-blur-md border-b border-[#0D3B36]/10 dark:border-white/10 shadow-xs transition-all duration-200">
-      <div className="max-w-4xl mx-auto space-y-3">
+    <header className="fixed top-0 left-0 right-0 z-40 md:pl-64 pt-[max(4px,env(safe-area-inset-top))] sm:pt-4 pb-1.5 sm:pb-2 px-1.5 sm:px-6 bg-[#EBF5F0]/95 dark:bg-[#061E1B]/95 backdrop-blur-md border-b border-[#0D3B36]/10 dark:border-white/10 shadow-xs transition-all duration-200">
+      <div className="max-w-4xl mx-auto space-y-2 sm:space-y-3">
         {/* Master Link Card */}
-        <div className="bg-white/90 dark:bg-[#061E1B]/95 backdrop-blur-md rounded-2xl sm:rounded-3xl p-2.5 sm:p-4 border-2 border-[#DCA134] shadow-md flex flex-col xs:flex-row items-start xs:items-center justify-between gap-2.5 sm:gap-3">
+        <div className="bg-white/90 dark:bg-[#061E1B]/95 backdrop-blur-md rounded-xl sm:rounded-3xl p-2 sm:p-4 border-2 border-[#DCA134] shadow-md flex items-center justify-between gap-2 sm:gap-3">
           {/* Left Logo + Titles */}
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-2xl bg-[#061E1B] border-2 border-[#DCA134] overflow-hidden shadow-sm shrink-0">
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+            <div className="w-8 h-8 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-[#061E1B] border-2 border-[#DCA134] overflow-hidden shadow-sm shrink-0">
               <img src={studioLogoUrl || '/tailor_pro_logo.jpg'} alt="Master Brand Logo" className="w-full h-full object-cover" />
             </div>
 
-            <div>
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-[10px] font-black uppercase tracking-wider text-[#DCA134] flex items-center gap-1">
+            <div className="min-w-0">
+              <div className="flex items-center gap-1">
+                <span className="text-[9px] font-black uppercase tracking-wider text-[#DCA134] flex items-center gap-0.5 truncate">
                   <span>★ LINKED MASTER ATELIER</span>
                 </span>
               </div>
-              <h1 className="font-['Outfit'] font-black text-lg sm:text-xl text-[#0D3B36] dark:text-[#DCA134] tracking-tight leading-tight uppercase mt-0.5">
+              <h1 className="font-['Outfit'] font-black text-xs sm:text-xl text-[#0D3B36] dark:text-[#DCA134] tracking-tight leading-tight uppercase truncate max-w-[170px] xs:max-w-[240px] sm:max-w-none">
                 {displayBrandName}
               </h1>
-              <p className="text-xs font-extrabold text-slate-600 dark:text-slate-300 flex items-center gap-1">
-                <span>Master Trainer:</span>
-                <span className="text-[#0D3B36] dark:text-emerald-300 font-black">{masterName}</span>
+              <p className="text-[10px] sm:text-xs font-bold text-slate-600 dark:text-slate-300 flex items-center gap-1 truncate">
+                <span>Master:</span>
+                <span className="text-[#0D3B36] dark:text-emerald-300 font-extrabold truncate">{masterName}</span>
               </p>
             </div>
           </div>

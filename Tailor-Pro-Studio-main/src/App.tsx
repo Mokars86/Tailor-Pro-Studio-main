@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { App as CapacitorApp } from '@capacitor/app';
-import { TabType, Client, Apprentice, UnpaidDeposit, RunwaySession, LedgerTransaction, InventoryItem, ShopStats, StudioSettings, UserRole, RunwayStage, GarmentMeasurements, ApprenticeTask, ApprenticeTaskStatus } from './types';
+import { TabType, Client, Apprentice, UnpaidDeposit, RunwaySession, LedgerTransaction, InventoryItem, ShopStats, StudioSettings, UserRole, RunwayStage, GarmentMeasurements, ApprenticeTask, ApprenticeTaskStatus, StudioSubscription } from './types';
 import {
   initialClients,
   initialApprentices,
@@ -79,6 +79,9 @@ import { FullMeasurementsModal } from './components/modals/FullMeasurementsModal
 import { FabricColorScannerModal } from './components/modals/FabricColorScannerModal';
 import { LogoutConfirmationModal } from './components/modals/LogoutConfirmationModal';
 import { InstallAppModal } from './components/modals/InstallAppModal';
+import { SubscriptionPlansModal } from './components/modals/SubscriptionPlansModal';
+import { GraduationPaymentModal } from './components/modals/GraduationPaymentModal';
+import { getStudioSubscription, canAddClientProfile } from './services/subscriptionService';
 
 import { ApprenticeAppView } from './components/apprentice/ApprenticeAppView';
 import { SplashScreen } from './components/SplashScreen';
@@ -570,8 +573,28 @@ export default function App() {
   const [isCustomTaskOpen, setIsCustomTaskOpen] = useState<boolean>(false);
   const [isMasterCertOpen, setIsMasterCertOpen] = useState<boolean>(false);
   const [isFabricScannerOpen, setIsFabricScannerOpen] = useState<boolean>(false);
+  const [fabricScannerTab, setFabricScannerTab] = useState<'color' | 'sides' | 'saved'>('sides');
+
+  const handleOpenFabricScanner = (tab: 'color' | 'sides' | 'saved' = 'sides') => {
+    setFabricScannerTab(tab);
+    setIsFabricScannerOpen(true);
+  };
   const [isLogoutConfirmOpen, setIsLogoutConfirmOpen] = useState<boolean>(false);
   const [isInstallAppOpen, setIsInstallAppOpen] = useState<boolean>(false);
+  const [studioSub, setStudioSub] = useState<StudioSubscription>(getStudioSubscription);
+  const [isSubscriptionModalOpen, setIsSubscriptionModalOpen] = useState<boolean>(false);
+  const [graduationPaymentApprentice, setGraduationPaymentApprentice] = useState<Apprentice | null>(null);
+
+  const handleTriggerAddClient = () => {
+    const check = canAddClientProfile(clients.length);
+    if (!check.allowed) {
+      alert(`Free Tier limit reached (${check.limit} client profiles). Upgrade to Tailor Pro Master (GHS 35/mo) for unlimited client profiles!`);
+      setIsSubscriptionModalOpen(true);
+      return;
+    }
+    setEditingClient(null);
+    setIsAddClientOpen(true);
+  };
 
   const handlePromptLogout = () => {
     setIsLogoutConfirmOpen(true);
@@ -779,6 +802,17 @@ export default function App() {
 
 
   const handleSaveClient = (savedClient: Client) => {
+    const isNewClient = !clients.some((c) => c.id === savedClient.id);
+    if (isNewClient) {
+      const check = canAddClientProfile(clients.length);
+      if (!check.allowed) {
+        setIsAddClientOpen(false);
+        setIsSubscriptionModalOpen(true);
+        alert(`Free Tier Limit Reached: You have reached the maximum limit of ${check.limit} client profiles on the Free Tier.\n\nPlease upgrade to Tailor Pro Master (GHS 35/month or GHS 200/year) to unlock unlimited client profiles!`);
+        return;
+      }
+    }
+
     setClients((prev) => {
       const exists = prev.some((c) => c.id === savedClient.id);
       let updated: Client[];
@@ -1557,10 +1591,7 @@ export default function App() {
       <Header
         studioSettings={studioSettings}
         onOpenStudioSettings={() => setIsStudioSettingsOpen(true)}
-        onOpenAddClient={() => {
-          setEditingClient(null);
-          setIsAddClientOpen(true);
-        }}
+        onOpenAddClient={handleTriggerAddClient}
         onOpenBookSession={() => {
           setPreselectedBookingClient(null);
           setIsBookSessionOpen(true);
@@ -1568,7 +1599,9 @@ export default function App() {
         activeTab={activeTab}
         userRole={userRole}
         onOpenMasterCertificate={() => setIsMasterCertOpen(true)}
-        onOpenFabricScanner={() => setIsFabricScannerOpen(true)}
+        onOpenFabricScanner={(tab) => handleOpenFabricScanner(tab || 'sides')}
+        onOpenSubscriptionModal={() => setIsSubscriptionModalOpen(true)}
+        subscriptionTier={studioSub.tier}
         onOpenInstallApp={() => setIsInstallAppOpen(true)}
         onOpenAdminPortal={() => setIsAdminPortalOpen(true)}
         onManualSync={performFullCloudSync}
@@ -1608,6 +1641,8 @@ export default function App() {
               onToggleHandshake={handleToggleApprenticeHandshake}
               onPassTask={handlePassTask}
               onUnlinkApprentice={handleUnlinkApprentice}
+              onOpenGraduationPaymentModal={(app) => setGraduationPaymentApprentice(app)}
+              onTriggerUpgradeModal={() => setIsSubscriptionModalOpen(true)}
             />
 
             {/* 3. Search Bar & Filter Chips */}
@@ -1718,7 +1753,7 @@ export default function App() {
               items={inventory}
               onRestockItem={handleRestockInventoryItem}
               onOpenAddMaterialModal={() => setIsAddMaterialOpen(true)}
-              onOpenFabricScanner={() => setIsFabricScannerOpen(true)}
+              onOpenFabricScanner={(tab) => handleOpenFabricScanner(tab || 'sides')}
               onRemoveItem={(id) => setInventory((prev) => prev.filter((item) => item.id !== id))}
             />
           </div>
@@ -1729,10 +1764,7 @@ export default function App() {
       <BottomNav
         activeTab={activeTab}
         onTabChange={setActiveTab}
-        onOpenQuickAdd={() => {
-          setEditingClient(null);
-          setIsAddClientOpen(true);
-        }}
+        onOpenQuickAdd={handleTriggerAddClient}
         onOpenStudioSettings={() => setIsStudioSettingsOpen(true)}
         studioName={studioSettings.studioName}
         ownerName={studioSettings.ownerName}
@@ -1916,7 +1948,20 @@ export default function App() {
       <FabricColorScannerModal
         isOpen={isFabricScannerOpen}
         onClose={() => setIsFabricScannerOpen(false)}
+        initialTab={fabricScannerTab}
         onAddMaterialToInventory={handleAddMaterialToInventory}
+      />
+
+      <SubscriptionPlansModal
+        isOpen={isSubscriptionModalOpen}
+        onClose={() => setIsSubscriptionModalOpen(false)}
+        onSubscriptionUpdated={(newSub) => setStudioSub(newSub)}
+      />
+
+      <GraduationPaymentModal
+        isOpen={!!graduationPaymentApprentice}
+        onClose={() => setGraduationPaymentApprentice(null)}
+        apprentice={graduationPaymentApprentice}
       />
 
       <CustomTaskModal

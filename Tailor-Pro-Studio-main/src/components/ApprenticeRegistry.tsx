@@ -4,6 +4,7 @@ import { Apprentice, ApprenticeTask } from '../types';
 import { CurriculumTemplateModal } from './modals/CurriculumTemplateModal';
 import { ApprenticeCertificateModal } from './modals/ApprenticeCertificateModal';
 import { generateMasterWorkshopCode } from '../utils/workshopCode';
+import { getGraduationPayment, canLinkApprentice } from '../services/subscriptionService';
 
 interface ApprenticeRegistryProps {
   apprentices: Apprentice[];
@@ -15,6 +16,8 @@ interface ApprenticeRegistryProps {
   onToggleHandshake?: (apprenticeId: string) => void;
   onPassTask?: (taskId: string) => void;
   onUnlinkApprentice?: (apprenticeId: string) => void;
+  onOpenGraduationPaymentModal?: (apprentice: Apprentice) => void;
+  onTriggerUpgradeModal?: () => void;
   studioLogoUrl?: string;
   studioName?: string;
   masterTrainer?: string;
@@ -30,6 +33,8 @@ export const ApprenticeRegistry: React.FC<ApprenticeRegistryProps> = ({
   onToggleHandshake,
   onPassTask,
   onUnlinkApprentice,
+  onOpenGraduationPaymentModal,
+  onTriggerUpgradeModal,
   studioLogoUrl,
   studioName,
   masterTrainer
@@ -70,6 +75,8 @@ export const ApprenticeRegistry: React.FC<ApprenticeRegistryProps> = ({
     }
   };
 
+  const linkCheck = canLinkApprentice(apprentices.length);
+
   return (
     <div className="w-full bg-[#061E1B] border-2 border-[#DCA134] rounded-2xl sm:rounded-3xl p-3.5 sm:p-5 text-white shadow-xl relative overflow-hidden font-['Outfit'] space-y-3.5 sm:space-y-4 my-2 sm:my-3">
       {/* Background Soft Glow */}
@@ -80,6 +87,26 @@ export const ApprenticeRegistry: React.FC<ApprenticeRegistryProps> = ({
         <div className="bg-amber-500/20 border border-amber-400/50 text-amber-200 px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-2 animate-fade-in">
           <CheckCircle2 className="w-4 h-4 text-amber-400 shrink-0" />
           <span>{curriculumNotice}</span>
+        </div>
+      )}
+
+      {/* Free Tier Apprentice Limit Banner */}
+      {!linkCheck.allowed && (
+        <div className="p-3 rounded-2xl bg-amber-500/20 border border-amber-400/50 text-amber-200 text-xs font-bold flex items-center justify-between flex-wrap gap-2 animate-fade-in">
+          <div className="flex items-center gap-2">
+            <Info className="w-4 h-4 text-amber-400 shrink-0" />
+            <span>Free Tier Limit: Tailor Pro Free allows linking max 1 apprentice profile ({apprentices.length}/1). Upgrade to Master Pro for unlimited linked apprentices!</span>
+          </div>
+          {onTriggerUpgradeModal && (
+            <button
+              type="button"
+              onClick={onTriggerUpgradeModal}
+              className="px-3.5 py-1.5 rounded-xl bg-[#DCA134] hover:bg-amber-400 text-[#0D3B36] font-black text-xs flex items-center gap-1 shadow-md cursor-pointer shrink-0"
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              <span>Upgrade to Master 👑</span>
+            </button>
+          )}
         </div>
       )}
 
@@ -210,24 +237,27 @@ export const ApprenticeRegistry: React.FC<ApprenticeRegistryProps> = ({
                           {/* Handshake Button */}
                           <button
                             type="button"
-                            disabled={!isCurriculumCompleted || isHandshakeApproved}
-                            onClick={() => handleToggleHandshakeAction(apprentice)}
+                            disabled={!isCurriculumCompleted}
+                            onClick={() => {
+                              if (!isCurriculumCompleted) return;
+                              handleToggleHandshakeAction(apprentice);
+                            }}
                             className={`px-2.5 sm:px-3.5 py-1.5 rounded-xl sm:rounded-full text-[10px] sm:text-xs font-black flex items-center justify-center gap-1.5 transition-all border shadow-xs truncate ${
                               isHandshakeApproved
-                                ? 'bg-emerald-600/40 text-emerald-300 border-emerald-500/60 cursor-not-allowed opacity-90'
+                                ? 'bg-emerald-600/40 text-emerald-300 border-emerald-500/60 cursor-pointer opacity-90'
                                 : !isCurriculumCompleted
-                                ? 'bg-slate-800/90 text-slate-300 border-slate-700 cursor-not-allowed opacity-70'
+                                ? 'bg-slate-800/90 text-slate-400 border-slate-700 cursor-not-allowed opacity-60'
                                 : 'bg-[#DCA134] hover:bg-[#c9902b] text-[#0D3B36] border-amber-200 active:scale-95 cursor-pointer'
                             }`}
                             title={
                               isHandshakeApproved
                                 ? 'Master Handshake Granted (Approved)'
                                 : !isCurriculumCompleted
-                                ? `Handshake Locked: Complete all curriculum duties first (${passedDuties.length}/${assignedDuties.length} passed)`
+                                ? `Handshake Locked 🔒: Complete all curriculum duties/hours first (${passedDuties.length}/${assignedDuties.length} passed)`
                                 : 'Grant Master Handshake Approval'
                             }
                           >
-                            <Handshake className={`w-3.5 h-3.5 shrink-0 ${isHandshakeApproved ? 'text-emerald-300' : !isCurriculumCompleted ? 'text-slate-300' : 'text-[#0D3B36]'}`} />
+                            <Handshake className={`w-3.5 h-3.5 shrink-0 ${isHandshakeApproved ? 'text-emerald-300' : !isCurriculumCompleted ? 'text-slate-400' : 'text-[#0D3B36]'}`} />
                             <span className="truncate">
                               {isHandshakeApproved
                                 ? 'Handshake Approved ✓'
@@ -238,24 +268,52 @@ export const ApprenticeRegistry: React.FC<ApprenticeRegistryProps> = ({
                           </button>
 
                           {/* Cert Button */}
-                          <button
-                            type="button"
-                            disabled={!isCurriculumCompleted}
-                            onClick={() => isCurriculumCompleted && setSelectedCertApprentice(apprentice)}
-                            className={`px-2.5 sm:px-3.5 py-1.5 rounded-xl sm:rounded-full text-[10px] sm:text-xs font-black flex items-center justify-center gap-1.5 transition-all shadow-xs truncate ${
-                              !isCurriculumCompleted
-                                ? 'bg-slate-900/90 text-slate-400 border border-slate-700 cursor-not-allowed opacity-60'
-                                : 'bg-[#061E1B] hover:bg-[#041412] text-amber-300 border border-[#DCA134] active:scale-95 cursor-pointer'
-                            }`}
-                            title={
-                              !isCurriculumCompleted
-                                ? `Certificate Locked: Available upon curriculum completion (${passedDuties.length}/${assignedDuties.length} passed)`
-                                : 'View / Print Graduation Certificate'
-                            }
-                          >
-                            <Sparkles className={`w-3.5 h-3.5 shrink-0 ${!isCurriculumCompleted ? 'text-slate-400' : 'text-amber-300'}`} />
-                            <span className="truncate">{!isCurriculumCompleted ? 'Cert 🔒' : 'Cert 📜'}</span>
-                          </button>
+                          {(() => {
+                            const payment = getGraduationPayment(apprentice.id);
+                            const isCertPaid = payment?.isPaid || false;
+
+                            return (
+                              <button
+                                type="button"
+                                disabled={!isCurriculumCompleted}
+                                onClick={() => {
+                                  if (!isCurriculumCompleted) return;
+                                  if (!isCertPaid) {
+                                    if (onOpenGraduationPaymentModal) {
+                                      onOpenGraduationPaymentModal(apprentice);
+                                    } else {
+                                      alert(`Graduation fee payment (GHS 250) is required to unlock certificate for ${apprentice.name}.`);
+                                    }
+                                  } else {
+                                    setSelectedCertApprentice(apprentice);
+                                  }
+                                }}
+                                className={`px-2.5 sm:px-3.5 py-1.5 rounded-xl sm:rounded-full text-[10px] sm:text-xs font-black flex items-center justify-center gap-1.5 transition-all shadow-xs truncate ${
+                                  !isCurriculumCompleted
+                                    ? 'bg-slate-900/90 text-slate-400 border border-slate-700 cursor-not-allowed opacity-60'
+                                    : !isCertPaid
+                                    ? 'bg-amber-400 hover:bg-amber-300 text-[#061E1B] border border-amber-500 cursor-pointer active:scale-95 font-black'
+                                    : 'bg-[#061E1B] hover:bg-[#041412] text-amber-300 border border-[#DCA134] active:scale-95 cursor-pointer'
+                                }`}
+                                title={
+                                  !isCurriculumCompleted
+                                    ? `Certificate Locked 🔒: Available upon curriculum completion (${passedDuties.length}/${assignedDuties.length} passed)`
+                                    : !isCertPaid
+                                    ? 'Pay GHS 250 Graduation Fee to Unlock Certificate 📜'
+                                    : 'View / Print Graduation Certificate 📜'
+                                }
+                              >
+                                <Sparkles className={`w-3.5 h-3.5 shrink-0 ${!isCurriculumCompleted ? 'text-slate-400' : 'text-amber-300'}`} />
+                                <span className="truncate">
+                                  {!isCurriculumCompleted
+                                    ? 'Cert 🔒'
+                                    : !isCertPaid
+                                    ? 'Pay Cert 📜'
+                                    : 'Cert 📜'}
+                                </span>
+                              </button>
+                            );
+                          })()}
 
                           {/* Assign Duty */}
                           <button
@@ -530,28 +588,83 @@ export const ApprenticeRegistry: React.FC<ApprenticeRegistryProps> = ({
                               {/* Handshake Toggle Button */}
                               <button
                                 type="button"
-                                onClick={() => onToggleHandshake && onToggleHandshake(apprentice.id)}
-                                className={`px-2.5 sm:px-3 py-1.5 rounded-xl text-[11px] font-black flex items-center justify-center gap-1 transition-all shadow-2xs cursor-pointer truncate ${
+                                disabled={!isCurriculumCompleted}
+                                onClick={() => {
+                                  if (!isCurriculumCompleted) return;
+                                  if (onToggleHandshake) onToggleHandshake(apprentice.id);
+                                }}
+                                className={`px-2.5 sm:px-3 py-1.5 rounded-xl text-[11px] font-black flex items-center justify-center gap-1 transition-all shadow-2xs truncate ${
                                   isHandshakeApproved
-                                    ? 'bg-emerald-100 text-emerald-900 border border-emerald-300 dark:bg-emerald-950/80 dark:text-emerald-300'
-                                    : 'bg-amber-100 text-amber-900 border border-amber-300 dark:bg-amber-950/80 dark:text-amber-300'
+                                    ? 'bg-emerald-100 text-emerald-900 border border-emerald-300 dark:bg-emerald-950/80 dark:text-emerald-300 cursor-pointer'
+                                    : !isCurriculumCompleted
+                                    ? 'bg-slate-200 text-slate-400 dark:bg-slate-900 dark:text-slate-500 border border-slate-300 dark:border-slate-800 cursor-not-allowed opacity-60'
+                                    : 'bg-amber-100 text-amber-900 border border-amber-300 dark:bg-amber-950/80 dark:text-amber-300 cursor-pointer'
                                 }`}
-                                title={isHandshakeApproved ? 'Handshake Granted' : 'Grant Handshake Access'}
+                                title={
+                                  isHandshakeApproved
+                                    ? 'Master Handshake Granted (Approved)'
+                                    : !isCurriculumCompleted
+                                    ? `Handshake Locked 🔒: Complete curriculum/hours first (${passedDuties.length}/${assignedDuties.length} passed)`
+                                    : 'Grant Master Handshake Approval'
+                                }
                               >
                                 <Handshake className="w-3.5 h-3.5 shrink-0" />
-                                <span>{isHandshakeApproved ? 'Approved' : 'Handshake'}</span>
+                                <span>
+                                  {isHandshakeApproved
+                                    ? 'Approved ✓'
+                                    : !isCurriculumCompleted
+                                    ? 'Handshake 🔒'
+                                    : 'Handshake 🤝'}
+                                </span>
                               </button>
 
                               {/* Certificate Button */}
-                              <button
-                                type="button"
-                                onClick={() => setSelectedCertApprentice(apprentice)}
-                                className="px-2.5 sm:px-3 py-1.5 rounded-xl bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-[#061E1B] text-[11px] font-black flex items-center justify-center gap-1 shadow-xs transition-all active:scale-95 cursor-pointer truncate"
-                                title="View Apprentice Certificate"
-                              >
-                                <Sparkles className="w-3.5 h-3.5 shrink-0" />
-                                <span>Cert</span>
-                              </button>
+                              {(() => {
+                                const payment = getGraduationPayment(apprentice.id);
+                                const isCertPaid = payment?.isPaid || false;
+
+                                return (
+                                  <button
+                                    type="button"
+                                    disabled={!isCurriculumCompleted}
+                                    onClick={() => {
+                                      if (!isCurriculumCompleted) return;
+                                      if (!isCertPaid) {
+                                        if (onOpenGraduationPaymentModal) {
+                                          onOpenGraduationPaymentModal(apprentice);
+                                        } else {
+                                          alert(`Graduation fee payment (GHS 250) is required to unlock certificate for ${apprentice.name}.`);
+                                        }
+                                      } else {
+                                        setSelectedCertApprentice(apprentice);
+                                      }
+                                    }}
+                                    className={`px-2.5 sm:px-3 py-1.5 rounded-xl text-[11px] font-black flex items-center justify-center gap-1 transition-all shadow-xs truncate ${
+                                      !isCurriculumCompleted
+                                        ? 'bg-slate-200 text-slate-400 dark:bg-slate-900 dark:text-slate-500 border border-slate-300 dark:border-slate-800 cursor-not-allowed opacity-60'
+                                        : !isCertPaid
+                                        ? 'bg-amber-400 hover:bg-amber-300 text-[#061E1B] border border-amber-500 cursor-pointer active:scale-95 font-black'
+                                        : 'bg-[#061E1B] hover:bg-[#041412] text-amber-300 border border-[#DCA134] cursor-pointer active:scale-95'
+                                    }`}
+                                    title={
+                                      !isCurriculumCompleted
+                                        ? `Certificate Locked 🔒: Available upon curriculum completion & GHS 250 fee payment (${passedDuties.length}/${assignedDuties.length} passed)`
+                                        : !isCertPaid
+                                        ? 'Pay GHS 250 Graduation Fee to Unlock Certificate 📜'
+                                        : 'View & Print Graduation Certificate 📜'
+                                    }
+                                  >
+                                    <Sparkles className="w-3.5 h-3.5 shrink-0" />
+                                    <span>
+                                      {!isCurriculumCompleted
+                                        ? 'Cert 🔒'
+                                        : !isCertPaid
+                                        ? 'Pay Cert 📜'
+                                        : 'Cert 📜'}
+                                    </span>
+                                  </button>
+                                );
+                              })()}
 
                               {/* Assign Duty Button */}
                               <button

@@ -194,4 +194,51 @@ export interface UserAccountRecord {
   registeredAt: string;
 }
 
+export interface FabricSideInspectionResult {
+  verdict: 'Side A is Right Side (Face)' | 'Side B is Right Side (Face)' | 'Reversible / Identical Double-Faced Fabric';
+  confidence: 'High' | 'Medium' | 'Low';
+  faceSide: 'Side A' | 'Side B' | 'Both';
+  fabricType: string;
+  keyDifferentiators: string[];
+  tailoringAdvice: {
+    markingGuidance: string;
+    cuttingAdvice: string;
+    pressingNotes: string;
+  };
+}
+
+export interface SavedFabricSideInspection {
+  id: string;
+  title: string;
+  date: string;
+  sideAImage: string;
+  sideBImage: string;
+  result: FabricSideInspectionResult;
+}
+
+export type SubscriptionTier = 'FREE' | 'MASTER' | 'ENTERPRISE';
+
+export interface StudioSubscription {
+  tier: SubscriptionTier;
+  status: 'ACTIVE' | 'EXPIRED' | 'TRIAL';
+  clientProfileLimit: number; // 10 for Free, 999999 for Master/Enterprise
+  expiresAt?: string;
+  momoNumber?: string;
+  txRef?: string;
+  updatedAt: string;
+}
+
+export interface GraduationCertificatePayment {
+  apprenticeId: string;
+  apprenticeName: string;
+  masterHandshakeLocked: boolean;
+  isPaid: boolean;
+  amountGHS: number; // 250
+  paidAt?: string;
+  txRef?: string;
+  paymentMethod?: 'MoMo' | 'Card' | 'License';
+}
+
+
+
 

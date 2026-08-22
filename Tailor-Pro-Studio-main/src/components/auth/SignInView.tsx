@@ -202,23 +202,6 @@ export const SignInView: React.FC<SignInViewProps> = ({
               </button>
             )}
           </div>
-
-          {/* Support Card */}
-          <div className="glass-card rounded-2xl p-4 text-center space-y-1 bg-white/60 border border-white/80">
-            <div className="text-xs font-bold text-[#0D3B36] flex items-center justify-center gap-1">
-              <Coffee className="w-3.5 h-3.5 text-[#0D3B36]" />
-              <span>Support Tailor Pro</span>
-            </div>
-            <p className="text-[11px] text-[#0D3B36]/70 font-semibold">
-              Buy me a coffee via MTN Mobile Money:
-            </p>
-            <p className="text-xs font-extrabold text-[#0D3B36] tracking-wider">
-              0546920418
-            </p>
-            <p className="text-[10px] text-[#0D3B36]/60 font-semibold">
-              Name: Mubarik Tuahir Ali
-            </p>
-          </div>
         </div>
 
       </div>

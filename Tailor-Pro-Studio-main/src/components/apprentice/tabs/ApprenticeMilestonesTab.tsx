@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import { Sparkles, Lock, ChevronDown, ChevronUp, Award, Printer, Handshake, CheckCircle2 } from 'lucide-react';
 import { ApprenticeCertificateModal } from '../../modals/ApprenticeCertificateModal';
+import { GraduationPaymentModal } from '../../modals/GraduationPaymentModal';
 import { Apprentice } from '../../../types';
+import { getGraduationPayment } from '../../../services/subscriptionService';
 
 interface ApprenticeMilestonesTabProps {
   apprenticeName?: string;
@@ -22,6 +24,7 @@ export const ApprenticeMilestonesTab: React.FC<ApprenticeMilestonesTabProps> = (
 }) => {
   const [expandedStage, setExpandedStage] = useState<number | null>(1);
   const [isCertModalOpen, setIsCertModalOpen] = useState(false);
+  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
 
   const activeApprentice: Apprentice = apprentice || {
     id: `app_${Date.now()}`,
@@ -280,37 +283,68 @@ export const ApprenticeMilestonesTab: React.FC<ApprenticeMilestonesTabProps> = (
         </p>
 
         {/* Certificate View Action CTA */}
-        <button
-          type="button"
-          disabled={!isHandshakeApproved}
-          onClick={() => {
-            if (isHandshakeApproved) {
-              setIsCertModalOpen(true);
-            }
-          }}
-          className={`w-full py-3 px-3 sm:px-4 rounded-2xl font-black text-[11px] sm:text-xs flex items-center justify-center gap-2 shadow-xs transition-all uppercase tracking-wider ${
-            !isHandshakeApproved
-              ? 'bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-500 border border-slate-300 dark:border-slate-700 cursor-not-allowed opacity-70'
-              : 'bg-[#0D3B36] hover:bg-[#082824] text-white active:scale-95 cursor-pointer'
-          }`}
-          title={
-            !isHandshakeApproved
-              ? 'Certificate Locked: Master Trainer must approve your handshake on the Master Dashboard first'
-              : 'View and print your official graduation certificate'
-          }
-        >
-          {!isHandshakeApproved ? (
-            <div className="flex items-center justify-center gap-1.5 flex-wrap">
-              <Lock className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500 shrink-0" />
-              <span>Certificate Locked 🔒 (Awaiting Approval)</span>
-            </div>
-          ) : (
-            <div className="flex items-center justify-center gap-1.5 flex-wrap">
-              <Sparkles className="w-3.5 h-3.5 text-[#DCA134] shrink-0" />
-              <span>View / Print Official Graduation Certificate</span>
-            </div>
-          )}
-        </button>
+        {(() => {
+          const certPayment = getGraduationPayment(activeApprentice.id);
+          const isPaid = certPayment?.isPaid || false;
+
+          return (
+            <>
+              <button
+                type="button"
+                disabled={!isHandshakeApproved}
+                onClick={() => {
+                  if (!isHandshakeApproved) return;
+                  if (!isPaid) {
+                    setIsPaymentModalOpen(true);
+                  } else {
+                    setIsCertModalOpen(true);
+                  }
+                }}
+                className={`w-full py-3 px-3 sm:px-4 rounded-2xl font-black text-[11px] sm:text-xs flex items-center justify-center gap-2 shadow-xs transition-all uppercase tracking-wider ${
+                  !isHandshakeApproved
+                    ? 'bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-500 border border-slate-300 dark:border-slate-700 cursor-not-allowed opacity-70'
+                    : !isPaid
+                    ? 'bg-[#DCA134] hover:bg-amber-400 text-[#0D3B36] active:scale-95 cursor-pointer shadow-md'
+                    : 'bg-[#0D3B36] hover:bg-[#082824] text-white active:scale-95 cursor-pointer'
+                }`}
+                title={
+                  !isHandshakeApproved
+                    ? 'Certificate Locked: Master Trainer must approve your handshake on the Master Dashboard first'
+                    : !isPaid
+                    ? 'Pay GHS 250 graduation fee to unlock official certificate'
+                    : 'View and print your official graduation certificate'
+                }
+              >
+                {!isHandshakeApproved ? (
+                  <div className="flex items-center justify-center gap-1.5 flex-wrap">
+                    <Lock className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500 shrink-0" />
+                    <span>Certificate Locked 🔒 (Awaiting Approval)</span>
+                  </div>
+                ) : !isPaid ? (
+                  <div className="flex items-center justify-center gap-1.5 flex-wrap font-extrabold">
+                    <Sparkles className="w-4 h-4 text-[#0D3B36] shrink-0" />
+                    <span>Pay GHS 250 Graduation Fee & Unlock Certificate 📜</span>
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-center gap-1.5 flex-wrap">
+                    <Sparkles className="w-3.5 h-3.5 text-[#DCA134] shrink-0" />
+                    <span>View / Print Official Graduation Certificate 📜</span>
+                  </div>
+                )}
+              </button>
+
+              <GraduationPaymentModal
+                isOpen={isPaymentModalOpen}
+                onClose={() => setIsPaymentModalOpen(false)}
+                apprentice={activeApprentice}
+                onPaymentSuccess={() => {
+                  setIsPaymentModalOpen(false);
+                  setIsCertModalOpen(true);
+                }}
+              />
+            </>
+          );
+        })()}
       </div>
 
       {/* Certificate Modal */}
