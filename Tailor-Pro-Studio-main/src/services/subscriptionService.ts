@@ -157,14 +157,14 @@ export function recordGraduationPayment(
   txRef?: string
 ): GraduationCertificatePayment {
   const payments = getGraduationPayments();
-  const generatedTxRef = txRef || `CERT_GHS250_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+  const generatedTxRef = txRef || `CERT_GHS300_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
 
   const record: GraduationCertificatePayment = {
     apprenticeId,
     apprenticeName,
     masterHandshakeLocked: true,
     isPaid: true,
-    amountGHS: 250,
+    amountGHS: 300,
     paidAt: new Date().toISOString(),
     txRef: generatedTxRef,
     paymentMethod

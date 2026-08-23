@@ -52,8 +52,8 @@ export const GraduationPaymentModal: React.FC<GraduationPaymentModalProps> = ({
 
     initializePaystackCheckout({
       email: `${momoNumber.replace(/\D/g, '')}@tailorpro.com`,
-      amountGHS: 250,
-      referencePrefix: 'PAYSTACK_CERT_250',
+      amountGHS: 300,
+      referencePrefix: 'PAYSTACK_CERT_300',
       metadata: {
         apprenticeId: apprentice.id,
         apprenticeName: apprentice.name,
@@ -63,20 +63,23 @@ export const GraduationPaymentModal: React.FC<GraduationPaymentModalProps> = ({
       onSuccess: (txRef) => {
         recordGraduationPayment(apprentice.id, apprentice.name, selectedProvider === 'CARD' ? 'Card' : 'MoMo', txRef);
         setIsProcessing(false);
-        setSuccessMessage(`Paystack Payment Verified (${txRef})! GHS 250 Graduation Fee completed. Official Mokars Digital Certificate & CV unlocked for ${apprentice.name}.`);
+        setSuccessMessage(`Paystack Payment Verified (${txRef})! GHS 300 Graduation Fee completed. Official Mokars Digital Certificate & CV unlocked for ${apprentice.name}.`);
         if (onPaymentSuccess) {
           onPaymentSuccess();
         }
       },
       onCancel: () => {
         setIsProcessing(false);
+      },
+      onError: () => {
+        setIsProcessing(false);
       }
     });
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-sm animate-fade-in font-['Outfit'] overflow-y-auto select-none">
-      <div className="relative w-full max-w-2xl my-6 bg-white dark:bg-[#092825] rounded-3xl shadow-2xl border border-slate-200 dark:border-white/10 overflow-hidden flex flex-col max-h-[92vh]">
+    <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center p-2.5 sm:p-4 pt-10 sm:pt-6 pb-4 bg-slate-900/75 backdrop-blur-sm animate-fade-in font-['Outfit'] overflow-y-auto select-none">
+      <div className="relative w-full max-w-2xl my-1 sm:my-6 bg-white dark:bg-[#092825] rounded-2xl sm:rounded-3xl shadow-2xl border border-slate-200 dark:border-white/10 overflow-hidden flex flex-col max-h-[86vh] sm:max-h-[92vh]">
         
         {/* Header */}
         <div className="px-6 py-5 bg-gradient-to-r from-[#0D3B36] via-[#092D29] to-[#155e56] text-white flex items-center justify-between border-b border-amber-500/20 shrink-0">
@@ -119,7 +122,7 @@ export const GraduationPaymentModal: React.FC<GraduationPaymentModalProps> = ({
                 </span>
               ) : (
                 <span className="px-3 py-1 rounded-full bg-amber-400 text-[#0D3B36] font-black text-xs uppercase flex items-center gap-1 shadow-md">
-                  <Lock className="w-3.5 h-3.5" /> LOCKED — GHS 250 FEE REQUIRED
+                  <Lock className="w-3.5 h-3.5" /> LOCKED — GHS 300 FEE REQUIRED
                 </span>
               )}
             </div>
@@ -157,7 +160,7 @@ export const GraduationPaymentModal: React.FC<GraduationPaymentModalProps> = ({
 
             {!isUnlocked && (
               <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-400/30 text-amber-200 text-xs italic">
-                "Upon payment of the GHS 250 graduation processing fee, the official digital certificate and digital resume are cryptographically issued and unlocked for instant print & PDF export."
+                "Upon payment of the GHS 300 graduation processing fee, the official digital certificate and digital resume are cryptographically issued and unlocked for instant print & PDF export."
               </div>
             )}
           </div>
@@ -205,7 +208,7 @@ export const GraduationPaymentModal: React.FC<GraduationPaymentModalProps> = ({
                 </div>
 
                 <span className="px-3 py-1 rounded-full bg-amber-400 text-[#0D3B36] text-xs font-black">
-                  Fee: GHS 250
+                  Fee: GHS 300
                 </span>
               </div>
 
@@ -258,12 +261,12 @@ export const GraduationPaymentModal: React.FC<GraduationPaymentModalProps> = ({
                   {isProcessing ? (
                     <>
                       <RefreshCw className="w-4 h-4 text-amber-300 animate-spin" />
-                      <span>PROCESSING GHS 200 GRADUATION PAYMENT...</span>
+                      <span>PROCESSING GHS 300 GRADUATION PAYMENT...</span>
                     </>
                   ) : (
                     <>
                       <ShieldCheck className="w-4 h-4 text-amber-300" />
-                      <span>PAY GHS 200 VIA {selectedProvider} & UNLOCK CERTIFICATE</span>
+                      <span>PAY GHS 300 VIA {selectedProvider} & UNLOCK CERTIFICATE</span>
                     </>
                   )}
                 </button>

@@ -194,12 +194,11 @@ export const ApprenticeRegistry: React.FC<ApprenticeRegistryProps> = ({
                   );
                   const passedDuties = assignedDuties.filter((t) => t.status === 'passed');
                   
-                  // Strict Curriculum Completion:
+                  // Strict Curriculum Completion: Cert & Handshake are locked until apprentice finishes curriculum or officially graduates
                   const isCurriculumCompleted =
-                    isHandshakeApproved ||
-                    apprentice.status === 'Graduating' ||
+                    apprentice.status === 'Graduated' ||
                     (assignedDuties.length > 0 && passedDuties.length === assignedDuties.length) ||
-                    (apprentice.hoursCompleted > 0 && apprentice.hoursCompleted >= apprentice.totalRequiredHours && passedDuties.length > 0);
+                    (apprentice.totalRequiredHours > 0 && apprentice.hoursCompleted >= apprentice.totalRequiredHours && assignedDuties.length > 0 && passedDuties.length === assignedDuties.length);
 
                   return (
                     <div
@@ -282,7 +281,7 @@ export const ApprenticeRegistry: React.FC<ApprenticeRegistryProps> = ({
                                     if (onOpenGraduationPaymentModal) {
                                       onOpenGraduationPaymentModal(apprentice);
                                     } else {
-                                      alert(`Graduation fee payment (GHS 250) is required to unlock certificate for ${apprentice.name}.`);
+                                      alert(`Graduation fee payment (GHS 300) is required to unlock certificate for ${apprentice.name}.`);
                                     }
                                   } else {
                                     setSelectedCertApprentice(apprentice);
@@ -299,7 +298,7 @@ export const ApprenticeRegistry: React.FC<ApprenticeRegistryProps> = ({
                                   !isCurriculumCompleted
                                     ? `Certificate Locked 🔒: Available upon curriculum completion (${passedDuties.length}/${assignedDuties.length} passed)`
                                     : !isCertPaid
-                                    ? 'Pay GHS 250 Graduation Fee to Unlock Certificate 📜'
+                                    ? 'Pay GHS 300 Graduation Fee to Unlock Certificate 📜'
                                     : 'View / Print Graduation Certificate 📜'
                                 }
                               >
@@ -554,9 +553,9 @@ export const ApprenticeRegistry: React.FC<ApprenticeRegistryProps> = ({
                       );
                       const passedDuties = assignedDuties.filter((t) => t.status === 'passed');
                       const isCurriculumCompleted =
-                        isHandshakeApproved ||
-                        apprentice.status === 'Graduating' ||
-                        (assignedDuties.length > 0 && passedDuties.length === assignedDuties.length);
+                        apprentice.status === 'Graduated' ||
+                        (assignedDuties.length > 0 && passedDuties.length === assignedDuties.length) ||
+                        (apprentice.totalRequiredHours > 0 && apprentice.hoursCompleted >= apprentice.totalRequiredHours && assignedDuties.length > 0 && passedDuties.length === assignedDuties.length);
 
                       return (
                         <div
@@ -633,7 +632,7 @@ export const ApprenticeRegistry: React.FC<ApprenticeRegistryProps> = ({
                                         if (onOpenGraduationPaymentModal) {
                                           onOpenGraduationPaymentModal(apprentice);
                                         } else {
-                                          alert(`Graduation fee payment (GHS 250) is required to unlock certificate for ${apprentice.name}.`);
+                                          alert(`Graduation fee payment (GHS 300) is required to unlock certificate for ${apprentice.name}.`);
                                         }
                                       } else {
                                         setSelectedCertApprentice(apprentice);
@@ -648,9 +647,9 @@ export const ApprenticeRegistry: React.FC<ApprenticeRegistryProps> = ({
                                     }`}
                                     title={
                                       !isCurriculumCompleted
-                                        ? `Certificate Locked 🔒: Available upon curriculum completion & GHS 250 fee payment (${passedDuties.length}/${assignedDuties.length} passed)`
+                                        ? `Certificate Locked 🔒: Available upon curriculum completion & GHS 300 fee payment (${passedDuties.length}/${assignedDuties.length} passed)`
                                         : !isCertPaid
-                                        ? 'Pay GHS 250 Graduation Fee to Unlock Certificate 📜'
+                                        ? 'Pay GHS 300 Graduation Fee to Unlock Certificate 📜'
                                         : 'View & Print Graduation Certificate 📜'
                                     }
                                   >

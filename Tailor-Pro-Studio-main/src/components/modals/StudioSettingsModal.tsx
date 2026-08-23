@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Sun, Moon, QrCode, Copy, Printer, LogOut, Check, Upload, ShieldCheck, Download, Cloud, UserX, UserCircle2, Share2, Clipboard, ClipboardCheck, FileText, CreditCard, BadgeCheck } from 'lucide-react';
+import { X, Sun, Moon, QrCode, Copy, Printer, LogOut, Check, Upload, ShieldCheck, Download, Cloud, UserX, UserCircle2, Share2, Clipboard, ClipboardCheck, FileText, CreditCard, BadgeCheck, AlertTriangle, Trash2 } from 'lucide-react';
 import { StudioSettings, Apprentice } from '../../types';
 import { generateMasterWorkshopCode } from '../../utils/workshopCode';
 import { exportAtelierDataBackup, restoreAtelierDataBackup, restoreAtelierDataFromText, copyBackupToClipboard, clearAllAtelierData } from '../../utils/dataBackup';
@@ -14,6 +14,7 @@ interface StudioSettingsModalProps {
   onUnlinkApprentice?: (apprenticeId: string) => void;
   onToggleTheme?: (newTheme: 'light' | 'dark') => void;
   onOpenMembershipCard?: () => void;
+  onDeleteAccount?: () => void;
   userRole?: string;
 }
 
@@ -26,6 +27,7 @@ export const StudioSettingsModal: React.FC<StudioSettingsModalProps> = ({
   onUnlinkApprentice,
   onToggleTheme,
   onOpenMembershipCard,
+  onDeleteAccount,
   userRole
 }) => {
   const [showMembershipCardModal, setShowMembershipCardModal] = useState<boolean>(false);
@@ -52,8 +54,9 @@ export const StudioSettingsModal: React.FC<StudioSettingsModalProps> = ({
   const [printedNotice, setPrintedNotice] = useState(false);
   const [backupNotice, setBackupNotice] = useState<string | null>(null);
   const [showPasteRestore, setShowPasteRestore] = useState(false);
-  const [pastedJsonText, setPastedJsonText] = useState('');
   const [copiedBackupCode, setCopiedBackupCode] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleteConfirmInput, setDeleteConfirmInput] = useState('');
 
   const handleCopyKey = () => {
     if (form?.pairCode && navigator?.clipboard?.writeText) {
@@ -1005,6 +1008,84 @@ export const StudioSettingsModal: React.FC<StudioSettingsModalProps> = ({
             {backupNotice && (
               <div className="p-2.5 rounded-xl bg-emerald-100 dark:bg-emerald-900/60 text-emerald-800 dark:text-emerald-200 text-xs font-bold text-center animate-fade-in border border-emerald-300 dark:border-emerald-700">
                 {backupNotice}
+              </div>
+            )}
+          </div>
+
+          {/* Danger Zone: Account Deletion */}
+          <div className="p-3.5 sm:p-4 rounded-xl sm:rounded-2xl bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900/50 space-y-3">
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2 min-w-0">
+                <Trash2 className="w-4 h-4 text-rose-600 dark:text-rose-400 shrink-0" />
+                <div className="min-w-0">
+                  <h4 className="font-extrabold text-xs sm:text-sm text-rose-700 dark:text-rose-400 uppercase tracking-tight truncate">
+                    Delete Studio Account
+                  </h4>
+                  <p className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400 truncate">
+                    Permanently delete account & wipe all saved data
+                  </p>
+                </div>
+              </div>
+
+              {!showDeleteConfirm ? (
+                <button
+                  type="button"
+                  onClick={() => setShowDeleteConfirm(true)}
+                  className="px-3 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-extrabold text-[11px] sm:text-xs shrink-0 cursor-pointer transition-colors shadow-xs"
+                >
+                  Delete Account
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowDeleteConfirm(false);
+                    setDeleteConfirmInput('');
+                  }}
+                  className="px-2.5 py-1 rounded-lg bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold text-[11px] shrink-0 cursor-pointer"
+                >
+                  Cancel
+                </button>
+              )}
+            </div>
+
+            {showDeleteConfirm && (
+              <div className="p-3 rounded-xl bg-white dark:bg-slate-900 border border-rose-300 dark:border-rose-800 space-y-2.5 animate-fade-in shadow-xs">
+                <p className="text-[11px] font-bold text-rose-600 dark:text-rose-400">
+                  Type <span className="font-mono font-black text-rose-700 dark:text-rose-300">DELETE</span> to confirm permanent account removal:
+                </p>
+
+                <input
+                  type="text"
+                  value={deleteConfirmInput}
+                  onChange={(e) => setDeleteConfirmInput(e.target.value)}
+                  placeholder="Type DELETE"
+                  className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 font-mono font-bold text-xs text-rose-600 dark:text-rose-400 focus:outline-none focus:ring-2 focus:ring-rose-500"
+                />
+
+                <button
+                  type="button"
+                  disabled={deleteConfirmInput.trim().toUpperCase() !== 'DELETE'}
+                  onClick={() => {
+                    if (deleteConfirmInput.trim().toUpperCase() === 'DELETE') {
+                      clearAllAtelierData();
+                      if (onDeleteAccount) {
+                        onDeleteAccount();
+                      }
+                      onClose();
+                      onLogout();
+                      alert('Your studio account and data have been permanently deleted.');
+                    }
+                  }}
+                  className={`w-full py-2 rounded-xl font-extrabold text-xs flex items-center justify-center gap-1.5 transition-all shadow-xs ${
+                    deleteConfirmInput.trim().toUpperCase() === 'DELETE'
+                      ? 'bg-rose-600 hover:bg-rose-700 text-white cursor-pointer active:scale-98'
+                      : 'bg-slate-200 dark:bg-slate-800 text-slate-400 cursor-not-allowed opacity-60'
+                  }`}
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  <span>Delete My Account</span>
+                </button>
               </div>
             )}
           </div>

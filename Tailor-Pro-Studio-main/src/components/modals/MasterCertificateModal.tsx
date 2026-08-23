@@ -1,5 +1,5 @@
 import React, { useRef, useState } from 'react';
-import { X, Printer, ShieldCheck, Award, Edit3, Calendar, Scissors, Building2, BadgeCheck } from 'lucide-react';
+import { X, Printer, ShieldCheck, Award, Edit3, Calendar, Scissors, Building2, BadgeCheck, Lock, Sparkles } from 'lucide-react';
 import { generateUniqueCertNumber, formatCertificateDate, generateQRCodeUrl } from '../../utils/certificateGenerator';
 
 interface MasterCertificateModalProps {
@@ -9,6 +9,8 @@ interface MasterCertificateModalProps {
   masterTrainer?: string;
   ceoName?: string;
   studioLogoUrl?: string;
+  subscriptionTier?: string;
+  onOpenSubscriptionModal?: () => void;
 }
 
 export const MasterCertificateModal: React.FC<MasterCertificateModalProps> = ({
@@ -17,7 +19,9 @@ export const MasterCertificateModal: React.FC<MasterCertificateModalProps> = ({
   studioName = 'MOKARS STITCHES STUDIO',
   masterTrainer = 'KAUSARA MOHAMMED',
   ceoName = 'MUBARIK TUAHIR ALI',
-  studioLogoUrl
+  studioLogoUrl,
+  subscriptionTier = 'FREE',
+  onOpenSubscriptionModal
 }) => {
   const certificateRef = useRef<HTMLDivElement | null>(null);
   const [recipientTitle, setRecipientTitle] = useState<string>(studioName);
@@ -27,6 +31,58 @@ export const MasterCertificateModal: React.FC<MasterCertificateModalProps> = ({
   const [isEditing, setIsEditing] = useState<boolean>(false);
 
   if (!isOpen) return null;
+
+  if (subscriptionTier === 'FREE') {
+    return (
+      <div className="fixed inset-0 z-[100] bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto animate-fade-in font-['Outfit'] select-none">
+        <div className="w-full max-w-md my-auto bg-[#082824] border-2 border-amber-400/50 rounded-3xl p-6 text-center text-white shadow-2xl space-y-5 relative">
+          <button
+            type="button"
+            onClick={onClose}
+            className="absolute top-4 right-4 p-2 rounded-xl bg-white/10 hover:bg-white/20 text-slate-300 transition-all cursor-pointer"
+          >
+            <X className="w-4 h-4" />
+          </button>
+
+          <div className="w-16 h-16 rounded-2xl bg-amber-500/20 border-2 border-amber-400 text-amber-300 flex items-center justify-center mx-auto shadow-lg">
+            <Lock className="w-8 h-8 text-amber-400" />
+          </div>
+
+          <div className="space-y-2">
+            <h3 className="text-xl font-black uppercase tracking-wider text-amber-300">
+              Master Certificate Locked 👑
+            </h3>
+            <p className="text-xs text-slate-300 font-medium leading-relaxed">
+              Official Master Atelier Craftsman Accreditation is an exclusive feature reserved for <strong className="text-amber-400 font-bold">Tailor Pro Master (Pro Plan)</strong> subscribers.
+            </p>
+          </div>
+
+          <div className="p-4 rounded-2xl bg-slate-900/80 border border-amber-400/30 text-left text-xs space-y-2 text-amber-100 font-semibold">
+            <p className="flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-amber-400 shrink-0" />
+              <span>Full Landscape High-Resolution Accreditation PDF</span>
+            </p>
+            <p className="flex items-center gap-2">
+              <BadgeCheck className="w-4 h-4 text-amber-400 shrink-0" />
+              <span>Digital QR Verification Code & Authentic Seal</span>
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => {
+              onClose();
+              if (onOpenSubscriptionModal) onOpenSubscriptionModal();
+            }}
+            className="w-full py-3.5 px-4 rounded-2xl bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-[#061E1B] font-black text-xs uppercase tracking-wider shadow-xl transition-all cursor-pointer active:scale-95 flex items-center justify-center gap-2"
+          >
+            <Sparkles className="w-4 h-4" />
+            <span>Upgrade to Pro Plan (GHS 35/mo)</span>
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   const qrCodeUrl = generateQRCodeUrl(certCode, recipientTitle, studioName);
 
@@ -156,7 +212,7 @@ export const MasterCertificateModal: React.FC<MasterCertificateModalProps> = ({
           <div
             ref={certificateRef}
             id="printable-master-certificate"
-            className="relative w-full min-w-[320px] aspect-[1.414/1] bg-[#FDFCF7] text-slate-900 rounded-3xl shadow-2xl overflow-hidden border-4 border-[#DCA134] select-none print:m-0 print:border-none print:shadow-none print:rounded-none flex flex-col justify-between"
+            className="relative w-full min-w-[280px] sm:min-w-[320px] aspect-[1.414/1] bg-[#FDFCF7] text-slate-900 rounded-2xl sm:rounded-3xl shadow-2xl overflow-hidden border-2 sm:border-4 border-[#DCA134] select-none print:m-0 print:border-none print:shadow-none print:rounded-none flex flex-col justify-between"
           >
           {/* Outer & Inner Frame Accent Lines */}
           <div className="absolute inset-2 border border-[#DCA134]/60 rounded-[20px] pointer-events-none z-20" />

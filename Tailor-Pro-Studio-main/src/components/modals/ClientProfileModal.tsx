@@ -118,7 +118,7 @@ export const ClientProfileModal: React.FC<ClientProfileModalProps> = ({
   const measurements = client.measurements || {};
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-start sm:items-center justify-center p-3 sm:p-4 pt-[max(2.5rem,env(safe-area-inset-top))] sm:pt-4 overflow-y-auto">
+    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-start sm:items-center justify-center p-2 sm:p-4 pt-[max(0.75rem,env(safe-area-inset-top))] sm:pt-4 overflow-y-auto">
       <div className="w-full max-w-xl bg-[#EBF5F0] dark:bg-[#061E1B] rounded-[36px] p-5 sm:p-6 space-y-4 shadow-2xl border border-white dark:border-white/10 max-h-[86vh] sm:max-h-[92vh] flex flex-col my-0 sm:my-auto relative overflow-hidden mt-1 sm:mt-0">
         
         {/* Floating Toast Notification */}

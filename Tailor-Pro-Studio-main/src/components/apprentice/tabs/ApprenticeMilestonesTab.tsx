@@ -311,7 +311,7 @@ export const ApprenticeMilestonesTab: React.FC<ApprenticeMilestonesTabProps> = (
                   !isHandshakeApproved
                     ? 'Certificate Locked: Master Trainer must approve your handshake on the Master Dashboard first'
                     : !isPaid
-                    ? 'Pay GHS 250 graduation fee to unlock official certificate'
+                    ? 'Pay GHS 300 graduation fee to unlock official certificate'
                     : 'View and print your official graduation certificate'
                 }
               >
@@ -323,7 +323,7 @@ export const ApprenticeMilestonesTab: React.FC<ApprenticeMilestonesTabProps> = (
                 ) : !isPaid ? (
                   <div className="flex items-center justify-center gap-1.5 flex-wrap font-extrabold">
                     <Sparkles className="w-4 h-4 text-[#0D3B36] shrink-0" />
-                    <span>Pay GHS 250 Graduation Fee & Unlock Certificate 📜</span>
+                    <span>Pay GHS 300 Graduation Fee & Unlock Certificate 📜</span>
                   </div>
                 ) : (
                   <div className="flex items-center justify-center gap-1.5 flex-wrap">

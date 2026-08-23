@@ -233,7 +233,7 @@ export interface GraduationCertificatePayment {
   apprenticeName: string;
   masterHandshakeLocked: boolean;
   isPaid: boolean;
-  amountGHS: number; // 250
+  amountGHS: number; // 300
   paidAt?: string;
   txRef?: string;
   paymentMethod?: 'MoMo' | 'Card' | 'License';

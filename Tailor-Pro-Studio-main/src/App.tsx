@@ -808,7 +808,7 @@ export default function App() {
       if (!check.allowed) {
         setIsAddClientOpen(false);
         setIsSubscriptionModalOpen(true);
-        alert(`Free Tier Limit Reached: You have reached the maximum limit of ${check.limit} client profiles on the Free Tier.\n\nPlease upgrade to Tailor Pro Master (GHS 35/month or GHS 200/year) to unlock unlimited client profiles!`);
+        alert(`Free Tier Limit Reached: You have reached the maximum limit of ${check.limit} client profiles on the Free Tier.\n\nPlease upgrade to Tailor Pro Master (GHS 35/month or GHS 300/year) to unlock unlimited client profiles!`);
         return;
       }
     }
@@ -1575,7 +1575,7 @@ export default function App() {
   }
 
   return (
-    <div className={`min-h-screen md:pl-64 pt-[max(150px,calc(140px+env(safe-area-inset-top)))] sm:pt-40 md:pt-44 pb-32 sm:pb-36 transition-colors duration-300 font-['Plus_Jakarta_Sans',sans-serif] ${
+    <div className={`min-h-screen md:pl-64 pt-[max(98px,calc(90px+env(safe-area-inset-top)))] sm:pt-36 md:pt-40 pb-32 sm:pb-36 transition-colors duration-300 font-['Plus_Jakarta_Sans',sans-serif] ${
       theme === 'dark'
         ? 'bg-[#061E1B] text-slate-100 dark'
         : 'bg-[#EBF5F0] text-[#0D3B36]'
@@ -1597,9 +1597,14 @@ export default function App() {
           setIsBookSessionOpen(true);
         }}
         activeTab={activeTab}
-        userRole={userRole}
-        onOpenMasterCertificate={() => setIsMasterCertOpen(true)}
-        onOpenFabricScanner={(tab) => handleOpenFabricScanner(tab || 'sides')}
+        onOpenMasterCertificate={() => {
+          if (studioSub.tier === 'FREE') {
+            alert('Master Certificate is locked on Tailor Pro Free 👑. Upgrade to Tailor Pro Master (GHS 35/mo) to unlock your official Master Atelier Certificate!');
+            setIsSubscriptionModalOpen(true);
+            return;
+          }
+          setIsMasterCertOpen(true);
+        }}
         onOpenSubscriptionModal={() => setIsSubscriptionModalOpen(true)}
         subscriptionTier={studioSub.tier}
         onOpenInstallApp={() => setIsInstallAppOpen(true)}
@@ -1979,6 +1984,8 @@ export default function App() {
           masterTrainer={studioSettings.ownerName || studioSettings.tailorName || 'Mubarik Tuahir Ali'}
           ceoName="MUBARIK TUAHIR ALI"
           studioLogoUrl={studioSettings.logoUrl}
+          subscriptionTier={studioSub.tier}
+          onOpenSubscriptionModal={() => setIsSubscriptionModalOpen(true)}
         />
       )}
 

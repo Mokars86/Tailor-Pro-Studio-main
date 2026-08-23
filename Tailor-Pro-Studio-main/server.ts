@@ -387,6 +387,12 @@ Return a JSON object matching this exact schema:
   });
 
 
+  // Privacy Policy Endpoint
+  app.get("/privacy-policy", (req, res) => {
+    const policyPath = path.join(process.cwd(), "public", "privacy-policy.html");
+    res.sendFile(policyPath);
+  });
+
   // Vite middleware for development
   if (process.env.NODE_ENV !== "production") {
     const vite = await createViteServer({

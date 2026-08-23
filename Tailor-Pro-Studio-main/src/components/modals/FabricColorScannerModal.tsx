@@ -800,12 +800,12 @@ export const FabricColorScannerModal: React.FC<FabricColorScannerModalProps> = (
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in font-['Outfit'] overflow-y-auto select-none">
-      <div className="relative w-full max-w-3xl my-2 sm:my-6 bg-white dark:bg-[#092825] rounded-2xl sm:rounded-3xl shadow-2xl border border-slate-200 dark:border-white/10 overflow-hidden flex flex-col max-h-[95vh] sm:max-h-[92vh]">
+    <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center p-2.5 sm:p-4 pt-10 sm:pt-6 pb-4 bg-slate-900/75 backdrop-blur-sm animate-fade-in font-['Outfit'] overflow-y-auto select-none">
+      <div className="relative w-full max-w-3xl my-1 sm:my-6 bg-white dark:bg-[#092825] rounded-2xl sm:rounded-3xl shadow-2xl border border-slate-200 dark:border-white/10 overflow-hidden flex flex-col max-h-[86vh] sm:max-h-[92vh]">
         
         {/* Header */}
-        <div className="px-3.5 py-3 sm:px-6 sm:py-4 bg-[#0D3B36] text-white flex items-center justify-between border-b border-amber-500/20 shrink-0">
-          <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+        <div className="px-3 sm:px-6 py-2.5 sm:py-4 bg-[#0D3B36] text-white flex items-center justify-between border-b border-amber-500/20 shrink-0">
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
             <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl bg-white/10 border border-amber-400/30 flex items-center justify-center text-[#DCA134] shrink-0">
               {mainFeature === 'sides' ? (
                 <Layers className="w-4 h-4 sm:w-5 sm:h-5 text-[#DCA134]" />
@@ -818,11 +818,11 @@ export const FabricColorScannerModal: React.FC<FabricColorScannerModalProps> = (
                 <h2 className="font-extrabold text-xs xs:text-sm sm:text-lg tracking-tight uppercase text-amber-300 truncate">
                   {mainFeature === 'sides' ? 'Fabric Face & Back Inspector' : 'Master Fabric & Thread Matcher'}
                 </h2>
-                <span className="px-2 py-0.5 rounded-full bg-amber-400/20 text-amber-300 text-[9px] sm:text-[10px] font-black border border-amber-400/30 flex items-center gap-1">
+                <span className="px-2 py-0.5 rounded-full bg-amber-400/20 text-amber-300 text-[8px] sm:text-[10px] font-black border border-amber-400/30 flex items-center gap-1">
                   <Sparkles className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-amber-300" /> AI Atelier
                 </span>
               </div>
-              <p className="text-[10px] sm:text-xs text-slate-300 truncate">
+              <p className="text-[9px] sm:text-xs text-slate-300 truncate">
                 {mainFeature === 'sides'
                   ? 'Identify Right Side (Face) vs Wrong Side (Back) of ambiguous fabrics'
                   : 'Upload or snap fabric photo to extract color palette & thread spools'}
@@ -835,7 +835,8 @@ export const FabricColorScannerModal: React.FC<FabricColorScannerModalProps> = (
               stopCamera();
               onClose();
             }}
-            className="p-1.5 sm:p-2 rounded-xl bg-white/10 hover:bg-white/20 text-slate-200 transition-colors cursor-pointer shrink-0"
+            aria-label="Close"
+            className="p-1.5 sm:p-2 rounded-xl bg-white/10 hover:bg-white/20 text-slate-200 transition-colors cursor-pointer shrink-0 min-w-[34px] min-h-[34px] flex items-center justify-center"
           >
             <X className="w-4 h-4 sm:w-5 sm:h-5" />
           </button>

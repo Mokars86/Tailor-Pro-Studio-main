@@ -100,6 +100,9 @@ export const SubscriptionPlansModal: React.FC<SubscriptionPlansModalProps> = ({
       },
       onCancel: () => {
         setIsDonating(false);
+      },
+      onError: () => {
+        setIsDonating(false);
       }
     });
   };
@@ -114,7 +117,7 @@ export const SubscriptionPlansModal: React.FC<SubscriptionPlansModalProps> = ({
     setIsProcessing(true);
     setSuccessNotice(null);
 
-    const priceGHS = billingCycle === 'yearly' ? 200 : 35;
+    const priceGHS = billingCycle === 'yearly' ? 300 : 35;
 
     initializePaystackCheckout({
       email: `${momoNumber.replace(/\D/g, '')}@tailorpro.com`,
@@ -137,17 +140,20 @@ export const SubscriptionPlansModal: React.FC<SubscriptionPlansModalProps> = ({
       },
       onCancel: () => {
         setIsProcessing(false);
+      },
+      onError: () => {
+        setIsProcessing(false);
       }
     });
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-900/70 backdrop-blur-sm animate-fade-in font-['Outfit'] overflow-y-auto select-none">
-      <div className="relative w-full max-w-4xl my-2 sm:my-6 bg-white dark:bg-[#092825] rounded-2xl sm:rounded-3xl shadow-2xl border border-slate-200 dark:border-white/10 overflow-hidden flex flex-col max-h-[95vh] sm:max-h-[92vh]">
+    <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center p-2.5 sm:p-4 pt-10 sm:pt-6 pb-4 bg-slate-900/75 backdrop-blur-sm animate-fade-in font-['Outfit'] overflow-y-auto select-none">
+      <div className="relative w-full max-w-5xl my-1 sm:my-6 bg-white dark:bg-[#092825] rounded-2xl sm:rounded-3xl shadow-2xl border border-slate-200 dark:border-white/10 overflow-hidden flex flex-col max-h-[86vh] sm:max-h-[92vh]">
         
         {/* Header */}
-        <div className="px-3.5 py-3 sm:px-6 sm:py-5 bg-gradient-to-r from-[#0D3B36] via-[#092D29] to-[#155e56] text-white flex items-center justify-between border-b border-amber-500/20 shrink-0">
-          <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+        <div className="px-3 sm:px-6 py-2.5 sm:py-4 bg-gradient-to-r from-[#0D3B36] via-[#092D29] to-[#155e56] text-white flex items-center justify-between border-b border-amber-500/20 shrink-0">
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
             <div className="w-8 h-8 sm:w-11 sm:h-11 rounded-xl sm:rounded-2xl bg-amber-400/20 border border-amber-400/40 flex items-center justify-center text-[#DCA134] shrink-0">
               <Crown className="w-4 h-4 sm:w-6 sm:h-6 text-amber-300" />
             </div>
@@ -156,11 +162,11 @@ export const SubscriptionPlansModal: React.FC<SubscriptionPlansModalProps> = ({
                 <h2 className="font-extrabold text-xs xs:text-sm sm:text-xl tracking-tight uppercase text-amber-300 truncate">
                   Tailor Pro Subscriptions
                 </h2>
-                <span className="px-2 py-0.5 rounded-full bg-amber-400/20 text-amber-300 text-[9px] sm:text-[10px] font-black border border-amber-400/30 flex items-center gap-1">
+                <span className="px-2 py-0.5 rounded-full bg-amber-400/20 text-amber-300 text-[8px] sm:text-[10px] font-black border border-amber-400/30 flex items-center gap-1">
                   <Sparkles className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-amber-300" /> Mokars SaaS
                 </span>
               </div>
-              <p className="text-[10px] sm:text-xs text-slate-300 truncate">
+              <p className="text-[9px] sm:text-xs text-slate-300 truncate">
                 Choose the perfect atelier plan to scale client profiles and finance
               </p>
             </div>
@@ -168,7 +174,8 @@ export const SubscriptionPlansModal: React.FC<SubscriptionPlansModalProps> = ({
 
           <button
             onClick={onClose}
-            className="p-1.5 sm:p-2 rounded-xl bg-white/10 hover:bg-white/20 text-slate-200 transition-colors cursor-pointer shrink-0"
+            aria-label="Close"
+            className="p-1.5 sm:p-2 rounded-xl bg-white/10 hover:bg-white/20 text-slate-200 transition-colors cursor-pointer shrink-0 min-w-[34px] min-h-[34px] flex items-center justify-center"
           >
             <X className="w-4 h-4 sm:w-5 sm:h-5" />
           </button>
@@ -219,66 +226,63 @@ export const SubscriptionPlansModal: React.FC<SubscriptionPlansModalProps> = ({
             <span className={`text-xs font-black flex items-center gap-1.5 ${billingCycle === 'yearly' ? 'text-[#0D3B36] dark:text-amber-300' : 'text-slate-500'}`}>
               Yearly Billing
               <span className="px-2 py-0.5 rounded-full bg-emerald-500 text-slate-900 font-black text-[9px] uppercase">
-                SAVE GHS 220
+                SAVE GHS 120
               </span>
             </span>
           </div>
 
-          {/* Subscription Tier Cards Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-5">
+          {/* Subscription Tier Cards Grid (4 Tiers) */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
             
-            {/* TIER 1: FREE (Apprentice / Basic) */}
-            <div className={`p-3.5 sm:p-5 rounded-2xl sm:rounded-3xl border-2 flex flex-col justify-between space-y-3 sm:space-y-4 transition-all ${
+            {/* TIER 1: FREE */}
+            <div className={`p-3.5 sm:p-4 rounded-2xl sm:rounded-3xl border-2 flex flex-col justify-between space-y-3 transition-all ${
               currentSub.tier === 'FREE'
                 ? 'bg-slate-50 dark:bg-slate-800/90 border-slate-300 dark:border-slate-700'
                 : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800'
             }`}>
-              <div className="space-y-2.5 sm:space-y-3">
+              <div className="space-y-2.5">
                 <div className="flex items-center justify-between">
-                  <span className="px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-[9px] sm:text-[10px] font-black uppercase">
-                    Apprentice & Starter
+                  <span className="px-2.5 py-0.5 rounded-full bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-[9px] font-black uppercase">
+                    Starter
                   </span>
                   {currentSub.tier === 'FREE' && (
-                    <span className="text-[9px] sm:text-[10px] font-black text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
-                      <CheckCircle2 className="w-3 h-3 sm:w-3.5 sm:h-3.5" /> Active Plan
+                    <span className="text-[9px] font-black text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                      <CheckCircle2 className="w-3 h-3" /> Active
                     </span>
                   )}
                 </div>
 
                 <div>
-                  <h3 className="font-extrabold text-base sm:text-lg text-slate-900 dark:text-slate-100">
+                  <h3 className="font-extrabold text-base text-slate-900 dark:text-slate-100">
                     Tailor Pro Free
                   </h3>
-                  <p className="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
                     For young tailors & trainees starting out
                   </p>
                 </div>
 
-                <div className="pt-1 sm:pt-2">
-                  <span className="font-black text-xl sm:text-2xl text-slate-900 dark:text-slate-100">
+                <div className="pt-1">
+                  <span className="font-black text-xl text-slate-900 dark:text-slate-100">
                     GHS 0
                   </span>
-                  <span className="text-[11px] sm:text-xs font-bold text-slate-500 ml-1">/ forever</span>
+                  <span className="text-[11px] font-bold text-slate-500 ml-1">/ forever</span>
                 </div>
 
-                <ul className="space-y-1.5 sm:space-y-2 text-[11px] sm:text-xs pt-2 border-t border-slate-200 dark:border-slate-800">
+                <ul className="space-y-1.5 text-[11px] pt-2 border-t border-slate-200 dark:border-slate-800">
                   <li className="flex items-center gap-2 text-slate-700 dark:text-slate-300 font-semibold">
                     <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
-                    <span>Up to 10 Local Client Profiles</span>
+                    <span>Up to 10 Client Profiles</span>
                   </li>
                   <li className="flex items-center gap-2 text-slate-700 dark:text-slate-300 font-semibold">
                     <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
-                    <span>Offline Garment Measurement Form</span>
+                    <span>Garment Measurement Form</span>
                   </li>
                   <li className="flex items-center gap-2 text-slate-700 dark:text-slate-300 font-semibold">
                     <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
                     <span>Basic Fabric Scanner</span>
                   </li>
                   <li className="flex items-center gap-2 text-slate-400 dark:text-slate-500 line-through">
-                    <span>Unlimited Profiles & Ledger</span>
-                  </li>
-                  <li className="flex items-center gap-2 text-slate-400 dark:text-slate-500 line-through">
-                    <span>Offline Hotspot Studio Sync</span>
+                    <span>Unlimited Profiles</span>
                   </li>
                 </ul>
               </div>
@@ -287,73 +291,69 @@ export const SubscriptionPlansModal: React.FC<SubscriptionPlansModalProps> = ({
                 <button
                   type="button"
                   disabled
-                  className="w-full py-2 sm:py-2.5 rounded-xl bg-slate-200 dark:bg-slate-800 text-slate-500 font-bold text-xs cursor-default"
+                  className="w-full py-2 rounded-xl bg-slate-200 dark:bg-slate-800 text-slate-500 font-bold text-xs cursor-default"
                 >
                   {currentSub.tier === 'FREE' ? 'Current Active Tier' : 'Basic Tier'}
                 </button>
               </div>
             </div>
 
-            {/* TIER 2: MASTER PRO (SaaS Core Tier) */}
-            <div className="p-3.5 sm:p-5 rounded-2xl sm:rounded-3xl bg-gradient-to-b from-[#0D3B36] via-[#092D29] to-[#0A2E2A] border-2 border-amber-400 text-white shadow-xl flex flex-col justify-between space-y-3 sm:space-y-4 relative overflow-hidden">
-              <div className="absolute top-0 right-0 bg-amber-400 text-[#0D3B36] text-[8px] sm:text-[9px] font-black px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-bl-xl uppercase tracking-widest">
-                RECOMMENDED
+            {/* TIER 2: MASTER PRO */}
+            <div className="p-3.5 sm:p-4 rounded-2xl sm:rounded-3xl bg-gradient-to-b from-[#0D3B36] via-[#092D29] to-[#0A2E2A] border-2 border-amber-400 text-white shadow-xl flex flex-col justify-between space-y-3 relative overflow-hidden">
+              <div className="absolute top-0 right-0 bg-amber-400 text-[#0D3B36] text-[8px] font-black px-2 py-0.5 rounded-bl-xl uppercase tracking-widest">
+                BEST VALUE
               </div>
 
-              <div className="space-y-3">
+              <div className="space-y-2.5">
                 <div className="flex items-center justify-between">
-                  <span className="px-3 py-1 rounded-full bg-amber-400/20 text-amber-300 text-[10px] font-black uppercase border border-amber-400/40 flex items-center gap-1">
-                    <Crown className="w-3 h-3 text-amber-300" /> Master Studio
+                  <span className="px-2.5 py-0.5 rounded-full bg-amber-400/20 text-amber-300 text-[9px] font-black uppercase border border-amber-400/40 flex items-center gap-1">
+                    <Crown className="w-3 h-3 text-amber-300" /> Master Tier
                   </span>
                   {currentSub.tier === 'MASTER' && (
-                    <span className="text-[10px] font-black text-amber-300 flex items-center gap-1">
-                      <CheckCircle2 className="w-3.5 h-3.5 text-amber-400" /> Active Plan
+                    <span className="text-[9px] font-black text-amber-300 flex items-center gap-1">
+                      <CheckCircle2 className="w-3 h-3 text-amber-400" /> Active
                     </span>
                   )}
                 </div>
 
                 <div>
-                  <h3 className="font-extrabold text-xl text-amber-300">
+                  <h3 className="font-extrabold text-base text-amber-300">
                     Tailor Pro Master
                   </h3>
-                  <p className="text-xs text-slate-300 mt-0.5">
-                    For independent shop owners & bespoke ateliers
+                  <p className="text-[11px] text-slate-300 mt-0.5">
+                    For shop owners & bespoke ateliers
                   </p>
                 </div>
 
-                <div className="pt-2">
-                  <span className="font-black text-3xl text-white">
-                    GHS {billingCycle === 'yearly' ? '200' : '35'}
+                <div className="pt-1">
+                  <span className="font-black text-2xl text-white">
+                    GHS {billingCycle === 'yearly' ? '300' : '35'}
                   </span>
-                  <span className="text-xs font-bold text-amber-200 ml-1">
+                  <span className="text-[11px] font-bold text-amber-200 ml-1">
                     / {billingCycle === 'yearly' ? 'year' : 'month'}
                   </span>
                 </div>
 
-                <ul className="space-y-2.5 text-xs pt-2 border-t border-amber-500/20">
+                <ul className="space-y-1.5 text-[11px] pt-2 border-t border-amber-500/20">
                   <li className="flex items-center gap-2 text-slate-100 font-semibold">
-                    <CheckCircle2 className="w-4 h-4 text-amber-400 shrink-0" />
-                    <span><strong>UNLIMITED</strong> Client Profiles</span>
+                    <CheckCircle2 className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                    <span><strong>UNLIMITED</strong> Profiles</span>
                   </li>
                   <li className="flex items-center gap-2 text-slate-100 font-semibold">
-                    <CheckCircle2 className="w-4 h-4 text-amber-400 shrink-0" />
-                    <span>Full Ledger & Deposit Tracking</span>
+                    <CheckCircle2 className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                    <span>Ledger & Deposit Tracking</span>
                   </li>
                   <li className="flex items-center gap-2 text-slate-100 font-semibold">
-                    <CheckCircle2 className="w-4 h-4 text-amber-400 shrink-0" />
-                    <span>Fabric Face & Back AI Inspector</span>
+                    <CheckCircle2 className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                    <span>Fabric AI Inspector</span>
                   </li>
                   <li className="flex items-center gap-2 text-slate-100 font-semibold">
-                    <CheckCircle2 className="w-4 h-4 text-amber-400 shrink-0" />
-                    <span>Unlimited Apprentice Links</span>
+                    <CheckCircle2 className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                    <span>Unlimited Apprentices</span>
                   </li>
                   <li className="flex items-center gap-2 text-slate-100 font-semibold">
-                    <CheckCircle2 className="w-4 h-4 text-amber-400 shrink-0" />
-                    <span>Offline Hotspot Studio Sync</span>
-                  </li>
-                  <li className="flex items-center gap-2 text-slate-100 font-semibold">
-                    <CheckCircle2 className="w-4 h-4 text-amber-400 shrink-0" />
-                    <span>Priority WhatsApp Invoice Templates</span>
+                    <CheckCircle2 className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                    <span>Hotspot Studio Sync</span>
                   </li>
                 </ul>
               </div>
@@ -361,55 +361,117 @@ export const SubscriptionPlansModal: React.FC<SubscriptionPlansModalProps> = ({
               <div className="pt-2">
                 <a
                   href="#momo-checkout-form"
-                  className="w-full py-3 rounded-xl bg-[#DCA134] hover:bg-amber-400 text-[#0D3B36] font-black text-xs flex items-center justify-center gap-2 shadow-lg transition-transform hover:scale-102 cursor-pointer"
+                  className="w-full py-2.5 rounded-xl bg-[#DCA134] hover:bg-amber-400 text-[#0D3B36] font-black text-xs flex items-center justify-center gap-1.5 shadow-lg transition-transform hover:scale-102 cursor-pointer"
                 >
-                  <Zap className="w-4 h-4 text-[#0D3B36]" />
-                  <span>{currentSub.tier === 'MASTER' ? 'Renew / Extend Master Tier' : 'Upgrade to Master (GHS 35)'}</span>
+                  <Zap className="w-3.5 h-3.5 text-[#0D3B36]" />
+                  <span>{currentSub.tier === 'MASTER' ? 'Renew Master' : `Upgrade (GHS ${billingCycle === 'yearly' ? '300' : '35'})`}</span>
                 </a>
               </div>
             </div>
 
-            {/* TIER 3: ENTERPRISE / ACADEMY */}
-            <div className="p-5 rounded-3xl bg-white dark:bg-slate-900 border-2 border-slate-200 dark:border-slate-800 flex flex-col justify-between space-y-4">
-              <div className="space-y-3">
+            {/* TIER 3: WORKSHOP PLAN (GHS 200 - WHATSAPP CONTACT ONLY) */}
+            <div className="p-3.5 sm:p-4 rounded-2xl sm:rounded-3xl bg-gradient-to-b from-emerald-950 via-[#062923] to-[#041F1A] border-2 border-emerald-400/80 text-white shadow-xl flex flex-col justify-between space-y-3 relative overflow-hidden">
+              <div className="absolute top-0 right-0 bg-emerald-400 text-slate-950 text-[8px] font-black px-2 py-0.5 rounded-bl-xl uppercase tracking-widest">
+                WORKSHOP PASS
+              </div>
+
+              <div className="space-y-2.5">
                 <div className="flex items-center justify-between">
-                  <span className="px-3 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-[10px] font-black uppercase">
+                  <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 text-[9px] font-black uppercase border border-emerald-400/40 flex items-center gap-1">
+                    <Award className="w-3 h-3 text-emerald-300" /> Training Pass
+                  </span>
+                </div>
+
+                <div>
+                  <h3 className="font-extrabold text-base text-emerald-300">
+                    Workshop Plan
+                  </h3>
+                  <p className="text-[11px] text-slate-300 mt-0.5">
+                    For workshop trainees & physical voucher buyers
+                  </p>
+                </div>
+
+                <div className="pt-1">
+                  <span className="font-black text-2xl text-white">
+                    GHS 200
+                  </span>
+                  <span className="text-[11px] font-bold text-emerald-200 ml-1">/ workshop pass</span>
+                </div>
+
+                <ul className="space-y-1.5 text-[11px] pt-2 border-t border-emerald-500/20">
+                  <li className="flex items-center gap-2 text-slate-100 font-semibold">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                    <span>1-Year Master Access Key Code</span>
+                  </li>
+                  <li className="flex items-center gap-2 text-slate-100 font-semibold">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                    <span>In-Person Practical Mentorship</span>
+                  </li>
+                  <li className="flex items-center gap-2 text-slate-100 font-semibold">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                    <span>Official Atelier Certificate</span>
+                  </li>
+                  <li className="flex items-center gap-2 text-emerald-200 font-extrabold">
+                    <Phone className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                    <span>Direct WhatsApp: +233546920418</span>
+                  </li>
+                </ul>
+              </div>
+
+              <div className="pt-2">
+                <a
+                  href="https://wa.me/233546920418?text=Hello%20Tailor%20Pro%2C%20I%20am%20interested%20in%20the%20Workshop%20Plan%20(GHS%20200).%20Please%20provide%20payment%20and%20key%20details."
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-[11px] flex items-center justify-center gap-1.5 shadow-lg transition-transform hover:scale-102 cursor-pointer text-center"
+                >
+                  <Phone className="w-3.5 h-3.5 text-slate-950" />
+                  <span>CONTACT WHATSAPP (+233546920418)</span>
+                </a>
+              </div>
+            </div>
+
+            {/* TIER 4: ENTERPRISE / ACADEMY */}
+            <div className="p-3.5 sm:p-4 rounded-2xl sm:rounded-3xl bg-white dark:bg-slate-900 border-2 border-slate-200 dark:border-slate-800 flex flex-col justify-between space-y-3">
+              <div className="space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <span className="px-2.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-[9px] font-black uppercase">
                     Schools & NGOs
                   </span>
                 </div>
 
                 <div>
-                  <h3 className="font-extrabold text-lg text-slate-900 dark:text-slate-100">
+                  <h3 className="font-extrabold text-base text-slate-900 dark:text-slate-100">
                     Enterprise / Academy
                   </h3>
-                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                    For vocational schools & ANF NGO programs
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                    For vocational schools & NGO programs
                   </p>
                 </div>
 
-                <div className="pt-2">
-                  <span className="font-black text-2xl text-slate-900 dark:text-slate-100">
+                <div className="pt-1">
+                  <span className="font-black text-xl text-slate-900 dark:text-slate-100">
                     Custom
                   </span>
-                  <span className="text-xs font-bold text-slate-500 ml-1">/ annual licensing</span>
+                  <span className="text-[11px] font-bold text-slate-500 ml-1">/ annual</span>
                 </div>
 
-                <ul className="space-y-2 text-xs pt-2 border-t border-slate-200 dark:border-slate-800">
+                <ul className="space-y-1.5 text-[11px] pt-2 border-t border-slate-200 dark:border-slate-800">
                   <li className="flex items-center gap-2 text-slate-700 dark:text-slate-300 font-semibold">
-                    <Building2 className="w-4 h-4 text-slate-500 shrink-0" />
-                    <span>Bulk Apprentice Management</span>
+                    <Building2 className="w-3.5 h-3.5 text-slate-500 shrink-0" />
+                    <span>Bulk Apprentice Portal</span>
                   </li>
                   <li className="flex items-center gap-2 text-slate-700 dark:text-slate-300 font-semibold">
-                    <Building2 className="w-4 h-4 text-slate-500 shrink-0" />
-                    <span>Centralized Master Dashboards</span>
+                    <Building2 className="w-3.5 h-3.5 text-slate-500 shrink-0" />
+                    <span>Master Dashboards</span>
                   </li>
                   <li className="flex items-center gap-2 text-slate-700 dark:text-slate-300 font-semibold">
-                    <Building2 className="w-4 h-4 text-slate-500 shrink-0" />
-                    <span>Batch Graduation Processing</span>
+                    <Building2 className="w-3.5 h-3.5 text-slate-500 shrink-0" />
+                    <span>Batch Graduation</span>
                   </li>
                   <li className="flex items-center gap-2 text-slate-700 dark:text-slate-300 font-semibold">
-                    <Building2 className="w-4 h-4 text-slate-500 shrink-0" />
-                    <span>Mokars Co-Branded Portal</span>
+                    <Building2 className="w-3.5 h-3.5 text-slate-500 shrink-0" />
+                    <span>Co-Branded Portal</span>
                   </li>
                 </ul>
               </div>
@@ -417,7 +479,7 @@ export const SubscriptionPlansModal: React.FC<SubscriptionPlansModalProps> = ({
               <div className="pt-2">
                 <a
                   href="mailto:licensing@mokarstech.com?subject=Tailor%20Pro%20Enterprise%20Licensing"
-                  className="w-full py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-800 dark:text-slate-200 font-black text-xs flex items-center justify-center gap-2 transition-colors"
+                  className="w-full py-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-800 dark:text-slate-200 font-black text-xs flex items-center justify-center gap-1.5 transition-colors"
                 >
                   <Phone className="w-3.5 h-3.5 text-slate-500" />
                   <span>Contact Sales</span>
@@ -435,8 +497,6 @@ export const SubscriptionPlansModal: React.FC<SubscriptionPlansModalProps> = ({
             </div>
           )}
 
-          {/* 1. WORKSHOP VOUCHER KEY REDEMPTION CARD */}
-
           {/* WORKSHOP VOUCHER KEY REDEMPTION CARD */}
           <div className="p-4 sm:p-5 rounded-2xl sm:rounded-3xl bg-[#061E1B] border-2 border-amber-400/60 text-white space-y-3.5 shadow-xl">
             <div className="flex items-center justify-between flex-wrap gap-2">
@@ -450,10 +510,19 @@ export const SubscriptionPlansModal: React.FC<SubscriptionPlansModalProps> = ({
                     <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
                   </h4>
                   <p className="text-[11px] text-slate-300 font-medium">
-                    Attended a Tailor Pro training workshop or received a voucher code card? Redeem it here for instant 1-Year Master access!
+                    Attended a training workshop or purchased a GHS 200 Workshop Plan card? Enter your key code below or contact WhatsApp (+233546920418)!
                   </p>
                 </div>
               </div>
+              <a
+                href="https://wa.me/233546920418?text=Hello%2C%20I%20want%20to%20buy%20a%20Tailor%20Pro%20Workshop%20Plan%20Voucher%20Key%20(GHS%20200)."
+                target="_blank"
+                rel="noopener noreferrer"
+                className="px-3 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-black flex items-center gap-1.5 shadow-md transition-transform hover:scale-105"
+              >
+                <Phone className="w-3.5 h-3.5" />
+                <span>Buy Key on WhatsApp (+233546920418)</span>
+              </a>
             </div>
 
             {workshopKeyNotice && (
@@ -501,7 +570,7 @@ export const SubscriptionPlansModal: React.FC<SubscriptionPlansModalProps> = ({
           </div>
 
           {/* Form Option 2: Paystack Checkout */}
-          <form onSubmit={handleUpgrade} className="p-5 rounded-3xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 space-y-4">
+          <form id="momo-checkout-form" onSubmit={handleUpgrade} className="p-5 rounded-3xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 space-y-4">
             <div className="flex items-center justify-between flex-wrap gap-2">
               <div>
                 <h4 className="font-extrabold text-xs text-[#0D3B36] dark:text-amber-300 uppercase tracking-tight flex items-center gap-2">
@@ -561,7 +630,7 @@ export const SubscriptionPlansModal: React.FC<SubscriptionPlansModalProps> = ({
                 <input
                   type="text"
                   readOnly
-                  value={`TAILOR PRO MASTER (${billingCycle.toUpperCase()} - GHS ${billingCycle === 'yearly' ? '200' : '35'})`}
+                  value={`TAILOR PRO MASTER (${billingCycle.toUpperCase()} - GHS ${billingCycle === 'yearly' ? '300' : '35'})`}
                   className="w-full px-4 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-700 font-black text-[#0D3B36] dark:text-amber-300 text-xs"
                 />
               </div>
@@ -582,7 +651,7 @@ export const SubscriptionPlansModal: React.FC<SubscriptionPlansModalProps> = ({
                 ) : (
                   <>
                     <ShieldCheck className="w-4 h-4 text-amber-300" />
-                    <span>PAY GHS {billingCycle === 'yearly' ? '200' : '35'} VIA {selectedProvider} & UPGRADE NOW</span>
+                    <span>PAY GHS {billingCycle === 'yearly' ? '300' : '35'} VIA {selectedProvider} & UPGRADE NOW</span>
                   </>
                 )}
               </button>

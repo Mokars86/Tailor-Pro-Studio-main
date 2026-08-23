@@ -126,7 +126,7 @@ export const ApprenticeCertificateModal: React.FC<ApprenticeCertificateModalProp
           <div
             ref={certificateRef}
             id="printable-certificate"
-            className="relative w-full min-w-[320px] aspect-[1.414/1] bg-[#FDFCF7] text-slate-900 rounded-3xl shadow-2xl overflow-hidden border-4 border-[#DCA134] select-none print:m-0 print:border-none print:shadow-none print:rounded-none flex flex-col justify-between"
+            className="relative w-full min-w-[280px] sm:min-w-[320px] aspect-[1.414/1] bg-[#FDFCF7] text-slate-900 rounded-2xl sm:rounded-3xl shadow-2xl overflow-hidden border-2 sm:border-4 border-[#DCA134] select-none print:m-0 print:border-none print:shadow-none print:rounded-none flex flex-col justify-between"
           >
           {/* Outer & Inner Frame Accent Lines */}
           <div className="absolute inset-2 border border-[#DCA134]/60 rounded-[20px] pointer-events-none z-20" />
