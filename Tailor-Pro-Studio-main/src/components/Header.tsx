@@ -1,5 +1,5 @@
 import React from 'react';
-import { Settings, Award, Sun, Moon, Palette, UserCircle2, Download, RefreshCw, Crown } from 'lucide-react';
+import { Settings, Award, Sun, Moon, Palette, UserCircle2, Download, RefreshCw, Crown, Smartphone } from 'lucide-react';
 import { StudioSettings } from '../types';
 
 interface HeaderProps {
@@ -165,6 +165,19 @@ export const Header: React.FC<HeaderProps> = ({
             >
               <Award className={`w-3 h-3 sm:w-3.5 sm:h-3.5 shrink-0 ${subscriptionTier === 'FREE' ? 'text-slate-400' : 'text-[#DCA134]'}`} />
               <span className="hidden xs:inline">{subscriptionTier === 'FREE' ? 'Cert 🔒' : 'Cert 📜'}</span>
+            </button>
+          )}
+
+          {/* Install App Button */}
+          {onOpenInstallApp && (
+            <button
+              type="button"
+              onClick={onOpenInstallApp}
+              className="p-1.5 sm:px-3 sm:py-2 rounded-full bg-amber-400/20 hover:bg-amber-400/30 text-[#0D3B36] dark:text-amber-300 border border-amber-400/50 transition-all shadow-2xs flex items-center gap-1 text-[10px] sm:text-xs font-black cursor-pointer shrink-0"
+              title="Install Tailor Pro App on Android, iPhone, or Desktop"
+            >
+              <Smartphone className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-500 dark:text-amber-400 shrink-0" />
+              <span className="hidden sm:inline">Install App</span>
             </button>
           )}
 

@@ -17,9 +17,11 @@ import {
   ChevronDown,
   ChevronUp,
   Eye,
-  X
+  X,
+  Info
 } from 'lucide-react';
 import { InventoryItem } from '../types';
+import { canAddMaterial } from '../services/subscriptionService';
 
 interface InventoryViewProps {
   items: InventoryItem[];
@@ -27,6 +29,7 @@ interface InventoryViewProps {
   onOpenAddMaterialModal: () => void;
   onOpenFabricScanner?: (tab?: 'color' | 'sides' | 'saved') => void;
   onRemoveItem?: (id: string) => void;
+  onTriggerUpgradeModal?: () => void;
 }
 
 const CATEGORY_ICONS: Record<string, React.ElementType> = {
@@ -51,12 +54,28 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
   onRestockItem,
   onOpenAddMaterialModal,
   onOpenFabricScanner,
-  onRemoveItem
+  onRemoveItem,
+  onTriggerUpgradeModal
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState<string>('ALL');
   const [isAllMaterialsModalOpen, setIsAllMaterialsModalOpen] = useState<boolean>(false);
   const [modalSearchQuery, setModalSearchQuery] = useState<string>('');
+
+  const materialCheck = canAddMaterial(items.length);
+
+  const handleAddMaterialClick = () => {
+    if (!materialCheck.allowed) {
+      if (materialCheck.reason) {
+        alert(materialCheck.reason);
+      }
+      if (onTriggerUpgradeModal) {
+        onTriggerUpgradeModal();
+      }
+      return;
+    }
+    onOpenAddMaterialModal();
+  };
 
   // Filter items
   const filteredItems = useMemo(() => {
@@ -89,6 +108,30 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
   return (
     <div className="space-y-4 sm:space-y-5 my-2 sm:my-4 font-['Outfit'] animate-fade-in max-w-full overflow-hidden px-0.5">
       
+      {/* Subscription Limit Warning Banner */}
+      {!materialCheck.allowed && (
+        <div className="p-3 rounded-2xl bg-amber-500/20 border border-amber-400/50 text-amber-900 dark:text-amber-200 text-xs font-bold flex items-center justify-between flex-wrap gap-2 animate-fade-in">
+          <div className="flex items-center gap-2">
+            <Info className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
+            <span>
+              {materialCheck.isExpired
+                ? 'Subscription Expired: Adding inventory materials is restricted until you subscribe to a new plan.'
+                : `Free Tier Limit: Tailor Pro Free allows adding up to 5 inventory materials (${items.length}/5). Upgrade to Master Pro for unlimited material catalog!`}
+            </span>
+          </div>
+          {onTriggerUpgradeModal && (
+            <button
+              type="button"
+              onClick={onTriggerUpgradeModal}
+              className="px-3.5 py-1.5 rounded-xl bg-[#DCA134] hover:bg-amber-400 text-[#0D3B36] font-black text-xs flex items-center gap-1 shadow-md cursor-pointer shrink-0"
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              <span>{materialCheck.isExpired ? 'Renew Subscription 👑' : 'Upgrade to Master 👑'}</span>
+            </button>
+          )}
+        </div>
+      )}
+
       {/* Header Area */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         <div className="min-w-0">
@@ -119,7 +162,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
 
           <button
             type="button"
-            onClick={onOpenAddMaterialModal}
+            onClick={handleAddMaterialClick}
             className="flex-1 sm:flex-none px-4 sm:px-5 py-2.5 rounded-full bg-[#0D3B36] dark:bg-amber-400 hover:bg-[#082824] dark:hover:bg-amber-300 text-white dark:text-[#0D3B36] text-xs font-black flex items-center justify-center gap-1.5 shadow-md fab-shadow transition-all hover:scale-102 active:scale-95 cursor-pointer text-center truncate"
           >
             <Plus className="w-4 h-4 text-amber-300 dark:text-[#0D3B36] shrink-0" />
@@ -375,7 +418,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
           </div>
           <button
             type="button"
-            onClick={onOpenAddMaterialModal}
+            onClick={handleAddMaterialClick}
             className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-[#0D3B36] hover:bg-[#082824] dark:bg-amber-400 dark:hover:bg-amber-300 text-white dark:text-[#0D3B36] text-xs font-black transition-all shadow-md cursor-pointer"
           >
             <Plus className="w-4 h-4" />
@@ -427,7 +470,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                   type="button"
                   onClick={() => {
                     setIsAllMaterialsModalOpen(false);
-                    onOpenAddMaterialModal();
+                    handleAddMaterialClick();
                   }}
                   className="w-full xs:w-auto ml-auto px-3.5 py-2 rounded-xl bg-[#0D3B36] dark:bg-amber-400 hover:bg-[#082824] dark:hover:bg-amber-300 text-white dark:text-[#0D3B36] font-black text-xs flex items-center justify-center gap-1.5 shadow-md transition-all active:scale-95 cursor-pointer"
                 >

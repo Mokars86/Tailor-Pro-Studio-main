@@ -54,6 +54,13 @@ export const ApprenticeRegistry: React.FC<ApprenticeRegistryProps> = ({
   };
 
   const handleManualRefresh = () => {
+    if (linkCheck.isExpired) {
+      alert(linkCheck.reason || 'Subscription Plan Expired: Cannot sync with apprentices until you renew your subscription plan.');
+      if (onTriggerUpgradeModal) {
+        onTriggerUpgradeModal();
+      }
+      return;
+    }
     setIsRefreshing(true);
     onRefreshApprentices();
     setTimeout(() => {
@@ -90,12 +97,16 @@ export const ApprenticeRegistry: React.FC<ApprenticeRegistryProps> = ({
         </div>
       )}
 
-      {/* Free Tier Apprentice Limit Banner */}
+      {/* Free Tier / Subscription Expired Apprentice Limit Banner */}
       {!linkCheck.allowed && (
         <div className="p-3 rounded-2xl bg-amber-500/20 border border-amber-400/50 text-amber-200 text-xs font-bold flex items-center justify-between flex-wrap gap-2 animate-fade-in">
           <div className="flex items-center gap-2">
             <Info className="w-4 h-4 text-amber-400 shrink-0" />
-            <span>Free Tier Limit: Tailor Pro Free allows linking max 1 apprentice profile ({apprentices.length}/1). Upgrade to Master Pro for unlimited linked apprentices!</span>
+            <span>
+              {linkCheck.isExpired
+                ? 'Subscription Expired: Apprentice syncing and profile linking is currently restricted. Please renew your subscription to resume workshop sync.'
+                : `Free Tier Limit: Tailor Pro Free allows linking max 1 apprentice profile (${apprentices.length}/1). Upgrade to Master Pro for unlimited linked apprentices!`}
+            </span>
           </div>
           {onTriggerUpgradeModal && (
             <button
@@ -104,7 +115,7 @@ export const ApprenticeRegistry: React.FC<ApprenticeRegistryProps> = ({
               className="px-3.5 py-1.5 rounded-xl bg-[#DCA134] hover:bg-amber-400 text-[#0D3B36] font-black text-xs flex items-center gap-1 shadow-md cursor-pointer shrink-0"
             >
               <Sparkles className="w-3.5 h-3.5" />
-              <span>Upgrade to Master 👑</span>
+              <span>{linkCheck.isExpired ? 'Renew Subscription 👑' : 'Upgrade to Master 👑'}</span>
             </button>
           )}
         </div>

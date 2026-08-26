@@ -1,21 +1,26 @@
 import React from 'react';
 import { DollarSign, AlertTriangle, TrendingUp, Clock, ChevronRight } from 'lucide-react';
-import { ShopStats, UnpaidDeposit } from '../types';
+import { Client, ShopStats, UnpaidDeposit } from '../types';
 
 interface MetricCardsProps {
   stats: ShopStats;
   unpaidDeposits: UnpaidDeposit[];
+  clients?: Client[];
   onOpenCollectDeposit: (deposit?: UnpaidDeposit) => void;
   onOpenLedger: () => void;
+  onOpenRunway?: () => void;
 }
 
 export const MetricCards: React.FC<MetricCardsProps> = ({
   stats,
   unpaidDeposits,
+  clients = [],
   onOpenCollectDeposit,
   onOpenLedger
 }) => {
   const totalUnpaidAmount = stats.unpaidDeposits;
+  const clientUnpaidCount = clients.filter((c) => (c.balanceDue || 0) > 0).length;
+  const pendingCount = clientUnpaidCount > 0 ? clientUnpaidCount : unpaidDeposits.length;
 
   return (
     <div className="grid grid-cols-2 gap-2 sm:gap-4 my-3 sm:my-4 font-['Outfit'] select-none">
@@ -74,7 +79,7 @@ export const MetricCards: React.FC<MetricCardsProps> = ({
           <div className="inline-flex items-center gap-1 text-[9px] sm:text-[10px] font-bold text-amber-800 dark:text-amber-300 bg-amber-500/10 dark:bg-amber-500/20 px-1.5 py-0.5 rounded-full border border-amber-500/20 dark:border-amber-500/30">
             <Clock className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-[#C98A2B] dark:text-amber-300 shrink-0" />
             <span className="flex items-center gap-0.5 truncate">
-              <span>{unpaidDeposits.length} Pending</span>
+              <span>{pendingCount} Pending</span>
               <ChevronRight className="w-2.5 h-2.5 opacity-60 group-hover:translate-x-0.5 transition-transform shrink-0" />
             </span>
           </div>

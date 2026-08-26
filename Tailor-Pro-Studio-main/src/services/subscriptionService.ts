@@ -7,7 +7,7 @@ const STORAGE_KEY_WORKSHOP_KEYS = 'tailor_workshop_keys';
 export const DEFAULT_FREE_SUBSCRIPTION: StudioSubscription = {
   tier: 'FREE',
   status: 'ACTIVE',
-  clientProfileLimit: 10,
+  clientProfileLimit: 5,
   updatedAt: new Date().toISOString()
 };
 
@@ -22,7 +22,7 @@ export function getStudioSubscription(): StudioSubscription {
           ...parsed,
           status: 'EXPIRED',
           tier: 'FREE',
-          clientProfileLimit: 10
+          clientProfileLimit: 5
         };
       }
       return parsed;
@@ -41,33 +41,88 @@ export function saveStudioSubscription(subscription: StudioSubscription): void {
   }
 }
 
-export function canAddClientProfile(currentClientCount: number): { allowed: boolean; limit: number; tier: SubscriptionTier } {
+export function canAddClientProfile(currentClientCount: number): { allowed: boolean; limit: number; tier: SubscriptionTier; isExpired?: boolean; reason?: string } {
   const sub = getStudioSubscription();
+  if (sub.status === 'EXPIRED') {
+    return {
+      allowed: false,
+      limit: 0,
+      tier: sub.tier,
+      isExpired: true,
+      reason: 'Subscription Plan Expired: Please renew your subscription to add client profiles.'
+    };
+  }
   if (sub.tier === 'MASTER' || sub.tier === 'ENTERPRISE') {
     return { allowed: true, limit: 999999, tier: sub.tier };
   }
   const allowed = currentClientCount < sub.clientProfileLimit;
-  return { allowed, limit: sub.clientProfileLimit, tier: sub.tier };
+  return {
+    allowed,
+    limit: sub.clientProfileLimit,
+    tier: sub.tier,
+    reason: allowed ? undefined : `Free Tier Limit Reached (${sub.clientProfileLimit} client profiles max). Upgrade to Master for unlimited client profiles.`
+  };
 }
 
-export function canLinkApprentice(currentApprenticeCount: number): { allowed: boolean; limit: number; tier: SubscriptionTier } {
+export function canLinkApprentice(currentApprenticeCount: number): { allowed: boolean; limit: number; tier: SubscriptionTier; isExpired?: boolean; reason?: string } {
   const sub = getStudioSubscription();
+  if (sub.status === 'EXPIRED') {
+    return {
+      allowed: false,
+      limit: 0,
+      tier: sub.tier,
+      isExpired: true,
+      reason: 'Subscription Plan Expired: Apprentice syncing and linking is restricted until you renew your subscription plan.'
+    };
+  }
   if (sub.tier === 'MASTER' || sub.tier === 'ENTERPRISE') {
     return { allowed: true, limit: 999999, tier: sub.tier };
   }
   // Free tier allows max 1 linked apprentice
   const limit = 1;
   const allowed = currentApprenticeCount < limit;
-  return { allowed, limit, tier: sub.tier };
+  return {
+    allowed,
+    limit,
+    tier: sub.tier,
+    reason: allowed ? undefined : 'Free Tier Limit: Free tier allows linking max 1 apprentice profile. Upgrade to Master for unlimited linked apprentices.'
+  };
+}
+
+export function canAddMaterial(currentMaterialCount: number): { allowed: boolean; limit: number; tier: SubscriptionTier; isExpired?: boolean; reason?: string } {
+  const sub = getStudioSubscription();
+  if (sub.status === 'EXPIRED') {
+    return {
+      allowed: false,
+      limit: 0,
+      tier: sub.tier,
+      isExpired: true,
+      reason: 'Subscription Plan Expired: Adding inventory materials is restricted until you subscribe to a new plan.'
+    };
+  }
+  if (sub.tier === 'MASTER' || sub.tier === 'ENTERPRISE') {
+    return { allowed: true, limit: 999999, tier: sub.tier };
+  }
+  // Free Tier limit: 5 materials max
+  const limit = 5;
+  const allowed = currentMaterialCount < limit;
+  return {
+    allowed,
+    limit,
+    tier: sub.tier,
+    reason: allowed ? undefined : 'Free Tier Limit: Free tier accounts can add up to 5 inventory materials. Upgrade to Master for unlimited stock catalog.'
+  };
 }
 
 export function upgradeToMasterTier(
   momoNumber: string,
-  billingCycle: 'monthly' | 'yearly' = 'monthly'
+  billingCycle: 'monthly' | '6months' | 'yearly' = 'monthly'
 ): StudioSubscription {
   const expires = new Date();
   if (billingCycle === 'yearly') {
     expires.setFullYear(expires.getFullYear() + 1);
+  } else if (billingCycle === '6months') {
+    expires.setMonth(expires.getMonth() + 6);
   } else {
     expires.setMonth(expires.getMonth() + 1);
   }

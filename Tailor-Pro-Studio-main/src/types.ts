@@ -221,7 +221,7 @@ export type SubscriptionTier = 'FREE' | 'MASTER' | 'ENTERPRISE';
 export interface StudioSubscription {
   tier: SubscriptionTier;
   status: 'ACTIVE' | 'EXPIRED' | 'TRIAL';
-  clientProfileLimit: number; // 10 for Free, 999999 for Master/Enterprise
+  clientProfileLimit: number; // 5 for Free, 999999 for Master/Enterprise
   expiresAt?: string;
   momoNumber?: string;
   txRef?: string;

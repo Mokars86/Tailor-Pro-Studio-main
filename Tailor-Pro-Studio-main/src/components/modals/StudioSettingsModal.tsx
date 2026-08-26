@@ -54,6 +54,7 @@ export const StudioSettingsModal: React.FC<StudioSettingsModalProps> = ({
   const [printedNotice, setPrintedNotice] = useState(false);
   const [backupNotice, setBackupNotice] = useState<string | null>(null);
   const [showPasteRestore, setShowPasteRestore] = useState(false);
+  const [pastedJsonText, setPastedJsonText] = useState('');
   const [copiedBackupCode, setCopiedBackupCode] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteConfirmInput, setDeleteConfirmInput] = useState('');

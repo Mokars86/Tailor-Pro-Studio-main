@@ -107,6 +107,15 @@ function setPaystackActive(active: boolean): void {
 export async function initializePaystackCheckout(options: PaystackPaymentOptions): Promise<void> {
   const { email, amountGHS, referencePrefix = 'PAYSTACK', metadata = {}, onSuccess, onCancel, onError } = options;
 
+  // Check if device is offline before attempting payment
+  if (typeof navigator !== 'undefined' && !navigator.onLine) {
+    const offlineMsg = 'Internet connection required to process online payment. You are currently offline. Please connect to the internet and try again.';
+    console.warn('Paystack checkout aborted: Device is offline.');
+    if (onError) onError({ message: offlineMsg, isOffline: true });
+    else if (onCancel) onCancel();
+    return;
+  }
+
   const generatedReference = `${referencePrefix}_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
   const amountInPesewas = Math.round(amountGHS * 100);
 
@@ -196,11 +205,10 @@ export async function initializePaystackCheckout(options: PaystackPaymentOptions
     if (started) return;
   }
 
-  // Fallback for offline mode, adblockers, or restricted mobile WebViews
+  // Failed to initialize Paystack SDK (offline, script blocked, or network failure)
   setPaystackActive(false);
-  console.info('Paystack SDK inline popup simulated for reference:', generatedReference);
-  setTimeout(() => {
-    onSuccess(generatedReference);
-  }, 1200);
+  const failureMsg = 'Unable to load payment gateway. Please verify your internet connection and try again.';
+  console.warn('Paystack SDK failed to initialize:', failureMsg);
+  handleError({ message: failureMsg, isOffline: typeof navigator !== 'undefined' && !navigator.onLine });
 }
 

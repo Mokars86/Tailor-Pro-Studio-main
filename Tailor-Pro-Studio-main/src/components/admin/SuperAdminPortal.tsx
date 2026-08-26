@@ -19,6 +19,125 @@ interface SuperAdminPortalProps {
   onClose: () => void;
 }
 
+export function printVoucherKeys(
+  keys: Array<{ code: string; duration?: string; batchName?: string; expiresAt?: string }>,
+  title: string = 'Tailor Pro Master Workshop Voucher Keys'
+) {
+  const printWindow = window.open('', '_blank', 'width=900,height=750');
+  if (!printWindow) {
+    alert('Pop-up blocker prevented opening the print window. Please allow pop-ups for this site and try again.');
+    return;
+  }
+
+  const cardsHtml = keys
+    .map(
+      (k) => `
+    <div class="voucher-card">
+      <div class="voucher-header">
+        <div class="brand">
+          <span class="crown">👑</span>
+          <span class="title">TAILOR PRO STUDIO</span>
+        </div>
+        <div class="badge">MASTER ATELIER VOUCHER</div>
+      </div>
+      <div class="voucher-body">
+        <div class="sub-title">${k.batchName || title}</div>
+        <div class="key-box">${k.code}</div>
+        <div class="tier-label">1-YEAR TAILOR PRO MASTER ACCESS</div>
+        <div class="features">
+          • Unlimited Client Profiles & Measurements<br/>
+          • Finance Ledger & Deposit Tracking<br/>
+          • Fabric AI Inspector & Apprentice Hotspot Sync
+        </div>
+      </div>
+      <div class="voucher-footer">
+        <div class="instructions">
+          <strong>To Redeem:</strong> Open App &rarr; Subscriptions &rarr; Redeem Workshop Key Code
+        </div>
+        <div class="support">WhatsApp: +233546920418</div>
+      </div>
+    </div>
+  `
+    )
+    .join('');
+
+  printWindow.document.write(`
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <title>Print Voucher Keys - Tailor Pro Studio</title>
+        <meta charset="utf-8" />
+        <style>
+          @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;900&family=JetBrains+Mono:wght@700;800&display=swap');
+          * { box-sizing: border-box; margin: 0; padding: 0; }
+          body { font-family: 'Outfit', sans-serif; background: #f8fafc; color: #0f172a; padding: 20px; }
+          .print-nav {
+            position: sticky; top: 0; z-index: 100; background: #0D3B36; color: #ffffff;
+            padding: 12px 20px; display: flex; align-items: center; justify-content: space-between;
+            border-radius: 16px; margin-bottom: 20px; box-shadow: 0 10px 25px -5px rgba(13, 59, 54, 0.4);
+          }
+          .btn-print {
+            background: #DCA134; color: #0D3B36; font-weight: 900; font-size: 12px;
+            padding: 8px 16px; border: none; border-radius: 10px; cursor: pointer;
+            display: inline-flex; align-items: center; gap: 6px;
+          }
+          .btn-close {
+            background: rgba(255,255,255,0.15); color: #ffffff; font-weight: 800; font-size: 12px;
+            padding: 8px 14px; border: 1px solid rgba(255,255,255,0.3); border-radius: 10px;
+            cursor: pointer; margin-left: 8px;
+          }
+          .voucher-grid { display: grid; grid-template-cols: repeat(2, 1fr); gap: 14px; }
+          .voucher-card {
+            background: #ffffff; border: 2px dashed #0D3B36; border-radius: 14px; padding: 14px;
+            page-break-inside: avoid; display: flex; flex-direction: column; justify-content: space-between;
+          }
+          .voucher-header { display: flex; align-items: center; justify-content: space-between; border-bottom: 1.5px solid #0D3B36; padding-bottom: 6px; margin-bottom: 10px; }
+          .brand { display: flex; align-items: center; gap: 4px; }
+          .crown { font-size: 16px; }
+          .title { font-weight: 900; font-size: 12px; color: #0D3B36; letter-spacing: 0.5px; }
+          .badge { background: #0D3B36; color: #DCA134; font-size: 8px; font-weight: 900; padding: 2px 6px; border-radius: 99px; }
+          .voucher-body { text-align: center; margin-bottom: 10px; }
+          .sub-title { font-size: 10px; font-weight: 700; color: #64748b; margin-bottom: 6px; }
+          .key-box {
+            font-family: 'JetBrains Mono', monospace; font-size: 14px; font-weight: 800; color: #0D3B36;
+            background: #f1f5f9; border: 1.5px solid #cbd5e1; padding: 6px 10px; border-radius: 8px;
+            display: inline-block; letter-spacing: 1px; margin-bottom: 6px;
+          }
+          .tier-label { font-size: 10px; font-weight: 900; color: #059669; margin-bottom: 4px; }
+          .features { font-size: 8.5px; font-weight: 600; color: #475569; line-height: 1.3; }
+          .voucher-footer { border-top: 1px solid #e2e8f0; padding-top: 6px; display: flex; align-items: center; justify-content: space-between; font-size: 8.5px; color: #64748b; }
+          .instructions { max-width: 75%; font-weight: 600; }
+          .support { font-weight: 800; color: #0D3B36; }
+          @media print {
+            .no-print { display: none !important; }
+            body { background: #ffffff !important; padding: 0 !important; }
+            .voucher-grid { grid-template-cols: repeat(2, 1fr); gap: 10px; }
+            .voucher-card { box-shadow: none !important; }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="print-nav no-print">
+          <div>
+            <strong>🖨️ Printable Voucher Pass Sheet (${keys.length} Vouchers)</strong>
+            <div style="font-size:11px; opacity:0.8;">${title}</div>
+          </div>
+          <div>
+            <button class="btn-print" onclick="window.print()">🖨️ Print / Save PDF</button>
+            <button class="btn-close" onclick="window.close()">✕ Close</button>
+          </div>
+        </div>
+
+        <div class="voucher-grid">
+          ${cardsHtml}
+        </div>
+      </body>
+    </html>
+  `);
+
+  printWindow.document.close();
+}
+
 export const SuperAdminPortal: React.FC<SuperAdminPortalProps> = ({ isOpen, onClose }) => {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [pinInput, setPinInput] = useState<string>('');
@@ -52,6 +171,21 @@ export const SuperAdminPortal: React.FC<SuperAdminPortalProps> = ({ isOpen, onCl
   const refreshData = () => {
     setUsers(getUserAccountRecords());
     setLicenses(getLicenseKeys());
+  };
+
+  const handlePrintSingleKey = (key: LicenseRecord) => {
+    printVoucherKeys(
+      [{ code: key.licenseKey, duration: key.duration, batchName: key.assignedStudioName || 'Tailor Pro Master License Key' }],
+      key.assignedStudioName || 'Tailor Pro Atelier License Key'
+    );
+  };
+
+  const handlePrintAllActiveKeys = () => {
+    if (licenses.length === 0) return;
+    printVoucherKeys(
+      licenses.map((l) => ({ code: l.licenseKey, duration: l.duration, batchName: l.assignedStudioName || 'Atelier Master License Key' })),
+      'All Active Atelier Master License Keys'
+    );
   };
 
   const handleGenerateWorkshopBatch = (e: React.FormEvent) => {
@@ -230,23 +364,23 @@ export const SuperAdminPortal: React.FC<SuperAdminPortalProps> = ({ isOpen, onCl
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 sm:p-6 select-none animate-fade-in font-['Plus_Jakarta_Sans',sans-serif]">
-      <div className="w-full max-w-4xl bg-white dark:bg-[#0B2A27] rounded-[32px] border border-slate-200 dark:border-white/15 shadow-2xl overflow-hidden flex flex-col max-h-[90vh] text-[#0D3B36] dark:text-white relative">
+    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-start sm:items-center justify-center p-2.5 sm:p-6 pt-3 sm:pt-6 pb-2.5 sm:pb-6 select-none animate-fade-in font-['Plus_Jakarta_Sans',sans-serif] overflow-y-auto">
+      <div className="w-full max-w-4xl my-auto bg-white dark:bg-[#0B2A27] rounded-2xl sm:rounded-[32px] border border-slate-200 dark:border-white/15 shadow-2xl overflow-hidden flex flex-col max-h-[92vh] sm:max-h-[90vh] text-[#0D3B36] dark:text-white relative">
         
         {/* Header Bar */}
-        <div className="p-5 sm:p-6 bg-[#0D3B36] text-white flex items-center justify-between border-b border-white/10 shrink-0">
-          <div className="flex items-center gap-3">
-            <div className="w-11 h-11 rounded-2xl bg-white/10 border border-[#DCA134] text-[#DCA134] flex items-center justify-center shadow-md">
-              <ShieldCheck className="w-6 h-6 text-[#DCA134]" />
+        <div className="p-3.5 sm:p-6 bg-[#0D3B36] text-white flex items-center justify-between border-b border-white/10 shrink-0 gap-2">
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+            <div className="w-8 h-8 sm:w-11 sm:h-11 rounded-xl sm:rounded-2xl bg-white/10 border border-[#DCA134] text-[#DCA134] flex items-center justify-center shadow-md shrink-0">
+              <ShieldCheck className="w-4.5 h-4.5 sm:w-6 sm:h-6 text-[#DCA134]" />
             </div>
-            <div>
-              <h2 className="font-['Outfit'] font-black text-lg sm:text-xl text-white tracking-wide uppercase flex items-center gap-2">
-                <span>Super Admin Control Center</span>
-                <span className="px-2 py-0.5 rounded-full bg-[#DCA134] text-[#0D3B36] text-[10px] font-black tracking-widest">
+            <div className="min-w-0">
+              <h2 className="font-['Outfit'] font-black text-xs xs:text-sm sm:text-xl text-white tracking-wide uppercase flex items-center gap-1.5 flex-wrap truncate">
+                <span>Super Admin Portal</span>
+                <span className="px-1.5 py-0.5 rounded-full bg-[#DCA134] text-[#0D3B36] text-[8px] sm:text-[10px] font-black tracking-widest">
                   PRO
                 </span>
               </h2>
-              <p className="text-xs text-amber-300/80 font-bold">
+              <p className="text-[9px] sm:text-xs text-amber-300/80 font-bold truncate">
                 User Approvals, License Keys & Security Console
               </p>
             </div>
@@ -255,7 +389,7 @@ export const SuperAdminPortal: React.FC<SuperAdminPortalProps> = ({ isOpen, onCl
           <button
             type="button"
             onClick={onClose}
-            className="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-all cursor-pointer"
+            className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-all cursor-pointer shrink-0 text-xs sm:text-sm font-bold"
           >
             ✕
           </button>
@@ -263,21 +397,21 @@ export const SuperAdminPortal: React.FC<SuperAdminPortalProps> = ({ isOpen, onCl
 
         {/* PIN Authentication Screen if not verified */}
         {!isAuthenticated ? (
-          <div className="p-8 text-center max-w-md mx-auto my-auto space-y-5">
-            <div className="w-16 h-16 mx-auto rounded-3xl bg-[#0D3B36]/10 text-[#0D3B36] dark:text-[#DCA134] flex items-center justify-center border border-[#DCA134]">
-              <Lock className="w-8 h-8 text-[#0D3B36] dark:text-[#DCA134]" />
+          <div className="p-4 sm:p-8 text-center max-w-sm sm:max-w-md mx-auto my-auto space-y-4 sm:space-y-5">
+            <div className="w-12 h-12 sm:w-16 sm:h-16 mx-auto rounded-2xl sm:rounded-3xl bg-[#0D3B36]/10 text-[#0D3B36] dark:text-[#DCA134] flex items-center justify-center border border-[#DCA134]">
+              <Lock className="w-6 h-6 sm:w-8 sm:h-8 text-[#0D3B36] dark:text-[#DCA134]" />
             </div>
 
             <div>
-              <h3 className="text-xl font-extrabold text-[#0D3B36] dark:text-white">
-                Admin Authentication Required
+              <h3 className="text-base sm:text-xl font-extrabold text-[#0D3B36] dark:text-white">
+                Admin Security PIN Required
               </h3>
-              <p className="text-xs text-slate-500 dark:text-slate-300 font-semibold mt-1">
-                Enter Super Admin Security PIN
+              <p className="text-[11px] sm:text-xs text-slate-500 dark:text-slate-300 font-semibold mt-0.5">
+                Enter Super Admin Security PIN to proceed
               </p>
             </div>
 
-            <form onSubmit={handlePinSubmit} className="space-y-4">
+            <form onSubmit={handlePinSubmit} className="space-y-3.5 sm:space-y-4">
               <input
                 type="password"
                 maxLength={8}
@@ -285,19 +419,19 @@ export const SuperAdminPortal: React.FC<SuperAdminPortalProps> = ({ isOpen, onCl
                 value={pinInput}
                 onChange={(e) => setPinInput(e.target.value)}
                 placeholder="••••••••"
-                className="w-full text-center py-3.5 px-4 rounded-2xl bg-slate-100 dark:bg-white/10 border border-slate-300 dark:border-white/20 text-lg font-black tracking-widest text-[#0D3B36] dark:text-white focus:outline-none focus:ring-2 focus:ring-[#0D3B36]"
+                className="w-full text-center py-3 px-4 rounded-xl sm:rounded-2xl bg-slate-100 dark:bg-white/10 border border-slate-300 dark:border-white/20 text-base sm:text-lg font-black tracking-widest text-[#0D3B36] dark:text-white focus:outline-none focus:ring-2 focus:ring-[#0D3B36]"
               />
 
               {pinError && (
-                <p className="text-xs font-bold text-red-500 flex items-center justify-center gap-1">
-                  <AlertCircle className="w-4 h-4 shrink-0" />
+                <p className="text-[11px] sm:text-xs font-bold text-red-500 flex items-center justify-center gap-1">
+                  <AlertCircle className="w-3.5 h-3.5 shrink-0" />
                   <span>{pinError}</span>
                 </p>
               )}
 
               <button
                 type="submit"
-                className="w-full py-3.5 rounded-2xl bg-[#0D3B36] hover:bg-[#082824] text-white font-extrabold text-sm shadow-md transition-all cursor-pointer"
+                className="w-full py-3 sm:py-3.5 rounded-xl sm:rounded-2xl bg-[#0D3B36] hover:bg-[#082824] text-white font-extrabold text-xs sm:text-sm shadow-md transition-all cursor-pointer"
               >
                 Unlock Admin Portal
               </button>
@@ -309,32 +443,32 @@ export const SuperAdminPortal: React.FC<SuperAdminPortalProps> = ({ isOpen, onCl
             
             {/* Action Notice Alert Banner */}
             {noticeMessage && (
-              <div className="px-6 py-2.5 bg-emerald-500/15 border-b border-emerald-500/30 text-emerald-800 dark:text-emerald-300 text-xs font-black flex items-center justify-between">
+              <div className="px-4 sm:px-6 py-2 sm:py-2.5 bg-emerald-500/15 border-b border-emerald-500/30 text-emerald-800 dark:text-emerald-300 text-[11px] sm:text-xs font-black flex items-center justify-between">
                 <span className="flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                  <CheckCircle2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-500 shrink-0" />
                   <span>{noticeMessage}</span>
                 </span>
-                <button onClick={() => setNoticeMessage(null)} className="text-emerald-700 cursor-pointer">✕</button>
+                <button onClick={() => setNoticeMessage(null)} className="text-emerald-700 cursor-pointer ml-2">✕</button>
               </div>
             )}
 
             {/* Subheader Toolbar & Search */}
-            <div className="p-4 sm:p-5 bg-slate-50 dark:bg-white/5 border-b border-slate-200 dark:border-white/10 flex flex-col sm:flex-row items-center justify-between gap-3 shrink-0">
+            <div className="p-3 sm:p-5 bg-slate-50 dark:bg-white/5 border-b border-slate-200 dark:border-white/10 space-y-2.5 sm:space-y-0 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 shrink-0">
               
               {/* Tab Navigation */}
-              <div className="flex items-center gap-2 w-full sm:w-auto overflow-x-auto pb-1 sm:pb-0">
+              <div className="flex items-center gap-1.5 sm:gap-2 w-full sm:w-auto overflow-x-auto pb-1 sm:pb-0 custom-scrollbar">
                 <button
                   onClick={() => setActiveTab('pending')}
-                  className={`px-4 py-2 rounded-xl text-xs font-black transition-all flex items-center gap-2 cursor-pointer shrink-0 ${
+                  className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl text-[11px] sm:text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer shrink-0 ${
                     activeTab === 'pending'
                       ? 'bg-[#0D3B36] text-white shadow-md'
                       : 'bg-white dark:bg-white/10 text-slate-700 dark:text-slate-200 hover:bg-slate-100'
                   }`}
                 >
-                  <UserCheck className="w-4 h-4 text-[#DCA134]" />
-                  <span>Pending Approvals</span>
+                  <UserCheck className="w-3.5 h-3.5 text-[#DCA134]" />
+                  <span>Pending</span>
                   {pendingUsers.length > 0 && (
-                    <span className="px-2 py-0.5 rounded-full bg-red-500 text-white text-[10px] font-black animate-pulse">
+                    <span className="px-1.5 py-0.2 rounded-full bg-red-500 text-white text-[9px] font-black animate-pulse">
                       {pendingUsers.length}
                     </span>
                   )}
@@ -342,19 +476,19 @@ export const SuperAdminPortal: React.FC<SuperAdminPortalProps> = ({ isOpen, onCl
 
                 <button
                   onClick={() => setActiveTab('licenses')}
-                  className={`px-4 py-2 rounded-xl text-xs font-black transition-all flex items-center gap-2 cursor-pointer shrink-0 ${
+                  className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl text-[11px] sm:text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer shrink-0 ${
                     activeTab === 'licenses'
                       ? 'bg-[#0D3B36] text-white shadow-md'
                       : 'bg-white dark:bg-white/10 text-slate-700 dark:text-slate-200 hover:bg-slate-100'
                   }`}
                 >
-                  <Key className="w-4 h-4 text-[#DCA134]" />
+                  <Key className="w-3.5 h-3.5 text-[#DCA134]" />
                   <span>License Keys ({licenses.length})</span>
                 </button>
 
                 <button
                   onClick={() => setActiveTab('all')}
-                  className={`px-4 py-2 rounded-xl text-xs font-black transition-all flex items-center gap-2 cursor-pointer shrink-0 ${
+                  className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl text-[11px] sm:text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer shrink-0 ${
                     activeTab === 'all'
                       ? 'bg-[#0D3B36] text-white shadow-md'
                       : 'bg-white dark:bg-white/10 text-slate-700 dark:text-slate-200 hover:bg-slate-100'
@@ -365,48 +499,48 @@ export const SuperAdminPortal: React.FC<SuperAdminPortalProps> = ({ isOpen, onCl
               </div>
 
               {/* Right Search, Change PIN & Generate Key Buttons */}
-              <div className="flex items-center gap-2 w-full sm:w-auto">
-                <div className="relative flex-1 sm:w-44">
-                  <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+              <div className="grid grid-cols-2 xs:flex items-center gap-1.5 w-full sm:w-auto">
+                <div className="relative col-span-2 xs:col-span-1 w-full xs:w-36 sm:w-44">
+                  <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2.5" />
                   <input
                     type="text"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     placeholder="Search..."
-                    className="w-full pl-9 pr-3 py-2 rounded-xl bg-white dark:bg-white/10 border border-slate-200 dark:border-white/15 text-xs font-bold focus:outline-none focus:ring-2 focus:ring-[#0D3B36]"
+                    className="w-full pl-8 pr-2.5 py-1.5 sm:py-2 rounded-xl bg-white dark:bg-white/10 border border-slate-200 dark:border-white/15 text-xs font-bold focus:outline-none focus:ring-2 focus:ring-[#0D3B36]"
                   />
                 </div>
 
                 <button
                   onClick={() => setIsChangePinModalOpen(true)}
-                  className="px-3 py-2 rounded-xl bg-slate-200 dark:bg-white/15 hover:bg-slate-300 text-[#0D3B36] dark:text-white text-xs font-bold flex items-center gap-1.5 transition-all shrink-0 cursor-pointer"
+                  className="px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-xl bg-slate-200 dark:bg-white/15 hover:bg-slate-300 text-[#0D3B36] dark:text-white text-[11px] sm:text-xs font-bold flex items-center justify-center gap-1 transition-all shrink-0 cursor-pointer"
                   title="Change Admin Security PIN"
                 >
-                  <Settings className="w-4 h-4 text-[#DCA134]" />
-                  <span className="hidden md:inline">Change PIN</span>
+                  <Settings className="w-3.5 h-3.5 text-[#DCA134]" />
+                  <span>PIN</span>
                 </button>
 
                 <button
                   onClick={() => setIsBatchModalOpen(true)}
-                  className="px-3.5 py-2 rounded-xl bg-amber-400/20 hover:bg-amber-400/30 text-amber-300 text-xs font-black border border-amber-400/40 flex items-center gap-1.5 shadow-sm transition-all shrink-0 cursor-pointer"
+                  className="px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-xl bg-amber-400/20 hover:bg-amber-400/30 text-amber-300 text-[11px] sm:text-xs font-black border border-amber-400/40 flex items-center justify-center gap-1 shadow-sm transition-all shrink-0 cursor-pointer"
                   title="Generate Batch Workshop Voucher Keys"
                 >
-                  <Printer className="w-4 h-4 text-amber-300" />
-                  <span>Workshop Keys 🖨️</span>
+                  <Printer className="w-3.5 h-3.5 text-amber-300" />
+                  <span>Batch Keys 🖨️</span>
                 </button>
 
                 <button
                   onClick={() => setIsGenerateModalOpen(true)}
-                  className="px-3.5 py-2 rounded-xl bg-[#DCA134] hover:bg-[#c9902b] text-[#0D3B36] text-xs font-black flex items-center gap-1.5 shadow-sm transition-all shrink-0 cursor-pointer"
+                  className="col-span-2 xs:col-span-1 px-3 sm:px-3.5 py-1.5 sm:py-2 rounded-xl bg-[#DCA134] hover:bg-[#c9902b] text-[#0D3B36] text-[11px] sm:text-xs font-black flex items-center justify-center gap-1 shadow-sm transition-all shrink-0 cursor-pointer"
                 >
-                  <Plus className="w-4 h-4" />
-                  <span>Generate Single Key</span>
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>+ Single Key</span>
                 </button>
               </div>
             </div>
 
             {/* Main Content Body */}
-            <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4">
+            <div className="flex-1 overflow-y-auto p-3.5 sm:p-6 space-y-3.5 sm:space-y-4">
               
               {/* TAB 1: PENDING USER APPROVALS */}
               {activeTab === 'pending' && (
@@ -419,12 +553,12 @@ export const SuperAdminPortal: React.FC<SuperAdminPortalProps> = ({ isOpen, onCl
                   </div>
 
                   {pendingUsers.length === 0 ? (
-                    <div className="p-8 text-center rounded-2xl bg-slate-50 dark:bg-white/5 border border-dashed border-slate-300 dark:border-white/15 space-y-2">
-                      <CheckCircle2 className="w-10 h-10 text-emerald-500 mx-auto" />
-                      <h4 className="font-extrabold text-sm text-slate-700 dark:text-slate-200">
+                    <div className="p-6 sm:p-8 text-center rounded-2xl bg-slate-50 dark:bg-white/5 border border-dashed border-slate-300 dark:border-white/15 space-y-2">
+                      <CheckCircle2 className="w-8 h-8 sm:w-10 sm:h-10 text-emerald-500 mx-auto" />
+                      <h4 className="font-extrabold text-xs sm:text-sm text-slate-700 dark:text-slate-200">
                         No Pending Signups
                       </h4>
-                      <p className="text-xs text-slate-500 dark:text-slate-400">
+                      <p className="text-[11px] text-slate-500 dark:text-slate-400">
                         All registered users have been reviewed and approved!
                       </p>
                     </div>
@@ -433,41 +567,41 @@ export const SuperAdminPortal: React.FC<SuperAdminPortalProps> = ({ isOpen, onCl
                       {pendingUsers.map((u) => (
                         <div
                           key={u.id}
-                          className="p-4 rounded-2xl bg-amber-500/10 border border-amber-400/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3"
+                          className="p-3 sm:p-4 rounded-2xl bg-amber-500/10 border border-amber-400/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5"
                         >
-                          <div className="flex items-center gap-3">
-                            <div className="w-11 h-11 rounded-2xl bg-[#0D3B36] text-[#DCA134] font-black flex items-center justify-center text-sm shadow-sm shrink-0">
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            <div className="w-9 h-9 sm:w-11 sm:h-11 rounded-xl sm:rounded-2xl bg-[#0D3B36] text-[#DCA134] font-black flex items-center justify-center text-xs sm:text-sm shadow-sm shrink-0">
                               {u.fullName.substring(0, 2).toUpperCase()}
                             </div>
-                            <div>
-                              <h4 className="font-black text-sm text-[#0D3B36] dark:text-white flex items-center gap-2">
+                            <div className="min-w-0">
+                              <h4 className="font-black text-xs sm:text-sm text-[#0D3B36] dark:text-white flex items-center gap-1.5 flex-wrap truncate">
                                 <span>{u.fullName}</span>
-                                <span className="px-2 py-0.5 rounded-full bg-amber-500 text-white text-[10px] font-black">
-                                  Pending Approval
+                                <span className="px-1.5 py-0.2 rounded-full bg-amber-500 text-white text-[9px] font-black">
+                                  Pending
                                 </span>
                               </h4>
-                              <p className="text-xs font-extrabold text-slate-600 dark:text-slate-300 mt-0.5">
+                              <p className="text-[11px] font-extrabold text-slate-600 dark:text-slate-300 mt-0.5 truncate">
                                 Studio: {u.studioName} • Role: {u.role}
                               </p>
-                              <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">
+                              <p className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 truncate">
                                 Email: {u.email} {u.licenseKey && `• Key: ${u.licenseKey}`}
                               </p>
                             </div>
                           </div>
 
-                          <div className="flex items-center gap-2 w-full sm:w-auto justify-end shrink-0">
+                          <div className="flex items-center gap-2 w-full sm:w-auto justify-end shrink-0 pt-1 sm:pt-0">
                             <button
                               onClick={() => handleApprove(u.id)}
-                              className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
+                              className="flex-1 sm:flex-initial px-3.5 py-1.5 sm:py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black flex items-center justify-center gap-1 shadow-sm transition-all cursor-pointer"
                             >
-                              <CheckCircle2 className="w-4 h-4" />
-                              <span>Approve (1 Yr Key)</span>
+                              <CheckCircle2 className="w-3.5 h-3.5" />
+                              <span>Approve Key</span>
                             </button>
                             <button
                               onClick={() => handleReject(u.id)}
-                              className="px-3 py-2 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 border border-red-300 text-xs font-bold transition-all cursor-pointer"
+                              className="px-3 py-1.5 sm:py-2 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 border border-red-300 text-xs font-bold transition-all cursor-pointer"
                             >
-                              <XCircle className="w-4 h-4" />
+                              <XCircle className="w-3.5 h-3.5" />
                               <span>Reject</span>
                             </button>
                           </div>
@@ -481,53 +615,63 @@ export const SuperAdminPortal: React.FC<SuperAdminPortalProps> = ({ isOpen, onCl
               {/* TAB 2: LICENSE KEYS POOL */}
               {activeTab === 'licenses' && (
                 <div className="space-y-3">
-                  <div className="flex items-center justify-between text-xs font-black text-slate-500 dark:text-slate-400">
+                  <div className="flex items-center justify-between text-xs font-black text-slate-500 dark:text-slate-400 flex-wrap gap-2">
                     <span>ACTIVE ATELIER LICENSE KEYS POOL</span>
-                    <div className="flex items-center gap-3">
-                      <span>Total Keys: {licenses.length}</span>
+                    <div className="flex items-center gap-2">
+                      <span>Total: {licenses.length}</span>
                       {licenses.length > 0 && (
-                        <button
-                          type="button"
-                          onClick={handleClearAllKeys}
-                          className="px-2.5 py-1 rounded-lg bg-rose-500/15 hover:bg-rose-500/25 text-rose-600 dark:text-rose-400 text-[11px] font-bold border border-rose-400/30 transition-all cursor-pointer flex items-center gap-1"
-                        >
-                          <Trash2 className="w-3 h-3 text-rose-500" />
-                          <span>Clear All Keys</span>
-                        </button>
+                        <>
+                          <button
+                            type="button"
+                            onClick={handlePrintAllActiveKeys}
+                            className="px-2.5 py-1 rounded-lg bg-amber-400/20 hover:bg-amber-400/30 text-amber-300 text-[11px] font-black border border-amber-400/40 transition-all cursor-pointer flex items-center gap-1"
+                          >
+                            <Printer className="w-3 h-3 text-amber-300" />
+                            <span>Print All 🖨️</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={handleClearAllKeys}
+                            className="px-2.5 py-1 rounded-lg bg-rose-500/15 hover:bg-rose-500/25 text-rose-600 dark:text-rose-400 text-[11px] font-bold border border-rose-400/30 transition-all cursor-pointer flex items-center gap-1"
+                          >
+                            <Trash2 className="w-3 h-3 text-rose-500" />
+                            <span>Clear All</span>
+                          </button>
+                        </>
                       )}
                     </div>
                   </div>
 
                   {licenses.length === 0 ? (
-                    <div className="p-8 text-center bg-black/5 dark:bg-white/5 rounded-2xl border border-dashed border-slate-300 dark:border-white/10 space-y-2">
+                    <div className="p-6 sm:p-8 text-center bg-black/5 dark:bg-white/5 rounded-2xl border border-dashed border-slate-300 dark:border-white/10 space-y-2">
                       <Key className="w-8 h-8 text-slate-400 mx-auto" />
                       <p className="text-xs font-bold text-slate-700 dark:text-slate-200">No License Keys Generated</p>
-                      <p className="text-[11px] text-slate-500 dark:text-slate-400">Click "+ Generate License Key" above to generate a new key.</p>
+                      <p className="text-[11px] text-slate-500 dark:text-slate-400">Click "+ Single Key" above to generate a new key.</p>
                     </div>
                   ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 sm:gap-3">
                       {filteredLicenses.map((lic) => {
                         const isRevoked = lic.status === 'revoked';
                         return (
                           <div
                             key={lic.id}
-                            className={`p-4 rounded-2xl border flex items-center justify-between gap-3 ${
+                            className={`p-3 sm:p-4 rounded-2xl border flex flex-col xs:flex-row items-start xs:items-center justify-between gap-2.5 ${
                               isRevoked
                                 ? 'bg-slate-100 dark:bg-white/5 border-slate-200 text-slate-400'
                                 : 'bg-white dark:bg-white/10 border-slate-200 dark:border-white/15'
                             }`}
                           >
-                            <div className="flex items-center gap-3 min-w-0">
-                              <div className="w-10 h-10 rounded-xl bg-[#0D3B36] text-[#DCA134] flex items-center justify-center shrink-0 shadow-sm">
-                                <Key className="w-5 h-5" />
+                            <div className="flex items-center gap-2.5 min-w-0">
+                              <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-[#0D3B36] text-[#DCA134] flex items-center justify-center shrink-0 shadow-sm">
+                                <Key className="w-4 h-4 sm:w-5 sm:h-5" />
                               </div>
                               <div className="min-w-0 space-y-0.5">
-                                <div className="flex items-center gap-2 flex-wrap">
-                                  <span className="font-mono font-black text-sm text-[#0D3B36] dark:text-[#DCA134] tracking-wider truncate">
+                                <div className="flex items-center gap-1.5 flex-wrap">
+                                  <span className="font-mono font-black text-xs sm:text-sm text-[#0D3B36] dark:text-[#DCA134] tracking-wider break-all">
                                     {lic.licenseKey}
                                   </span>
                                   {getDurationBadge(lic.duration)}
-                                  <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase ${
+                                  <span className={`px-1.5 py-0.2 rounded-full text-[8px] sm:text-[9px] font-black uppercase ${
                                     isRevoked ? 'bg-red-100 text-red-600' : 'bg-emerald-100 text-emerald-800'
                                   }`}>
                                     {lic.status}
@@ -543,13 +687,20 @@ export const SuperAdminPortal: React.FC<SuperAdminPortalProps> = ({ isOpen, onCl
                               </div>
                             </div>
 
-                            <div className="flex items-center gap-1.5 shrink-0">
+                            <div className="flex items-center gap-1.5 shrink-0 w-full xs:w-auto justify-end pt-1 xs:pt-0 border-t xs:border-t-0 border-slate-100 dark:border-white/10">
+                              <button
+                                onClick={() => handlePrintSingleKey(lic)}
+                                className="p-1.5 sm:p-2 rounded-xl bg-amber-400/20 hover:bg-amber-400/30 text-amber-600 dark:text-amber-300 transition-all cursor-pointer"
+                                title="Print Voucher Pass Card 🖨️"
+                              >
+                                <Printer className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                              </button>
                               <button
                                 onClick={() => handleCopyKey(lic.licenseKey)}
-                                className="p-2 rounded-xl bg-slate-100 dark:bg-white/10 hover:bg-slate-200 text-slate-700 dark:text-white transition-all cursor-pointer relative"
+                                className="p-1.5 sm:p-2 rounded-xl bg-slate-100 dark:bg-white/10 hover:bg-slate-200 text-slate-700 dark:text-white transition-all cursor-pointer relative"
                                 title="Copy Key to Clipboard"
                               >
-                                <Copy className="w-4 h-4" />
+                                <Copy className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                                 {copiedKey === lic.licenseKey && (
                                   <span className="absolute -top-7 right-0 px-2 py-0.5 rounded bg-black text-white text-[9px] font-bold">
                                     Copied!
@@ -559,18 +710,18 @@ export const SuperAdminPortal: React.FC<SuperAdminPortalProps> = ({ isOpen, onCl
                               {!isRevoked && (
                                 <button
                                   onClick={() => handleRevokeKey(lic.id)}
-                                  className="p-2 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 transition-all cursor-pointer"
+                                  className="p-1.5 sm:p-2 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 transition-all cursor-pointer"
                                   title="Revoke License Key"
                                 >
-                                  <XCircle className="w-4 h-4" />
+                                  <XCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                                 </button>
                               )}
                               <button
                                 onClick={() => handleDeleteKey(lic.id)}
-                                className="p-2 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 transition-all cursor-pointer"
+                                className="p-1.5 sm:p-2 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 transition-all cursor-pointer"
                                 title="Delete License Key permanently"
                               >
-                                <Trash2 className="w-4 h-4" />
+                                <Trash2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                               </button>
                             </div>
                           </div>
@@ -593,16 +744,16 @@ export const SuperAdminPortal: React.FC<SuperAdminPortalProps> = ({ isOpen, onCl
                     {filteredUsers.map((u) => (
                       <div
                         key={u.id}
-                        className="p-3.5 rounded-2xl bg-white dark:bg-white/10 border border-slate-200 dark:border-white/15 flex items-center justify-between gap-3 text-xs"
+                        className="p-3 sm:p-3.5 rounded-2xl bg-white dark:bg-white/10 border border-slate-200 dark:border-white/15 flex flex-col xs:flex-row items-start xs:items-center justify-between gap-2 text-xs"
                       >
-                        <div className="flex items-center gap-3">
-                          <div className="w-9 h-9 rounded-xl bg-[#0D3B36] text-[#DCA134] font-black flex items-center justify-center text-xs shrink-0">
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-[#0D3B36] text-[#DCA134] font-black flex items-center justify-center text-xs shrink-0">
                             {u.fullName.substring(0, 2).toUpperCase()}
                           </div>
-                          <div>
-                            <div className="flex items-center gap-2">
-                              <span className="font-extrabold text-[#0D3B36] dark:text-white text-sm">{u.fullName}</span>
-                              <span className={`px-2 py-0.5 rounded-full text-[9px] font-black ${
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <span className="font-extrabold text-[#0D3B36] dark:text-white text-xs sm:text-sm truncate">{u.fullName}</span>
+                              <span className={`px-1.5 py-0.2 rounded-full text-[9px] font-black ${
                                 u.status === 'approved'
                                   ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-300'
                                   : u.status === 'pending'
@@ -612,7 +763,7 @@ export const SuperAdminPortal: React.FC<SuperAdminPortalProps> = ({ isOpen, onCl
                                 {u.status.toUpperCase()}
                               </span>
                             </div>
-                            <p className="text-slate-500 dark:text-slate-400 font-semibold mt-0.5">
+                            <p className="text-slate-500 dark:text-slate-400 font-semibold text-[11px] mt-0.5 truncate">
                               {u.studioName} • {u.email} {u.licenseKey && `• Key: ${u.licenseKey}`}
                             </p>
                           </div>
@@ -621,7 +772,7 @@ export const SuperAdminPortal: React.FC<SuperAdminPortalProps> = ({ isOpen, onCl
                         {u.status === 'pending' && (
                           <button
                             onClick={() => handleApprove(u.id)}
-                            className="px-3 py-1.5 rounded-xl bg-emerald-600 text-white font-black text-[11px] hover:bg-emerald-700 transition-all cursor-pointer"
+                            className="px-3 py-1 rounded-xl bg-emerald-600 text-white font-black text-[11px] hover:bg-emerald-700 transition-all cursor-pointer shrink-0 ml-auto"
                           >
                             Approve
                           </button>
@@ -640,19 +791,19 @@ export const SuperAdminPortal: React.FC<SuperAdminPortalProps> = ({ isOpen, onCl
 
       {/* Change Admin Security PIN Modal */}
       {isChangePinModalOpen && (
-        <div className="fixed inset-0 z-60 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="w-full max-w-sm bg-white dark:bg-[#0B2A27] rounded-3xl p-6 space-y-4 shadow-2xl border border-slate-200 dark:border-white/15 animate-fade-in text-[#0D3B36] dark:text-white">
-            <div className="flex items-center justify-between border-b pb-3 border-slate-200 dark:border-white/10">
-              <h3 className="text-sm font-extrabold uppercase tracking-wider flex items-center gap-2">
+        <div className="fixed inset-0 z-60 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+          <div className="w-full max-w-sm bg-white dark:bg-[#0B2A27] rounded-2xl sm:rounded-3xl p-4 sm:p-6 space-y-3.5 shadow-2xl border border-slate-200 dark:border-white/15 animate-fade-in text-[#0D3B36] dark:text-white my-auto">
+            <div className="flex items-center justify-between border-b pb-2.5 border-slate-200 dark:border-white/10">
+              <h3 className="text-xs sm:text-sm font-extrabold uppercase tracking-wider flex items-center gap-1.5">
                 <Lock className="w-4 h-4 text-[#DCA134]" />
                 <span>Change Admin Security PIN</span>
               </h3>
               <button onClick={() => setIsChangePinModalOpen(false)} className="text-slate-400 hover:text-slate-600 cursor-pointer">✕</button>
             </div>
 
-            <form onSubmit={handleChangePinSubmit} className="space-y-4">
-              <div className="space-y-1.5 text-left">
-                <label className="text-xs font-extrabold uppercase text-slate-600 dark:text-slate-300">
+            <form onSubmit={handleChangePinSubmit} className="space-y-3.5">
+              <div className="space-y-1 text-left">
+                <label className="text-[11px] font-extrabold uppercase text-slate-600 dark:text-slate-300">
                   NEW ADMIN SECURITY PIN
                 </label>
                 <input
@@ -662,12 +813,12 @@ export const SuperAdminPortal: React.FC<SuperAdminPortalProps> = ({ isOpen, onCl
                   value={newPinInput}
                   onChange={(e) => setNewPinInput(e.target.value)}
                   placeholder="Enter New PIN"
-                  className="w-full px-4 py-3 rounded-2xl bg-slate-50 dark:bg-white/10 border border-slate-300 dark:border-white/20 text-sm font-bold text-center tracking-widest text-[#0D3B36] dark:text-white focus:outline-none focus:ring-2 focus:ring-[#0D3B36]"
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-white/10 border border-slate-300 dark:border-white/20 text-xs sm:text-sm font-bold text-center tracking-widest text-[#0D3B36] dark:text-white focus:outline-none focus:ring-2 focus:ring-[#0D3B36]"
                 />
               </div>
 
-              <div className="space-y-1.5 text-left">
-                <label className="text-xs font-extrabold uppercase text-slate-600 dark:text-slate-300">
+              <div className="space-y-1 text-left">
+                <label className="text-[11px] font-extrabold uppercase text-slate-600 dark:text-slate-300">
                   CONFIRM NEW PIN
                 </label>
                 <input
@@ -677,20 +828,20 @@ export const SuperAdminPortal: React.FC<SuperAdminPortalProps> = ({ isOpen, onCl
                   value={confirmPinInput}
                   onChange={(e) => setConfirmPinInput(e.target.value)}
                   placeholder="Re-enter New PIN"
-                  className="w-full px-4 py-3 rounded-2xl bg-slate-50 dark:bg-white/10 border border-slate-300 dark:border-white/20 text-sm font-bold text-center tracking-widest text-[#0D3B36] dark:text-white focus:outline-none focus:ring-2 focus:ring-[#0D3B36]"
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-white/10 border border-slate-300 dark:border-white/20 text-xs sm:text-sm font-bold text-center tracking-widest text-[#0D3B36] dark:text-white focus:outline-none focus:ring-2 focus:ring-[#0D3B36]"
                 />
               </div>
 
               {changePinError && (
-                <div className="p-3 rounded-xl bg-red-500/15 border border-red-500/30 text-red-600 dark:text-red-400 text-xs font-bold flex items-center gap-1.5">
-                  <AlertCircle className="w-4 h-4 shrink-0" />
+                <div className="p-2.5 rounded-xl bg-red-500/15 border border-red-500/30 text-red-600 dark:text-red-400 text-[11px] font-bold flex items-center gap-1.5">
+                  <AlertCircle className="w-3.5 h-3.5 shrink-0" />
                   <span>{changePinError}</span>
                 </div>
               )}
 
               <button
                 type="submit"
-                className="w-full py-3 rounded-2xl bg-[#0D3B36] hover:bg-[#082824] text-white font-black text-xs uppercase tracking-wider shadow-md transition-all cursor-pointer"
+                className="w-full py-2.5 sm:py-3 rounded-xl bg-[#0D3B36] hover:bg-[#082824] text-white font-black text-xs uppercase tracking-wider shadow-md transition-all cursor-pointer"
               >
                 Save New Admin PIN
               </button>
@@ -701,34 +852,34 @@ export const SuperAdminPortal: React.FC<SuperAdminPortalProps> = ({ isOpen, onCl
 
       {/* License Key Duration Picker Popup Modal */}
       {isGenerateModalOpen && (
-        <div className="fixed inset-0 z-60 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="w-full max-w-sm bg-white dark:bg-[#0B2A27] rounded-3xl p-6 space-y-4 shadow-2xl border border-slate-200 dark:border-white/15 animate-fade-in text-[#0D3B36] dark:text-white">
-            <div className="flex items-center justify-between border-b pb-3 border-slate-200 dark:border-white/10">
-              <h3 className="text-sm font-extrabold uppercase tracking-wider flex items-center gap-2">
+        <div className="fixed inset-0 z-60 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+          <div className="w-full max-w-sm bg-white dark:bg-[#0B2A27] rounded-2xl sm:rounded-3xl p-4 sm:p-6 space-y-3 shadow-2xl border border-slate-200 dark:border-white/15 animate-fade-in text-[#0D3B36] dark:text-white my-auto">
+            <div className="flex items-center justify-between border-b pb-2.5 border-slate-200 dark:border-white/10">
+              <h3 className="text-xs sm:text-sm font-extrabold uppercase tracking-wider flex items-center gap-1.5">
                 <Sparkles className="w-4 h-4 text-[#DCA134]" />
                 <span>Select License Key Duration</span>
               </h3>
               <button onClick={() => setIsGenerateModalOpen(false)} className="text-slate-400 hover:text-slate-600 cursor-pointer">✕</button>
             </div>
 
-            <div className="space-y-2.5">
+            <div className="space-y-2">
               
               {/* 1 Year Option */}
               <button
                 type="button"
                 onClick={() => handleGenerateKeyWithDuration('1_year')}
-                className="w-full p-4 rounded-2xl border border-emerald-300 dark:border-emerald-500/30 bg-emerald-50 dark:bg-emerald-500/10 hover:bg-emerald-100 dark:hover:bg-emerald-500/20 text-left transition-all cursor-pointer flex items-center justify-between"
+                className="w-full p-3 rounded-xl sm:rounded-2xl border border-emerald-300 dark:border-emerald-500/30 bg-emerald-50 dark:bg-emerald-500/10 hover:bg-emerald-100 dark:hover:bg-emerald-500/20 text-left transition-all cursor-pointer flex items-center justify-between"
               >
                 <div>
-                  <div className="font-extrabold text-sm text-emerald-900 dark:text-emerald-300 flex items-center gap-1.5">
-                    <Calendar className="w-4 h-4 text-emerald-600" />
+                  <div className="font-extrabold text-xs sm:text-sm text-emerald-900 dark:text-emerald-300 flex items-center gap-1.5">
+                    <Calendar className="w-3.5 h-3.5 text-emerald-600" />
                     <span>1 Year License Key</span>
                   </div>
-                  <p className="text-[11px] text-emerald-700 dark:text-emerald-400 font-semibold mt-0.5">
-                    Valid for 365 Days • Prefix: TPS-1YR-xxxx
+                  <p className="text-[10px] text-emerald-700 dark:text-emerald-400 font-semibold mt-0.5">
+                    Valid 365 Days • TPS-1YR-xxxx
                   </p>
                 </div>
-                <span className="px-2.5 py-1 rounded-full bg-emerald-600 text-white text-xs font-black shrink-0">
+                <span className="px-2 py-0.5 rounded-full bg-emerald-600 text-white text-[10px] font-black shrink-0">
                   Select
                 </span>
               </button>
@@ -737,18 +888,18 @@ export const SuperAdminPortal: React.FC<SuperAdminPortalProps> = ({ isOpen, onCl
               <button
                 type="button"
                 onClick={() => handleGenerateKeyWithDuration('6_months')}
-                className="w-full p-4 rounded-2xl border border-amber-300 dark:border-amber-500/30 bg-amber-50 dark:bg-amber-500/10 hover:bg-amber-100 dark:hover:bg-amber-500/20 text-left transition-all cursor-pointer flex items-center justify-between"
+                className="w-full p-3 rounded-xl sm:rounded-2xl border border-amber-300 dark:border-amber-500/30 bg-amber-50 dark:bg-amber-500/10 hover:bg-amber-100 dark:hover:bg-amber-500/20 text-left transition-all cursor-pointer flex items-center justify-between"
               >
                 <div>
-                  <div className="font-extrabold text-sm text-amber-900 dark:text-amber-300 flex items-center gap-1.5">
-                    <Clock className="w-4 h-4 text-amber-600" />
+                  <div className="font-extrabold text-xs sm:text-sm text-amber-900 dark:text-amber-300 flex items-center gap-1.5">
+                    <Clock className="w-3.5 h-3.5 text-amber-600" />
                     <span>6 Month License Key</span>
                   </div>
-                  <p className="text-[11px] text-amber-700 dark:text-amber-400 font-semibold mt-0.5">
-                    Valid for 180 Days • Prefix: TPS-6MO-xxxx
+                  <p className="text-[10px] text-amber-700 dark:text-amber-400 font-semibold mt-0.5">
+                    Valid 180 Days • TPS-6MO-xxxx
                   </p>
                 </div>
-                <span className="px-2.5 py-1 rounded-full bg-amber-600 text-white text-xs font-black shrink-0">
+                <span className="px-2 py-0.5 rounded-full bg-amber-600 text-white text-[10px] font-black shrink-0">
                   Select
                 </span>
               </button>
@@ -757,18 +908,18 @@ export const SuperAdminPortal: React.FC<SuperAdminPortalProps> = ({ isOpen, onCl
               <button
                 type="button"
                 onClick={() => handleGenerateKeyWithDuration('1_month')}
-                className="w-full p-4 rounded-2xl border border-blue-300 dark:border-blue-500/30 bg-blue-50 dark:bg-blue-500/10 hover:bg-blue-100 dark:hover:bg-blue-500/20 text-left transition-all cursor-pointer flex items-center justify-between"
+                className="w-full p-3 rounded-xl sm:rounded-2xl border border-blue-300 dark:border-blue-500/30 bg-blue-50 dark:bg-blue-500/10 hover:bg-blue-100 dark:hover:bg-blue-500/20 text-left transition-all cursor-pointer flex items-center justify-between"
               >
                 <div>
-                  <div className="font-extrabold text-sm text-blue-900 dark:text-blue-300 flex items-center gap-1.5">
-                    <Clock className="w-4 h-4 text-blue-600" />
+                  <div className="font-extrabold text-xs sm:text-sm text-blue-900 dark:text-blue-300 flex items-center gap-1.5">
+                    <Clock className="w-3.5 h-3.5 text-blue-600" />
                     <span>1 Month License Key</span>
                   </div>
-                  <p className="text-[11px] text-blue-700 dark:text-blue-400 font-semibold mt-0.5">
-                    Valid for 30 Days • Prefix: TPS-1MO-xxxx
+                  <p className="text-[10px] text-blue-700 dark:text-blue-400 font-semibold mt-0.5">
+                    Valid 30 Days • TPS-1MO-xxxx
                   </p>
                 </div>
-                <span className="px-2.5 py-1 rounded-full bg-blue-600 text-white text-xs font-black shrink-0">
+                <span className="px-2 py-0.5 rounded-full bg-blue-600 text-white text-[10px] font-black shrink-0">
                   Select
                 </span>
               </button>
@@ -777,18 +928,18 @@ export const SuperAdminPortal: React.FC<SuperAdminPortalProps> = ({ isOpen, onCl
               <button
                 type="button"
                 onClick={() => handleGenerateKeyWithDuration('lifetime')}
-                className="w-full p-4 rounded-2xl border border-purple-300 dark:border-purple-500/30 bg-purple-50 dark:bg-purple-500/10 hover:bg-purple-100 dark:hover:bg-purple-500/20 text-left transition-all cursor-pointer flex items-center justify-between"
+                className="w-full p-3 rounded-xl sm:rounded-2xl border border-purple-300 dark:border-purple-500/30 bg-purple-50 dark:bg-purple-500/10 hover:bg-purple-100 dark:hover:bg-purple-500/20 text-left transition-all cursor-pointer flex items-center justify-between"
               >
                 <div>
-                  <div className="font-extrabold text-sm text-purple-900 dark:text-purple-300 flex items-center gap-1.5">
-                    <Sparkles className="w-4 h-4 text-purple-600" />
+                  <div className="font-extrabold text-xs sm:text-sm text-purple-900 dark:text-purple-300 flex items-center gap-1.5">
+                    <Sparkles className="w-3.5 h-3.5 text-purple-600" />
                     <span>Lifetime License Key ♾️</span>
                   </div>
-                  <p className="text-[11px] text-purple-700 dark:text-purple-400 font-semibold mt-0.5">
-                    Never Expires • Prefix: TPS-LIFE-xxxx
+                  <p className="text-[10px] text-purple-700 dark:text-purple-400 font-semibold mt-0.5">
+                    Never Expires • TPS-LIFE-xxxx
                   </p>
                 </div>
-                <span className="px-2.5 py-1 rounded-full bg-purple-600 text-white text-xs font-black shrink-0">
+                <span className="px-2 py-0.5 rounded-full bg-purple-600 text-white text-[10px] font-black shrink-0">
                   Select
                 </span>
               </button>
@@ -800,25 +951,25 @@ export const SuperAdminPortal: React.FC<SuperAdminPortalProps> = ({ isOpen, onCl
 
       {/* WORKSHOP BATCH GENERATOR MODAL */}
       {isBatchModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-sm animate-fade-in font-['Outfit']">
-          <div className="relative w-full max-w-xl bg-white dark:bg-[#092825] rounded-3xl shadow-2xl border border-slate-200 dark:border-white/10 overflow-hidden space-y-4 p-6">
-            <div className="flex items-center justify-between border-b border-slate-200 dark:border-white/10 pb-3">
-              <div className="flex items-center gap-2">
-                <Printer className="w-5 h-5 text-[#DCA134]" />
-                <h3 className="font-extrabold text-base text-[#0D3B36] dark:text-amber-300 uppercase tracking-tight">
+        <div className="fixed inset-0 z-60 flex items-center justify-center p-3 sm:p-4 bg-slate-900/70 backdrop-blur-sm animate-fade-in font-['Outfit'] overflow-y-auto">
+          <div className="relative w-full max-w-lg bg-white dark:bg-[#092825] rounded-2xl sm:rounded-3xl shadow-2xl border border-slate-200 dark:border-white/10 overflow-hidden space-y-3.5 p-4 sm:p-6 my-auto max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-slate-200 dark:border-white/10 pb-2.5">
+              <div className="flex items-center gap-2 min-w-0">
+                <Printer className="w-4.5 h-4.5 text-[#DCA134] shrink-0" />
+                <h3 className="font-extrabold text-xs sm:text-base text-[#0D3B36] dark:text-amber-300 uppercase tracking-tight truncate">
                   Batch Workshop Voucher Key Generator
                 </h3>
               </div>
               <button
                 type="button"
                 onClick={() => setIsBatchModalOpen(false)}
-                className="p-1 rounded-lg bg-slate-100 dark:bg-white/10 text-slate-500 hover:text-slate-800 dark:text-slate-300 transition-colors cursor-pointer"
+                className="p-1 rounded-lg bg-slate-100 dark:bg-white/10 text-slate-500 hover:text-slate-800 dark:text-slate-300 transition-colors cursor-pointer shrink-0"
               >
                 ✕
               </button>
             </div>
 
-            <form onSubmit={handleGenerateWorkshopBatch} className="space-y-4">
+            <form onSubmit={handleGenerateWorkshopBatch} className="space-y-3.5">
               <div>
                 <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">
                   Workshop Batch Title / Event Name:
@@ -829,7 +980,7 @@ export const SuperAdminPortal: React.FC<SuperAdminPortalProps> = ({ isOpen, onCl
                   value={batchName}
                   onChange={(e) => setBatchName(e.target.value)}
                   placeholder="e.g. Accra Atelier Workshop Batch #1"
-                  className="w-full px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-900 dark:text-slate-100"
+                  className="w-full px-3.5 py-2 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-900 dark:text-slate-100"
                 />
               </div>
 
@@ -844,32 +995,32 @@ export const SuperAdminPortal: React.FC<SuperAdminPortalProps> = ({ isOpen, onCl
                   required
                   value={batchCount}
                   onChange={(e) => setBatchCount(parseInt(e.target.value) || 1)}
-                  className="w-full px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-900 dark:text-slate-100"
+                  className="w-full px-3.5 py-2 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-900 dark:text-slate-100"
                 />
               </div>
 
-              <div className="flex justify-end gap-2 pt-2">
+              <div className="flex justify-end gap-2 pt-1">
                 <button
                   type="button"
                   onClick={() => setIsBatchModalOpen(false)}
-                  className="px-4 py-2.5 rounded-xl bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold text-xs cursor-pointer"
+                  className="px-3.5 py-2 rounded-xl bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold text-xs cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={isGeneratingBatch}
-                  className="px-6 py-2.5 rounded-xl bg-[#0D3B36] hover:bg-[#082824] text-amber-300 font-black text-xs flex items-center gap-2 shadow-md cursor-pointer disabled:opacity-60"
+                  className="px-5 py-2 rounded-xl bg-[#0D3B36] hover:bg-[#082824] text-amber-300 font-black text-xs flex items-center gap-1.5 shadow-md cursor-pointer disabled:opacity-60"
                 >
                   {isGeneratingBatch ? (
                     <>
-                      <RefreshCw className="w-4 h-4 text-amber-300 animate-spin" />
-                      <span>GENERATING BATCH...</span>
+                      <RefreshCw className="w-3.5 h-3.5 text-amber-300 animate-spin" />
+                      <span>GENERATING...</span>
                     </>
                   ) : (
                     <>
-                      <Printer className="w-4 h-4 text-amber-300" />
-                      <span>GENERATE {batchCount} WORKSHOP KEYS 🖨️</span>
+                      <Printer className="w-3.5 h-3.5 text-amber-300" />
+                      <span>GENERATE {batchCount} KEYS 🖨️</span>
                     </>
                   )}
                 </button>
@@ -878,37 +1029,42 @@ export const SuperAdminPortal: React.FC<SuperAdminPortalProps> = ({ isOpen, onCl
 
             {/* Generated Batch Output & Export */}
             {generatedBatchKeys.length > 0 && (
-              <div className="p-4 rounded-2xl bg-slate-900 border border-amber-400/40 space-y-3 animate-fade-in text-white">
-                <div className="flex items-center justify-between">
+              <div className="p-3.5 rounded-2xl bg-slate-900 border border-amber-400/40 space-y-2.5 animate-fade-in text-white">
+                <div className="flex items-center justify-between flex-wrap gap-2">
                   <span className="text-xs font-black text-amber-300 flex items-center gap-1.5">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
                     Generated {generatedBatchKeys.length} Voucher Keys!
                   </span>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1.5">
                     <button
                       type="button"
                       onClick={handleExportBatchCSV}
-                      className="px-3 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-slate-900 font-black text-[11px] flex items-center gap-1 cursor-pointer shadow-sm"
+                      className="px-2.5 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-slate-900 font-black text-[11px] flex items-center gap-1 cursor-pointer shadow-sm"
                     >
-                      <Download className="w-3.5 h-3.5" />
-                      <span>Export CSV 📄</span>
+                      <Download className="w-3 h-3" />
+                      <span>CSV 📄</span>
                     </button>
                     <button
                       type="button"
-                      onClick={() => window.print()}
-                      className="px-3 py-1.5 rounded-xl bg-[#DCA134] hover:bg-amber-400 text-[#0D3B36] font-black text-[11px] flex items-center gap-1 cursor-pointer shadow-sm"
+                      onClick={() =>
+                        printVoucherKeys(
+                          generatedBatchKeys.map((code) => ({ code, batchName })),
+                          batchName
+                        )
+                      }
+                      className="px-2.5 py-1.5 rounded-xl bg-[#DCA134] hover:bg-amber-400 text-[#0D3B36] font-black text-[11px] flex items-center gap-1 cursor-pointer shadow-sm"
                     >
-                      <Printer className="w-3.5 h-3.5" />
+                      <Printer className="w-3 h-3" />
                       <span>Print Vouchers 🖨️</span>
                     </button>
                   </div>
                 </div>
 
-                <div className="max-h-40 overflow-y-auto font-mono text-[11px] p-3 rounded-xl bg-black/60 border border-white/10 space-y-1 select-all">
+                <div className="max-h-36 overflow-y-auto font-mono text-[11px] p-2.5 rounded-xl bg-black/60 border border-white/10 space-y-1 select-all custom-scrollbar">
                   {generatedBatchKeys.map((key, idx) => (
-                    <div key={idx} className="flex items-center justify-between border-b border-white/5 py-1">
+                    <div key={idx} className="flex items-center justify-between border-b border-white/5 py-0.5">
                       <span className="text-amber-300 font-bold">{key}</span>
-                      <span className="text-slate-400 text-[10px]">1-Year Master Voucher</span>
+                      <span className="text-slate-400 text-[10px]">1-Year Master Pass</span>
                     </div>
                   ))}
                 </div>

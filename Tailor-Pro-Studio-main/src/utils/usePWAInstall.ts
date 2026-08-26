@@ -5,13 +5,20 @@ export function usePWAInstall() {
   const [isInstallable, setIsInstallable] = useState<boolean>(false);
   const [isInstalled, setIsInstalled] = useState<boolean>(false);
 
+  // Platform Detection
+  const ua = typeof navigator !== 'undefined' ? navigator.userAgent || '' : '';
+  const isIOS = /iPad|iPhone|iPod/.test(ua) || (typeof navigator !== 'undefined' && navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  const isAndroid = /android/i.test(ua);
+  const isMobile = isIOS || isAndroid;
+
   useEffect(() => {
-    // Check if running in standalone display mode (already installed as desktop/mobile app)
-    if (
+    // Check if running in standalone display mode (already installed as desktop/mobile PWA app)
+    const isStandalone =
       window.matchMedia('(display-mode: standalone)').matches ||
       (navigator as any).standalone === true ||
-      document.referrer.includes('android-app://')
-    ) {
+      document.referrer.includes('android-app://');
+
+    if (isStandalone) {
       setIsInstalled(true);
     }
 
@@ -50,5 +57,14 @@ export function usePWAInstall() {
     return false;
   };
 
-  return { deferredPrompt, isInstallable, isInstalled, triggerInstall };
+  return {
+    deferredPrompt,
+    isInstallable,
+    isInstalled,
+    isIOS,
+    isAndroid,
+    isMobile,
+    triggerInstall
+  };
 }
+

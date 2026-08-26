@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Scissors, Lock, Mail, MessageCircle, Coffee, Sparkles, UserCheck, Download } from 'lucide-react';
+import { Scissors, Lock, Mail, MessageCircle, Coffee, Sparkles, UserCheck, Download, Smartphone } from 'lucide-react';
 import { UserRole } from '../../types';
 
 interface SignInViewProps {
@@ -167,6 +167,18 @@ export const SignInView: React.FC<SignInViewProps> = ({
               <Scissors className="w-4 h-4 text-[#0D3B36] group-hover:rotate-12 transition-transform" />
               <span>Are you a customer? <span className="underline font-extrabold text-[#0D3B36]">Track Order Status Here</span></span>
             </button>
+
+            {/* Install App on Device Button */}
+            {onOpenInstallApp && (
+              <button
+                type="button"
+                onClick={onOpenInstallApp}
+                className="w-full py-2.5 px-3 rounded-2xl bg-amber-500/15 hover:bg-amber-500/25 border border-[#DCA134]/40 text-[#0D3B36] font-extrabold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer shadow-xs"
+              >
+                <Smartphone className="w-4 h-4 text-[#0D3B36]" />
+                <span>Install App on Android / iPhone 📱</span>
+              </button>
+            )}
 
             {/* Official WhatsApp Group Support Button */}
             <a

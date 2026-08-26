@@ -69,44 +69,31 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
   const totalJobs = displayClients.length;
 
   // Combine explicit transactions with automatic consultation deposits & full settlement receipts
-  const autoClientTransactions: LedgerTransaction[] = [];
+  const allCashflowTransactions: LedgerTransaction[] = [...transactions];
+
   displayClients.forEach((c) => {
     if (c.depositPaid > 0) {
-      autoClientTransactions.push({
-        id: `auto-dep-${c.id}`,
-        date: c.timestamp ? c.timestamp.split('T')[0] : new Date().toISOString().split('T')[0],
-        type: 'deposit',
-        category: 'Consultation Deposit',
-        description: `Consult Deposit Paid - ${c.name} (${c.garmentTag || 'Custom Order'})`,
-        amount: c.depositPaid,
-        clientOrVendor: c.name,
-        status: 'cleared',
-        method: 'Cash'
-      });
-    }
-    if (c.balanceDue === 0 && c.totalCost > 0) {
-      autoClientTransactions.push({
-        id: `auto-full-${c.id}`,
-        date: new Date().toISOString().split('T')[0],
-        type: 'revenue',
-        category: 'Full Settlement',
-        description: `Full Settlement Completed - ${c.name} (${c.garmentTag || 'Custom Order'})`,
-        amount: c.totalCost,
-        clientOrVendor: c.name,
-        status: 'cleared',
-        method: 'Cash'
-      });
-    }
-  });
+      // Check how much revenue/deposit has already been logged in transactions for this client
+      const loggedAmountForClient = transactions
+        .filter((t) => t.clientOrVendor && t.clientOrVendor.toLowerCase() === c.name.toLowerCase() && t.status === 'cleared')
+        .reduce((sum, t) => sum + (t.amount || 0), 0);
 
-  // Merge transactions, filtering duplicates
-  const allCashflowTransactions: LedgerTransaction[] = [...transactions];
-  autoClientTransactions.forEach((autoTx) => {
-    const isDuplicate = allCashflowTransactions.some(
-      (t) => t.id === autoTx.id || (t.clientOrVendor === autoTx.clientOrVendor && t.amount === autoTx.amount)
-    );
-    if (!isDuplicate) {
-      allCashflowTransactions.push(autoTx);
+      const unrecordedAmount = c.depositPaid - loggedAmountForClient;
+      if (unrecordedAmount > 0) {
+        allCashflowTransactions.push({
+          id: `auto-dep-${c.id}`,
+          date: c.timestamp ? c.timestamp.split('T')[0] : new Date().toISOString().split('T')[0],
+          type: 'deposit',
+          category: c.balanceDue === 0 ? 'Full Settlement' : 'Consultation Deposit',
+          description: c.balanceDue === 0
+            ? `Full Settlement Paid - ${c.name} (${c.garmentTag || 'Custom Order'})`
+            : `Deposit Paid - ${c.name} (${c.garmentTag || 'Custom Order'})`,
+          amount: unrecordedAmount,
+          clientOrVendor: c.name,
+          status: 'cleared',
+          method: 'Cash'
+        });
+      }
     }
   });
 

@@ -11,7 +11,8 @@ import {
   RefreshCw,
   Download,
   FileCheck,
-  UserCheck
+  UserCheck,
+  WifiOff
 } from 'lucide-react';
 import { Apprentice } from '../../types';
 import { getGraduationPayment, recordGraduationPayment } from '../../services/subscriptionService';
@@ -42,6 +43,10 @@ export const GraduationPaymentModal: React.FC<GraduationPaymentModalProps> = ({
 
   const handlePayGraduationFee = (e: React.FormEvent) => {
     e.preventDefault();
+    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+      alert('You are currently offline. An active internet connection is required to process graduation fee payments. Please connect to the internet and try again.');
+      return;
+    }
     if (!momoNumber || momoNumber.trim().length < 9) {
       alert('Please enter a valid phone or Mobile Money number.');
       return;
@@ -71,8 +76,10 @@ export const GraduationPaymentModal: React.FC<GraduationPaymentModalProps> = ({
       onCancel: () => {
         setIsProcessing(false);
       },
-      onError: () => {
+      onError: (err) => {
         setIsProcessing(false);
+        const msg = err?.message || 'Payment processing failed. Please check your network connection and try again.';
+        alert(msg);
       }
     });
   };
@@ -113,6 +120,16 @@ export const GraduationPaymentModal: React.FC<GraduationPaymentModalProps> = ({
         {/* Modal Body */}
         <div className="p-6 overflow-y-auto space-y-6 flex-1">
           
+          {/* Offline Status Alert */}
+          {typeof navigator !== 'undefined' && !navigator.onLine && (
+            <div className="p-3.5 rounded-2xl bg-amber-500/15 border border-amber-500/40 text-amber-900 dark:text-amber-300 text-xs font-bold flex items-center gap-2.5 animate-fade-in">
+              <WifiOff className="w-5 h-5 text-amber-500 shrink-0" />
+              <span>
+                <strong>Device Offline:</strong> You are currently offline. An active internet connection is required to process graduation fee payments.
+              </span>
+            </div>
+          )}
+
           {/* Certificate Watermark Preview Box */}
           <div className="relative p-6 rounded-3xl bg-slate-900 border-2 border-amber-400/50 text-white overflow-hidden shadow-xl text-center space-y-4">
             <div className="absolute top-2 right-2">

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   X,
   CheckCircle2,
@@ -15,7 +15,9 @@ import {
   Award,
   Coffee,
   Heart,
-  Info
+  Info,
+  WifiOff,
+  AlertTriangle
 } from 'lucide-react';
 import { StudioSubscription } from '../../types';
 import { getStudioSubscription, upgradeToMasterTier, redeemWorkshopKey } from '../../services/subscriptionService';
@@ -33,11 +35,12 @@ export const SubscriptionPlansModal: React.FC<SubscriptionPlansModalProps> = ({
   onSubscriptionUpdated
 }) => {
   const [currentSub, setCurrentSub] = useState<StudioSubscription>(getStudioSubscription);
-  const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly');
+  const [billingCycle, setBillingCycle] = useState<'monthly' | '6months' | 'yearly'>('monthly');
   const [selectedProvider, setSelectedProvider] = useState<'MTN' | 'TELECEL' | 'AT' | 'CARD'>('MTN');
   const [momoNumber, setMomoNumber] = useState<string>('0240000000');
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
   const [successNotice, setSuccessNotice] = useState<string | null>(null);
+  const [isOnline, setIsOnline] = useState<boolean>(typeof navigator !== 'undefined' ? navigator.onLine : true);
 
   // Workshop Key State
   const [workshopKeyCode, setWorkshopKeyCode] = useState<string>('');
@@ -49,6 +52,17 @@ export const SubscriptionPlansModal: React.FC<SubscriptionPlansModalProps> = ({
   const [customDonationInput, setCustomDonationInput] = useState<string>('');
   const [isDonating, setIsDonating] = useState<boolean>(false);
   const [donationSuccess, setDonationSuccess] = useState<string | null>(null);
+
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
 
   if (!isOpen) return null;
 
@@ -77,6 +91,10 @@ export const SubscriptionPlansModal: React.FC<SubscriptionPlansModalProps> = ({
   };
 
   const handleDonateCoffee = () => {
+    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+      alert('You are currently offline. An active internet connection is required to make online payments. Please connect to the internet and try again.');
+      return;
+    }
     const finalAmount = customDonationInput ? parseFloat(customDonationInput) : donationAmount;
     if (!finalAmount || finalAmount <= 0) {
       alert('Please enter a valid donation amount.');
@@ -101,14 +119,24 @@ export const SubscriptionPlansModal: React.FC<SubscriptionPlansModalProps> = ({
       onCancel: () => {
         setIsDonating(false);
       },
-      onError: () => {
+      onError: (err) => {
         setIsDonating(false);
+        const msg = err?.message || 'Payment processing failed. Please check your internet connection and try again.';
+        alert(msg);
       }
     });
   };
 
+  const priceGHS = billingCycle === 'yearly' ? 300 : billingCycle === '6months' ? 180 : 35;
+  const cycleLabel = billingCycle === 'yearly' ? 'year' : billingCycle === '6months' ? '6 months' : 'month';
+  const cycleCode = billingCycle === '6months' ? '6-MONTHS' : billingCycle.toUpperCase();
+
   const handleUpgrade = (e: React.FormEvent) => {
     e.preventDefault();
+    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+      alert('You are currently offline. An active internet connection is required to process payments and subscribe to a plan. Please connect to the internet and try again.');
+      return;
+    }
     if (!momoNumber || momoNumber.trim().length < 9) {
       alert('Please enter a valid Mobile Money or phone number.');
       return;
@@ -117,14 +145,12 @@ export const SubscriptionPlansModal: React.FC<SubscriptionPlansModalProps> = ({
     setIsProcessing(true);
     setSuccessNotice(null);
 
-    const priceGHS = billingCycle === 'yearly' ? 300 : 35;
-
     initializePaystackCheckout({
       email: `${momoNumber.replace(/\D/g, '')}@tailorpro.com`,
       amountGHS: priceGHS,
       referencePrefix: 'PAYSTACK_SUB',
       metadata: {
-        plan: `TAILOR_PRO_MASTER_${billingCycle.toUpperCase()}`,
+        plan: `TAILOR_PRO_MASTER_${cycleCode}`,
         phone: momoNumber,
         provider: selectedProvider
       },
@@ -133,7 +159,7 @@ export const SubscriptionPlansModal: React.FC<SubscriptionPlansModalProps> = ({
         updated.txRef = txRef;
         setCurrentSub(updated);
         setIsProcessing(false);
-        setSuccessNotice(`Paystack Payment Verified (${txRef})! Studio upgraded to TAILOR PRO MASTER (${billingCycle.toUpperCase()}).`);
+        setSuccessNotice(`Paystack Payment Verified (${txRef})! Studio upgraded to TAILOR PRO MASTER (${cycleCode}).`);
         if (onSubscriptionUpdated) {
           onSubscriptionUpdated(updated);
         }
@@ -141,8 +167,10 @@ export const SubscriptionPlansModal: React.FC<SubscriptionPlansModalProps> = ({
       onCancel: () => {
         setIsProcessing(false);
       },
-      onError: () => {
+      onError: (err) => {
         setIsProcessing(false);
+        const msg = err?.message || 'Subscription payment failed. Please ensure you are connected to the internet and try again.';
+        alert(msg);
       }
     });
   };
@@ -184,6 +212,16 @@ export const SubscriptionPlansModal: React.FC<SubscriptionPlansModalProps> = ({
         {/* Modal Content */}
         <div className="p-3.5 sm:p-6 overflow-y-auto space-y-3.5 sm:space-y-6 flex-1">
           
+          {/* Offline Status Alert */}
+          {!isOnline && (
+            <div className="p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-amber-500/15 border border-amber-500/40 text-amber-900 dark:text-amber-300 text-xs font-bold flex items-center gap-2.5 animate-fade-in">
+              <WifiOff className="w-5 h-5 text-amber-500 shrink-0" />
+              <span>
+                <strong>Device Offline:</strong> You are currently offline. An active internet connection is required to complete payments and subscribe to a plan. Please connect to the internet to upgrade.
+              </span>
+            </div>
+          )}
+
           {/* Active Plan Alert */}
           <div className="p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 flex items-center justify-between flex-wrap gap-2">
             <div className="flex items-center gap-2.5">
@@ -195,7 +233,7 @@ export const SubscriptionPlansModal: React.FC<SubscriptionPlansModalProps> = ({
                   Current Active Plan
                 </span>
                 <span className="font-extrabold text-xs sm:text-sm text-slate-900 dark:text-slate-100">
-                  TAILOR PRO {currentSub.tier} {currentSub.tier === 'FREE' ? '(10 Profile Limit)' : '(Unlimited)'}
+                  TAILOR PRO {currentSub.tier} {currentSub.tier === 'FREE' ? '(5 Profile Limit)' : '(Unlimited)'}
                 </span>
               </div>
             </div>
@@ -207,28 +245,47 @@ export const SubscriptionPlansModal: React.FC<SubscriptionPlansModalProps> = ({
             )}
           </div>
 
-          {/* Billing Cycle Toggle */}
-          <div className="flex items-center justify-center gap-3 py-2">
-            <span className={`text-xs font-black ${billingCycle === 'monthly' ? 'text-[#0D3B36] dark:text-amber-300' : 'text-slate-500'}`}>
-              Monthly Billing
-            </span>
+          {/* Billing Cycle Selector */}
+          <div className="flex items-center justify-center gap-1 sm:gap-1.5 p-1 rounded-2xl bg-slate-100 dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700 max-w-xl mx-auto my-2 flex-wrap">
             <button
               type="button"
-              onClick={() => setBillingCycle((prev) => (prev === 'monthly' ? 'yearly' : 'monthly'))}
-              className="w-14 h-8 rounded-full bg-[#0D3B36] p-1 flex items-center transition-colors cursor-pointer relative"
+              onClick={() => setBillingCycle('monthly')}
+              className={`flex-1 min-w-[100px] py-2 px-2.5 rounded-xl text-xs font-black transition-all cursor-pointer text-center ${
+                billingCycle === 'monthly'
+                  ? 'bg-[#0D3B36] text-amber-300 shadow-md'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+              }`}
             >
-              <div
-                className={`w-6 h-6 rounded-full bg-amber-400 shadow-md transition-transform ${
-                  billingCycle === 'yearly' ? 'translate-x-6' : 'translate-x-0'
-                }`}
-              />
+              Monthly (GHS 35)
             </button>
-            <span className={`text-xs font-black flex items-center gap-1.5 ${billingCycle === 'yearly' ? 'text-[#0D3B36] dark:text-amber-300' : 'text-slate-500'}`}>
-              Yearly Billing
-              <span className="px-2 py-0.5 rounded-full bg-emerald-500 text-slate-900 font-black text-[9px] uppercase">
-                SAVE GHS 120
+            <button
+              type="button"
+              onClick={() => setBillingCycle('6months')}
+              className={`flex-1 min-w-[130px] py-2 px-2.5 rounded-xl text-xs font-black transition-all cursor-pointer text-center flex items-center justify-center gap-1 ${
+                billingCycle === '6months'
+                  ? 'bg-[#0D3B36] text-amber-300 shadow-md'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+              }`}
+            >
+              <span>6-Months (GHS 180)</span>
+              <span className="px-1.5 py-0.5 rounded-full bg-emerald-500 text-slate-950 text-[8px] uppercase font-black">
+                SAVE 30
               </span>
-            </span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setBillingCycle('yearly')}
+              className={`flex-1 min-w-[130px] py-2 px-2.5 rounded-xl text-xs font-black transition-all cursor-pointer text-center flex items-center justify-center gap-1 ${
+                billingCycle === 'yearly'
+                  ? 'bg-[#0D3B36] text-amber-300 shadow-md'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+              }`}
+            >
+              <span>Yearly (GHS 300)</span>
+              <span className="px-1.5 py-0.5 rounded-full bg-emerald-500 text-slate-950 text-[8px] uppercase font-black">
+                SAVE 120
+              </span>
+            </button>
           </div>
 
           {/* Subscription Tier Cards Grid (4 Tiers) */}
@@ -271,7 +328,7 @@ export const SubscriptionPlansModal: React.FC<SubscriptionPlansModalProps> = ({
                 <ul className="space-y-1.5 text-[11px] pt-2 border-t border-slate-200 dark:border-slate-800">
                   <li className="flex items-center gap-2 text-slate-700 dark:text-slate-300 font-semibold">
                     <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
-                    <span>Up to 10 Client Profiles</span>
+                    <span>Up to 5 Client Profiles</span>
                   </li>
                   <li className="flex items-center gap-2 text-slate-700 dark:text-slate-300 font-semibold">
                     <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
@@ -327,10 +384,10 @@ export const SubscriptionPlansModal: React.FC<SubscriptionPlansModalProps> = ({
 
                 <div className="pt-1">
                   <span className="font-black text-2xl text-white">
-                    GHS {billingCycle === 'yearly' ? '300' : '35'}
+                    GHS {priceGHS}
                   </span>
                   <span className="text-[11px] font-bold text-amber-200 ml-1">
-                    / {billingCycle === 'yearly' ? 'year' : 'month'}
+                    / {cycleLabel}
                   </span>
                 </div>
 
@@ -364,7 +421,7 @@ export const SubscriptionPlansModal: React.FC<SubscriptionPlansModalProps> = ({
                   className="w-full py-2.5 rounded-xl bg-[#DCA134] hover:bg-amber-400 text-[#0D3B36] font-black text-xs flex items-center justify-center gap-1.5 shadow-lg transition-transform hover:scale-102 cursor-pointer"
                 >
                   <Zap className="w-3.5 h-3.5 text-[#0D3B36]" />
-                  <span>{currentSub.tier === 'MASTER' ? 'Renew Master' : `Upgrade (GHS ${billingCycle === 'yearly' ? '300' : '35'})`}</span>
+                  <span>{currentSub.tier === 'MASTER' ? 'Renew Master' : `Upgrade (GHS ${priceGHS})`}</span>
                 </a>
               </div>
             </div>
@@ -630,7 +687,7 @@ export const SubscriptionPlansModal: React.FC<SubscriptionPlansModalProps> = ({
                 <input
                   type="text"
                   readOnly
-                  value={`TAILOR PRO MASTER (${billingCycle.toUpperCase()} - GHS ${billingCycle === 'yearly' ? '300' : '35'})`}
+                  value={`TAILOR PRO MASTER (${cycleCode} - GHS ${priceGHS})`}
                   className="w-full px-4 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-700 font-black text-[#0D3B36] dark:text-amber-300 text-xs"
                 />
               </div>
@@ -651,7 +708,7 @@ export const SubscriptionPlansModal: React.FC<SubscriptionPlansModalProps> = ({
                 ) : (
                   <>
                     <ShieldCheck className="w-4 h-4 text-amber-300" />
-                    <span>PAY GHS {billingCycle === 'yearly' ? '300' : '35'} VIA {selectedProvider} & UPGRADE NOW</span>
+                    <span>PAY GHS {priceGHS} VIA {selectedProvider} & UPGRADE NOW</span>
                   </>
                 )}
               </button>

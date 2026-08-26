@@ -79,9 +79,10 @@ import { FullMeasurementsModal } from './components/modals/FullMeasurementsModal
 import { FabricColorScannerModal } from './components/modals/FabricColorScannerModal';
 import { LogoutConfirmationModal } from './components/modals/LogoutConfirmationModal';
 import { InstallAppModal } from './components/modals/InstallAppModal';
+import { PWAInstallBanner } from './components/PWAInstallBanner';
 import { SubscriptionPlansModal } from './components/modals/SubscriptionPlansModal';
 import { GraduationPaymentModal } from './components/modals/GraduationPaymentModal';
-import { getStudioSubscription, canAddClientProfile } from './services/subscriptionService';
+import { getStudioSubscription, canAddClientProfile, canLinkApprentice, canAddMaterial } from './services/subscriptionService';
 
 import { ApprenticeAppView } from './components/apprentice/ApprenticeAppView';
 import { SplashScreen } from './components/SplashScreen';
@@ -588,12 +589,22 @@ export default function App() {
   const handleTriggerAddClient = () => {
     const check = canAddClientProfile(clients.length);
     if (!check.allowed) {
-      alert(`Free Tier limit reached (${check.limit} client profiles). Upgrade to Tailor Pro Master (GHS 35/mo) for unlimited client profiles!`);
+      alert(check.reason || `Free Tier limit reached (${check.limit} client profiles). Upgrade to Tailor Pro Master for unlimited client profiles!`);
       setIsSubscriptionModalOpen(true);
       return;
     }
     setEditingClient(null);
     setIsAddClientOpen(true);
+  };
+
+  const handleTriggerAddMaterial = () => {
+    const check = canAddMaterial(inventory.length);
+    if (!check.allowed) {
+      alert(check.reason || `Free Tier limit reached (${check.limit} materials max). Upgrade to Tailor Pro Master for unlimited inventory materials!`);
+      setIsSubscriptionModalOpen(true);
+      return;
+    }
+    setIsAddMaterialOpen(true);
   };
 
   const handlePromptLogout = () => {
@@ -614,6 +625,12 @@ export default function App() {
   };
 
   const handleAddMaterialToInventory = (name: string, unit: string, amount: number) => {
+    const check = canAddMaterial(inventory.length);
+    if (!check.allowed) {
+      alert(check.reason || `Free Tier limit reached (${check.limit} materials max). Upgrade to Tailor Pro Master for unlimited inventory materials!`);
+      setIsSubscriptionModalOpen(true);
+      return;
+    }
     const newItem: InventoryItem = {
       id: `mat_${Date.now()}`,
       name,
@@ -808,7 +825,7 @@ export default function App() {
       if (!check.allowed) {
         setIsAddClientOpen(false);
         setIsSubscriptionModalOpen(true);
-        alert(`Free Tier Limit Reached: You have reached the maximum limit of ${check.limit} client profiles on the Free Tier.\n\nPlease upgrade to Tailor Pro Master (GHS 35/month or GHS 300/year) to unlock unlimited client profiles!`);
+        alert(check.reason || `Free Tier Limit Reached: You have reached the maximum limit of ${check.limit} client profiles on the Free Tier.`);
         return;
       }
     }
@@ -927,6 +944,13 @@ export default function App() {
   };
 
   const handleSaveApprentice = (newApprentice: Apprentice) => {
+    const check = canLinkApprentice(apprentices.length);
+    if (!check.allowed) {
+      setIsAddApprenticeOpen(false);
+      setIsSubscriptionModalOpen(true);
+      alert(check.reason || `Free Tier Limit Reached: Free tier allows linking max 1 apprentice profile. Upgrade to Master for unlimited linked apprentices!`);
+      return;
+    }
     setApprentices((prev) => [newApprentice, ...prev]);
     upsertApprenticeToSupabase(newApprentice);
     queueOfflineAction('apprentice', newApprentice);
@@ -950,45 +974,113 @@ export default function App() {
     );
   };
 
+  const handleMarkPaidDirectly = (clientId: string, paymentMethod: string = 'Cash') => {
+    const client = clients.find((c) => c.id === clientId);
+    if (!client) return;
+
+    const remainingAmount = client.balanceDue > 0 ? client.balanceDue : Math.max(0, client.totalCost - client.depositPaid);
+
+    // Remove any unpaid deposit for this client from state & Supabase
+    const matchingDep = unpaidDeposits.find((d) => d.clientId === clientId);
+    setUnpaidDeposits((prev) => prev.filter((d) => d.clientId !== clientId && d.id !== `dep-${clientId}`));
+    if (matchingDep) {
+      deleteUnpaidDepositFromSupabase(matchingDep.id);
+    } else {
+      deleteUnpaidDepositFromSupabase(`dep-${clientId}`);
+      deleteUnpaidDepositFromSupabase(clientId);
+    }
+
+    // Update client record
+    const updatedClient: Client = {
+      ...client,
+      depositPaid: client.totalCost > 0 ? client.totalCost : client.depositPaid + remainingAmount,
+      balanceDue: 0,
+      status: 'Active'
+    };
+    setClients((prev) => prev.map((c) => (c.id === clientId ? updatedClient : c)));
+    upsertClientToSupabase(updatedClient);
+    queueOfflineAction('client', updatedClient);
+
+    // Record settlement transaction if there was a balance
+    if (remainingAmount > 0) {
+      const settlementTx: LedgerTransaction = {
+        id: `tx-settle-${clientId}-${Date.now()}`,
+        date: new Date().toISOString().split('T')[0],
+        type: 'revenue',
+        category: 'Remaining Balance Settlement',
+        description: `Full Settlement Paid - ${client.name} (${client.garmentTag || 'Custom Order'})`,
+        amount: remainingAmount,
+        clientOrVendor: client.name,
+        status: 'cleared',
+        method: paymentMethod as LedgerTransaction['method']
+      };
+
+      setTransactions((prev) => [settlementTx, ...prev]);
+      upsertLedgerTransactionToSupabase(settlementTx);
+      queueOfflineAction('transaction', settlementTx);
+    }
+  };
+
   const handleProcessDepositCollection = (depositId: string, paymentMethod: string) => {
-    const dep = unpaidDeposits.find((d) => d.id === depositId);
-    if (!dep) return;
+    const depFromList = unpaidDeposits.find((d) => d.id === depositId);
+    const dep = depFromList || (targetDeposit?.id === depositId ? targetDeposit : null);
+
+    const targetClientId = dep ? dep.clientId : (depositId.startsWith('dep-') ? depositId.replace('dep-', '') : depositId);
+    const targetClient = clients.find((c) => c.id === targetClientId || c.id === depositId);
+
+    if (!dep && !targetClient) {
+      console.warn('Could not find deposit or client for ID:', depositId);
+      return;
+    }
+
+    const clientName = dep?.clientName || targetClient?.name || 'Client';
+    const garmentTag = dep?.garmentTag || targetClient?.garmentTag || 'Custom Order';
+    const amountToCollect = dep ? dep.amount : (targetClient?.balanceDue || 0);
 
     // Remove from unpaid deposits list & Supabase DB
-    setUnpaidDeposits((prev) => prev.filter((d) => d.id !== depositId));
-    deleteUnpaidDepositFromSupabase(depositId);
+    setUnpaidDeposits((prev) => prev.filter((d) => d.id !== depositId && d.clientId !== targetClientId));
+    if (depFromList) {
+      deleteUnpaidDepositFromSupabase(depFromList.id);
+    } else if (targetClientId) {
+      deleteUnpaidDepositFromSupabase(depositId);
+      deleteUnpaidDepositFromSupabase(`dep-${targetClientId}`);
+    }
 
     // Update client balance due & Supabase DB
-    setClients((prev) =>
-      prev.map((c) => {
-        if (c.id === dep.clientId) {
-          const updated = {
-            ...c,
-            depositPaid: c.depositPaid + dep.amount,
-            balanceDue: Math.max(0, c.balanceDue - dep.amount)
-          };
-          upsertClientToSupabase(updated);
-          return updated;
-        }
-        return c;
-      })
-    );
+    if (targetClient) {
+      const newBalance = Math.max(0, targetClient.balanceDue - amountToCollect);
+      const updatedClient: Client = {
+        ...targetClient,
+        depositPaid: targetClient.depositPaid + amountToCollect,
+        balanceDue: newBalance,
+        status: newBalance <= 0 ? 'Active' : targetClient.status
+      };
+
+      setClients((prev) =>
+        prev.map((c) => (c.id === targetClient.id ? updatedClient : c))
+      );
+      upsertClientToSupabase(updatedClient);
+      queueOfflineAction('client', updatedClient);
+    }
 
     // Add transaction to ledger & Supabase DB
-    const newTx: LedgerTransaction = {
-      id: `tx-${Date.now()}`,
-      date: new Date().toISOString().split('T')[0],
-      type: 'deposit',
-      category: 'Client Deposit',
-      description: `Deposit Cleared - ${dep.clientName} (${dep.garmentTag})`,
-      amount: dep.amount,
-      clientOrVendor: dep.clientName,
-      status: 'cleared',
-      method: paymentMethod as LedgerTransaction['method']
-    };
+    if (amountToCollect > 0) {
+      const newTx: LedgerTransaction = {
+        id: `tx-${Date.now()}`,
+        date: new Date().toISOString().split('T')[0],
+        type: 'deposit',
+        category: 'Client Payment',
+        description: `Payment Cleared - ${clientName} (${garmentTag})`,
+        amount: amountToCollect,
+        clientOrVendor: clientName,
+        status: 'cleared',
+        method: paymentMethod as LedgerTransaction['method']
+      };
 
-    setTransactions((prev) => [newTx, ...prev]);
-    upsertLedgerTransactionToSupabase(newTx);
+      setTransactions((prev) => [newTx, ...prev]);
+      upsertLedgerTransactionToSupabase(newTx);
+      queueOfflineAction('transaction', newTx);
+    }
   };
 
   const handleBookSession = (newSession: RunwaySession) => {
@@ -1035,6 +1127,13 @@ export default function App() {
   };
 
   const handleSaveMaterial = (newItem: InventoryItem) => {
+    const check = canAddMaterial(inventory.length);
+    if (!check.allowed) {
+      setIsAddMaterialOpen(false);
+      setIsSubscriptionModalOpen(true);
+      alert(check.reason || `Free Tier Limit Reached: Free tier accounts can add up to 5 inventory materials. Upgrade to Master for unlimited stock catalog!`);
+      return;
+    }
     setInventory((prev) => [newItem, ...prev]);
     upsertInventoryItemToSupabase(newItem);
     queueOfflineAction('inventory', newItem);
@@ -1366,6 +1465,7 @@ export default function App() {
   if (authScreen === 'signin') {
     return (
       <>
+        <PWAInstallBanner onOpenInstallModal={() => setIsInstallAppOpen(true)} />
         <SignInView
           onSignInSuccess={handleSignInSuccess}
           onGoToRegister={() => setAuthScreen('register')}
@@ -1580,6 +1680,9 @@ export default function App() {
         ? 'bg-[#061E1B] text-slate-100 dark'
         : 'bg-[#EBF5F0] text-[#0D3B36]'
     }`}>
+      {/* PWA Install Banner for Browser Visitors */}
+      <PWAInstallBanner onOpenInstallModal={() => setIsInstallAppOpen(true)} />
+
       {/* Offline / Reconnection Toast Banner */}
       {offlineNotice && (
         <div className="fixed top-20 left-1/2 -translate-x-1/2 z-50 bg-[#0D3B36] text-white px-5 py-2.5 rounded-full shadow-2xl border-2 border-[#DCA134] text-xs font-black flex items-center gap-2 animate-bounce max-w-sm text-center">
@@ -1626,7 +1729,25 @@ export default function App() {
               unpaidDeposits={unpaidDeposits}
               clients={clients}
               onOpenCollectDeposit={(dep) => {
-                setTargetDeposit(dep || null);
+                if (dep) {
+                  setTargetDeposit(dep);
+                } else {
+                  const unpaidClient = clients.find((c) => (c.balanceDue || 0) > 0);
+                  if (unpaidClient) {
+                    const clientDep = unpaidDeposits.find((d) => d.clientId === unpaidClient.id) || {
+                      id: `dep-${unpaidClient.id}`,
+                      clientId: unpaidClient.id,
+                      clientName: unpaidClient.name,
+                      garmentType: unpaidClient.garmentTag || 'Custom Order',
+                      amount: unpaidClient.balanceDue,
+                      date: 'Today',
+                      phone: unpaidClient.phone
+                    };
+                    setTargetDeposit(clientDep);
+                  } else {
+                    setTargetDeposit(null);
+                  }
+                }
                 setIsCollectDepositOpen(true);
               }}
               onOpenLedger={() => setActiveTab('ledger')}
@@ -1681,10 +1802,7 @@ export default function App() {
               onOpenMeasurements={(client) => setMeasurementClient(client)}
               onOpenFullMeasurements={(client) => setFullMeasurementsClient(client)}
               onOpenInvoice={(client) => setInvoiceClient(client)}
-              onOpenNewConsult={() => {
-                setEditingClient(null);
-                setIsAddClientOpen(true);
-              }}
+              onOpenNewConsult={handleTriggerAddClient}
               onSelectClient={(client) => setProfileClient(client)}
               onDeleteClient={(clientId) => {
                 setClients((prev) => prev.filter((c) => c.id !== clientId));
@@ -1732,21 +1850,7 @@ export default function App() {
                 setIsBookSessionOpen(true);
               }}
               onAdvanceStage={handleAdvanceRunwayStage}
-              onMarkPaidDirectly={(clientId) => {
-                setClients((prev) =>
-                  prev.map((c) => {
-                    if (c.id === clientId) {
-                      return {
-                        ...c,
-                        depositPaid: c.totalCost,
-                        balanceDue: 0,
-                        status: 'Active'
-                      };
-                    }
-                    return c;
-                  })
-                );
-              }}
+              onMarkPaidDirectly={handleMarkPaidDirectly}
             />
           </div>
         )}
@@ -1757,9 +1861,10 @@ export default function App() {
             <InventoryView
               items={inventory}
               onRestockItem={handleRestockInventoryItem}
-              onOpenAddMaterialModal={() => setIsAddMaterialOpen(true)}
+              onOpenAddMaterialModal={handleTriggerAddMaterial}
               onOpenFabricScanner={(tab) => handleOpenFabricScanner(tab || 'sides')}
               onRemoveItem={(id) => setInventory((prev) => prev.filter((item) => item.id !== id))}
+              onTriggerUpgradeModal={() => setIsSubscriptionModalOpen(true)}
             />
           </div>
         )}
@@ -1796,7 +1901,21 @@ export default function App() {
           setTargetDeposit(null);
         }}
         deposit={targetDeposit}
-        unpaidDepositsList={unpaidDeposits}
+        unpaidDepositsList={
+          unpaidDeposits.length > 0
+            ? unpaidDeposits
+            : clients
+                .filter((c) => (c.balanceDue || 0) > 0)
+                .map((c) => ({
+                  id: `dep-${c.id}`,
+                  clientId: c.id,
+                  clientName: c.name,
+                  garmentType: c.garmentTag || 'Custom Order',
+                  amount: c.balanceDue,
+                  date: 'Today',
+                  phone: c.phone
+                }))
+        }
         onProcessCollection={handleProcessDepositCollection}
       />
 
