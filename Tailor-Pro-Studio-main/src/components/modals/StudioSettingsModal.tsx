@@ -830,20 +830,6 @@ export const StudioSettingsModal: React.FC<StudioSettingsModalProps> = ({
             </div>
           </div>
 
-          {/* Safety PIN */}
-          <div className="space-y-1">
-            <label className="text-[11px] font-extrabold uppercase tracking-wider text-[#0D3B36]/70 dark:text-amber-300/80">
-              WORKSHOP SAFETY PIN (4-DIGITS)
-            </label>
-            <input
-              type="password"
-              maxLength={4}
-              value={form.safetyPin || ''}
-              onChange={(e) => setForm({ ...form, safetyPin: e.target.value })}
-              className="w-full px-3.5 py-2.5 rounded-xl bg-slate-100/80 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 font-bold text-xs text-[#0D3B36] dark:text-slate-100 tracking-widest focus:outline-none focus:ring-2 focus:ring-[#0D3B36]"
-            />
-          </div>
-
           {/* Phone Loss Protection & Cloud Data Backup Section */}
           <div className="p-4 rounded-2xl bg-emerald-500/10 dark:bg-emerald-400/10 border border-emerald-400/40 space-y-3 font-['Outfit']">
             <div className="flex flex-col xs:flex-row items-start xs:items-center justify-between gap-1.5">

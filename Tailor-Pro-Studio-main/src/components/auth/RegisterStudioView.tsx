@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Upload, ChevronDown, CheckCircle2, ArrowLeft, Sparkles, UserCheck, Building2, Mail, Lock, User, AlertCircle, QrCode } from 'lucide-react';
+import { Upload, ChevronDown, CheckCircle2, ArrowLeft, Sparkles, UserCheck, Building2, Mail, Lock, User, AlertCircle, QrCode, Eye, EyeOff } from 'lucide-react';
 import { UserRole } from '../../types';
 import { formatWorkshopCodeInput, validateWorkshopCode } from '../../utils/workshopCode';
 
@@ -24,6 +24,9 @@ export const RegisterStudioView: React.FC<RegisterStudioViewProps> = ({
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [showPin, setShowPin] = useState(false);
   const [passwordError, setPasswordError] = useState('');
   const [pin, setPin] = useState('');
   const [licenseKey, setLicenseKey] = useState('');
@@ -257,15 +260,25 @@ export const RegisterStudioView: React.FC<RegisterStudioViewProps> = ({
                 <Lock className="w-3.5 h-3.5 text-[#0D3B36]" />
                 <span>ACCOUNT PASSWORD *</span>
               </label>
-              <input
-                type="password"
-                required
-                minLength={6}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Create strong password (min 6 chars)"
-                className="w-full px-4 py-3 rounded-2xl bg-white/90 border border-slate-200 text-sm sm:text-base font-semibold text-[#0D3B36] placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0D3B36] focus:bg-white shadow-xs transition-all"
-              />
+              <div className="relative">
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  required
+                  minLength={6}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Create strong password (min 6 chars)"
+                  className="w-full pl-4 pr-12 py-3 rounded-2xl bg-white/90 border border-slate-200 text-sm sm:text-base font-semibold text-[#0D3B36] placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0D3B36] focus:bg-white shadow-xs transition-all"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3.5 top-3.5 p-1 text-[#0D3B36]/50 hover:text-[#0D3B36] transition-colors cursor-pointer"
+                  title={showPassword ? "Hide password" : "Show password"}
+                >
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
             </div>
 
             {/* CONFIRM PASSWORD */}
@@ -274,15 +287,25 @@ export const RegisterStudioView: React.FC<RegisterStudioViewProps> = ({
                 <Lock className="w-3.5 h-3.5 text-[#0D3B36]" />
                 <span>CONFIRM PASSWORD *</span>
               </label>
-              <input
-                type="password"
-                required
-                minLength={6}
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                placeholder="Re-enter account password"
-                className="w-full px-4 py-3 rounded-2xl bg-white/90 border border-slate-200 text-sm sm:text-base font-semibold text-[#0D3B36] placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0D3B36] focus:bg-white shadow-xs transition-all"
-              />
+              <div className="relative">
+                <input
+                  type={showConfirmPassword ? 'text' : 'password'}
+                  required
+                  minLength={6}
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder="Re-enter account password"
+                  className="w-full pl-4 pr-12 py-3 rounded-2xl bg-white/90 border border-slate-200 text-sm sm:text-base font-semibold text-[#0D3B36] placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0D3B36] focus:bg-white shadow-xs transition-all"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  className="absolute right-3.5 top-3.5 p-1 text-[#0D3B36]/50 hover:text-[#0D3B36] transition-colors cursor-pointer"
+                  title={showConfirmPassword ? "Hide password" : "Show password"}
+                >
+                  {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
             </div>
 
             {passwordError && (
@@ -291,23 +314,6 @@ export const RegisterStudioView: React.FC<RegisterStudioViewProps> = ({
                 <span>{passwordError}</span>
               </div>
             )}
-
-            {/* WORKSHOP SAFETY PIN (4-DIGITS) */}
-            <div className="space-y-1.5">
-              <label className="text-xs font-extrabold uppercase tracking-wider text-[#0D3B36]/80 flex items-center gap-1.5">
-                <Lock className="w-3.5 h-3.5 text-[#0D3B36]" />
-                <span>WORKSHOP SAFETY PIN (4-DIGITS) *</span>
-              </label>
-              <input
-                type="password"
-                maxLength={4}
-                required
-                value={pin}
-                onChange={(e) => setPin(e.target.value)}
-                placeholder="••••"
-                className="w-full px-4 py-3 rounded-2xl bg-white/90 border border-slate-200 text-sm sm:text-base font-bold text-[#0D3B36] placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0D3B36] focus:bg-white shadow-xs tracking-widest transition-all"
-              />
-            </div>
 
             {/* ATELIER LICENSE KEY (OPTIONAL) */}
             <div className="space-y-1.5">

@@ -55,8 +55,8 @@ export const CollectDepositModal: React.FC<CollectDepositModalProps> = ({
         </button>
 
         <div className="flex items-center gap-3 mb-6">
-          <div className="w-10 h-10 rounded-2xl bg-[#DCA134] text-slate-950 flex items-center justify-center font-bold gold-shadow">
-            <DollarSign className="w-5 h-5 text-slate-950" />
+          <div className="w-10 h-10 rounded-2xl bg-[#DCA134] text-slate-950 flex items-center justify-center font-black text-sm gold-shadow">
+            GH₵
           </div>
           <div>
             <h3 className="font-['Outfit'] font-bold text-xl text-[#0E3832]">
@@ -77,7 +77,7 @@ export const CollectDepositModal: React.FC<CollectDepositModalProps> = ({
               Deposit Collected Successfully!
             </h4>
             <p className="text-xs text-slate-500">
-              ${currentDep?.amount} received via {paymentMethod}. Receipt sent to client.
+              GH₵ {currentDep?.amount} received via {paymentMethod}. Receipt sent to client.
             </p>
           </div>
         ) : (
@@ -93,7 +93,7 @@ export const CollectDepositModal: React.FC<CollectDepositModalProps> = ({
                 >
                   {unpaidDepositsList.map((dep) => (
                     <option key={dep.id} value={dep.id}>
-                      {dep.clientName} - ${dep.amount} ({dep.serviceName})
+                      {dep.clientName} - GH₵ {dep.amount} ({dep.serviceName})
                     </option>
                   ))}
                 </select>
@@ -118,7 +118,7 @@ export const CollectDepositModal: React.FC<CollectDepositModalProps> = ({
                   <div className="flex items-center justify-between pt-2 border-t border-slate-200">
                     <span className="text-slate-700 font-bold text-sm">Deposit Amount:</span>
                     <strong className="font-['Outfit'] font-extrabold text-xl text-emerald-800">
-                      ${currentDep.amount}
+                      GH₵ {currentDep.amount}
                     </strong>
                   </div>
                 </div>
@@ -160,9 +160,9 @@ export const CollectDepositModal: React.FC<CollectDepositModalProps> = ({
                     type="button"
                     disabled={isProcessing}
                     onClick={handleProcess}
-                    className="px-6 py-2.5 rounded-full bg-[#DCA134] hover:bg-[#c9902b] text-slate-950 font-bold text-xs gold-shadow transition-all hover:scale-105 flex items-center gap-1.5"
+                    className="px-6 py-2.5 rounded-full bg-[#DCA134] hover:bg-[#c9902b] text-slate-950 font-bold text-xs gold-shadow transition-all hover:scale-105 flex items-center gap-1.5 cursor-pointer"
                   >
-                    {isProcessing ? 'Processing Payment...' : `Clear $${currentDep.amount} Deposit`}
+                    {isProcessing ? 'Processing Payment...' : `Clear GH₵ ${currentDep.amount} Deposit`}
                   </button>
                 </div>
               </>

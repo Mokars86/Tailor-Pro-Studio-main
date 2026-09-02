@@ -1675,7 +1675,7 @@ export default function App() {
   }
 
   return (
-    <div className={`min-h-screen md:pl-64 pt-[max(98px,calc(90px+env(safe-area-inset-top)))] sm:pt-36 md:pt-40 pb-32 sm:pb-36 transition-colors duration-300 font-['Plus_Jakarta_Sans',sans-serif] ${
+    <div className={`min-h-screen md:pl-64 pt-[max(112px,calc(102px+env(safe-area-inset-top,0px)))] sm:pt-36 md:pt-40 pb-32 sm:pb-36 transition-colors duration-300 font-['Plus_Jakarta_Sans',sans-serif] ${
       theme === 'dark'
         ? 'bg-[#061E1B] text-slate-100 dark'
         : 'bg-[#EBF5F0] text-[#0D3B36]'

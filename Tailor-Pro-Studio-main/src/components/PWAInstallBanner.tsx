@@ -37,7 +37,7 @@ export const PWAInstallBanner: React.FC<PWAInstallBannerProps> = ({ onOpenInstal
   };
 
   return (
-    <div className="fixed top-0 left-0 right-0 z-[60] bg-gradient-to-r from-[#061E1B] via-[#0D3B36] to-[#061E1B] text-white py-2 px-3 sm:px-4 shadow-xl border-b border-[#DCA134]/40 flex items-center justify-between gap-2 animate-slideDown">
+    <div className="fixed top-0 left-0 right-0 z-[60] bg-gradient-to-r from-[#061E1B] via-[#0D3B36] to-[#061E1B] text-white pt-[max(0.5rem,calc(env(safe-area-inset-top,0px)+4px))] pb-2 px-3 sm:px-4 shadow-xl border-b border-[#DCA134]/40 flex items-center justify-between gap-2 animate-slideDown">
       <div className="flex items-center gap-2.5 min-w-0">
         <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-[#061E1B] border border-[#DCA134] overflow-hidden shrink-0 flex items-center justify-center shadow-sm">
           <img src="/tailor_pro_logo.jpg" alt="Tailor Pro Logo" className="w-full h-full object-cover" />

@@ -1,0 +1,12 @@
+# Root .gitignore
+node_modules/
+dist/
+build/
+*.log
+*.aab
+*.apk
+*.keystore
+*.jks
+*.pem
+Tailor-Pro-Studio-main/public/*.aab
+Tailor-Pro-Studio-main/public/*.apk

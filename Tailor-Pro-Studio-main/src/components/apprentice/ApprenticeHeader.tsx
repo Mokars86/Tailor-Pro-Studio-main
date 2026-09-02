@@ -30,7 +30,7 @@ export const ApprenticeHeader: React.FC<ApprenticeHeaderProps> = ({
   const displayBrandName = studioName && studioName !== 'My Atelier Studio' ? studioName : 'MOKARS STITCHES STUDIO';
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-40 md:pl-64 pt-[max(4px,env(safe-area-inset-top))] sm:pt-4 pb-1.5 sm:pb-2 px-1.5 sm:px-6 bg-[#EBF5F0]/95 dark:bg-[#061E1B]/95 backdrop-blur-md border-b border-[#0D3B36]/10 dark:border-white/10 shadow-xs transition-all duration-200">
+    <header className="fixed top-0 left-0 right-0 z-40 md:pl-64 pt-[max(12px,calc(env(safe-area-inset-top,0px)+10px))] sm:pt-4 pb-1.5 sm:pb-2 px-1.5 sm:px-6 bg-[#EBF5F0]/95 dark:bg-[#061E1B]/95 backdrop-blur-md border-b border-[#0D3B36]/10 dark:border-white/10 shadow-xs transition-all duration-200">
       <div className="max-w-4xl mx-auto space-y-2 sm:space-y-3">
         {/* Master Link Card */}
         <div className="bg-white/90 dark:bg-[#061E1B]/95 backdrop-blur-md rounded-xl sm:rounded-3xl p-2 sm:p-4 border-2 border-[#DCA134] shadow-md flex items-center justify-between gap-2 sm:gap-3">

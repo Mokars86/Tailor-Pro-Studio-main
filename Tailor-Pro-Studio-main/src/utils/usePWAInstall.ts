@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Capacitor } from '@capacitor/core';
 
 export function usePWAInstall() {
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
@@ -12,9 +13,20 @@ export function usePWAInstall() {
   const isMobile = isIOS || isAndroid;
 
   useEffect(() => {
-    // Check if running in standalone display mode (already installed as desktop/mobile PWA app)
+    // Check if running natively via Capacitor, or in standalone PWA, TWA, or WebView mode
+    const isCapacitorNative = Capacitor.isNativePlatform();
+    const isCapacitorWeb = Capacitor.getPlatform() !== 'web';
+    const isWebView = /wv|Android.*Version\//i.test(ua);
+    const isCapacitorProtocol = typeof window !== 'undefined' && (window.location.protocol === 'capacitor:' || window.location.protocol === 'ionic:');
+    
     const isStandalone =
+      isCapacitorNative ||
+      isCapacitorWeb ||
+      isWebView ||
+      isCapacitorProtocol ||
       window.matchMedia('(display-mode: standalone)').matches ||
+      window.matchMedia('(display-mode: fullscreen)').matches ||
+      window.matchMedia('(display-mode: minimal-ui)').matches ||
       (navigator as any).standalone === true ||
       document.referrer.includes('android-app://');
 
@@ -23,6 +35,8 @@ export function usePWAInstall() {
     }
 
     const handleBeforeInstallPrompt = (e: Event) => {
+      // If already standalone or native, do not prompt
+      if (isStandalone) return;
       e.preventDefault();
       setDeferredPrompt(e);
       setIsInstallable(true);
@@ -41,7 +55,7 @@ export function usePWAInstall() {
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
       window.removeEventListener('appinstalled', handleAppInstalled);
     };
-  }, []);
+  }, [ua]);
 
   const triggerInstall = async (): Promise<boolean> => {
     if (deferredPrompt) {

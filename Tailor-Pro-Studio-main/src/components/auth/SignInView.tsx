@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Scissors, Lock, Mail, MessageCircle, Coffee, Sparkles, UserCheck, Download, Smartphone } from 'lucide-react';
+import { Scissors, Lock, Mail, MessageCircle, Coffee, Sparkles, UserCheck, Download, Smartphone, Eye, EyeOff } from 'lucide-react';
 import { UserRole } from '../../types';
 
 interface SignInViewProps {
@@ -19,6 +19,7 @@ export const SignInView: React.FC<SignInViewProps> = ({
 }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [selectedRole, setSelectedRole] = useState<UserRole>('Master (Studio Owner & Financial Control)');
 
   useEffect(() => {
@@ -130,13 +131,25 @@ export const SignInView: React.FC<SignInViewProps> = ({
               <div className="relative">
                 <Lock className="w-4 h-4 text-[#0D3B36]/50 absolute left-4 top-3.5" />
                 <input
-                  type="password"
+                  type={showPassword ? 'text' : 'password'}
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
-                  className="w-full pl-11 pr-4 py-3 rounded-2xl bg-white/90 border border-slate-200 text-sm sm:text-base font-semibold text-[#0D3B36] placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0D3B36] focus:bg-white shadow-xs transition-all"
+                  className="w-full pl-11 pr-12 py-3 rounded-2xl bg-white/90 border border-slate-200 text-sm sm:text-base font-semibold text-[#0D3B36] placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0D3B36] focus:bg-white shadow-xs transition-all"
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3.5 top-3 p-1 text-[#0D3B36]/50 hover:text-[#0D3B36] transition-colors cursor-pointer"
+                  title={showPassword ? "Hide password" : "Show password"}
+                >
+                  {showPassword ? (
+                    <EyeOff className="w-4 h-4" />
+                  ) : (
+                    <Eye className="w-4 h-4" />
+                  )}
+                </button>
               </div>
             </div>
 

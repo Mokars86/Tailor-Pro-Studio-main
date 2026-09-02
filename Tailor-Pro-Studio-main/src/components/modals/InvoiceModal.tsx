@@ -86,7 +86,7 @@ export const InvoiceModal: React.FC<InvoiceModalProps> = ({
       {/* Invoice Modal Window */}
       <div
         onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-lg my-auto bg-white dark:bg-[#061E1B] rounded-[32px] p-6 sm:p-7 space-y-5 shadow-2xl border-2 border-[#DCA134] relative overflow-hidden print:p-0 print:border-none print:shadow-none print:bg-white text-slate-900 dark:text-slate-100"
+        className="w-full max-w-lg my-auto bg-white dark:bg-[#061E1B] rounded-[32px] p-4 xs:p-6 sm:p-7 space-y-4 sm:space-y-5 shadow-2xl border-2 border-[#DCA134] relative overflow-hidden print:p-0 print:border-none print:shadow-none print:bg-white text-slate-900 dark:text-slate-100"
       >
         
         {/* Soft Ambient Glow Orbs (Hidden in Print) */}
@@ -100,45 +100,47 @@ export const InvoiceModal: React.FC<InvoiceModalProps> = ({
             e.stopPropagation();
             onClose();
           }}
-          className="absolute top-4 right-4 z-50 p-2.5 rounded-full bg-slate-100 dark:bg-slate-800 hover:bg-rose-100 dark:hover:bg-rose-950/60 text-slate-600 dark:text-slate-300 hover:text-rose-600 dark:hover:text-rose-400 border border-slate-200 dark:border-slate-700 shadow-md transition-all cursor-pointer print:hidden active:scale-95 flex items-center justify-center"
+          className="absolute top-3.5 right-3.5 xs:top-4 xs:right-4 z-50 p-2 rounded-full bg-slate-100 dark:bg-slate-800 hover:bg-rose-100 dark:hover:bg-rose-950/60 text-slate-600 dark:text-slate-300 hover:text-rose-600 dark:hover:text-rose-400 border border-slate-200 dark:border-slate-700 shadow-md transition-all cursor-pointer print:hidden active:scale-95 flex items-center justify-center"
           title="Close Invoice"
         >
-          <X className="w-5 h-5 stroke-[2.5]" />
+          <X className="w-4 h-4 xs:w-5 xs:h-5 stroke-[2.5]" />
         </button>
 
-        {/* 1. Header Banner: Studio Branding & Invoice Specs */}
-        <div className="flex items-start justify-between border-b-2 border-[#DCA134]/30 pb-4 pr-10 relative z-10">
-          <div className="flex items-center gap-3">
+        {/* 1. Header Banner: Studio Branding & Invoice Specs (iPhone SE Responsive) */}
+        <div className="flex flex-col xs:flex-row items-start justify-between border-b-2 border-[#DCA134]/30 pb-3.5 pr-10 xs:pr-12 relative z-10 gap-3">
+          <div className="flex items-center gap-2.5 min-w-0">
             {studioLogoUrl ? (
-              <div className="w-12 h-12 rounded-2xl bg-[#061E1B] border-2 border-[#DCA134] overflow-hidden shadow-md shrink-0">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-[#061E1B] border-2 border-[#DCA134] overflow-hidden shadow-md shrink-0">
                 <img src={studioLogoUrl} alt="Studio Logo" className="w-full h-full object-cover" />
               </div>
             ) : (
-              <div className="w-12 h-12 rounded-2xl bg-[#061E1B] border-2 border-[#DCA134] text-[#DCA134] font-['Cinzel',serif] font-black text-xl flex items-center justify-center shadow-md shrink-0">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-[#061E1B] border-2 border-[#DCA134] text-[#DCA134] font-['Cinzel',serif] font-black text-lg sm:text-xl flex items-center justify-center shadow-md shrink-0">
                 {displayStudioName.charAt(0)}
               </div>
             )}
 
-            <div>
-              <h2 className="font-['Outfit'] font-black text-base sm:text-lg text-[#0D3B36] dark:text-amber-300 tracking-tight uppercase leading-tight">
+            <div className="min-w-0">
+              <h2 className="font-['Outfit'] font-black text-sm sm:text-lg text-[#0D3B36] dark:text-amber-300 tracking-tight uppercase leading-tight truncate">
                 {displayStudioName}
               </h2>
-              <p className="text-[11px] font-extrabold text-slate-500 dark:text-slate-400 uppercase tracking-wider mt-0.5">
+              <p className="text-[10px] sm:text-[11px] font-extrabold text-slate-500 dark:text-slate-400 uppercase tracking-wider mt-0.5 truncate">
                 Bespoke Couture & Fashion Studio
               </p>
             </div>
           </div>
 
-          <div className="text-right shrink-0">
-            <span className="px-2.5 py-0.5 rounded-full bg-[#061E1B] text-[#DCA134] text-[9.5px] font-black uppercase tracking-widest border border-[#DCA134]">
+          <div className="text-left xs:text-right shrink-0 flex xs:flex-col items-center xs:items-end justify-between xs:justify-start w-full xs:w-auto pt-1 xs:pt-0 border-t xs:border-t-0 border-slate-200/50 dark:border-slate-800">
+            <span className="px-2.5 py-0.5 rounded-full bg-[#061E1B] text-[#DCA134] text-[9px] sm:text-[9.5px] font-black uppercase tracking-widest border border-[#DCA134]">
               OFFICIAL INVOICE
             </span>
-            <p className="text-xs font-mono font-black text-slate-900 dark:text-amber-200 mt-1">
-              #{invoiceNum}
-            </p>
-            <p className="text-[10.5px] font-bold text-slate-500 dark:text-slate-400">
-              Date: <span className="font-black text-slate-800 dark:text-slate-200">{formattedDate}</span>
-            </p>
+            <div className="text-right xs:mt-1">
+              <p className="text-xs font-mono font-black text-slate-900 dark:text-amber-200">
+                #{invoiceNum}
+              </p>
+              <p className="text-[10px] sm:text-[10.5px] font-bold text-slate-500 dark:text-slate-400">
+                Date: <span className="font-black text-slate-800 dark:text-slate-200">{formattedDate}</span>
+              </p>
+            </div>
           </div>
         </div>
 
