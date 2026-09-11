@@ -30,7 +30,7 @@ export const ApprenticeHeader: React.FC<ApprenticeHeaderProps> = ({
   const displayBrandName = studioName && studioName !== 'My Atelier Studio' ? studioName : 'MOKARS STITCHES STUDIO';
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-40 md:pl-64 pt-[max(12px,calc(env(safe-area-inset-top,0px)+10px))] sm:pt-4 pb-1.5 sm:pb-2 px-1.5 sm:px-6 bg-[#EBF5F0]/95 dark:bg-[#061E1B]/95 backdrop-blur-md border-b border-[#0D3B36]/10 dark:border-white/10 shadow-xs transition-all duration-200">
+    <header className="fixed top-0 left-0 right-0 z-40 md:pl-64 pt-[max(8px,calc(env(safe-area-inset-top,0px)+4px))] sm:pt-3 pb-1 sm:pb-1.5 px-1.5 sm:px-6 bg-[#EBF5F0]/95 dark:bg-[#061E1B]/95 backdrop-blur-md border-b border-[#0D3B36]/10 dark:border-white/10 shadow-xs transition-all duration-200">
       <div className="max-w-4xl mx-auto space-y-2 sm:space-y-3">
         {/* Master Link Card */}
         <div className="bg-white/90 dark:bg-[#061E1B]/95 backdrop-blur-md rounded-xl sm:rounded-3xl p-2 sm:p-4 border-2 border-[#DCA134] shadow-md flex items-center justify-between gap-2 sm:gap-3">
@@ -56,19 +56,8 @@ export const ApprenticeHeader: React.FC<ApprenticeHeaderProps> = ({
             </div>
           </div>
 
-          {/* Right Action Controls: Theme, Master View Switcher & Settings */}
+          {/* Right Action Controls: Theme & Settings */}
           <div className="flex items-center gap-1.5 shrink-0">
-            {onSwitchRoleToMaster && (
-              <button
-                onClick={onSwitchRoleToMaster}
-                className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-[#0D3B36] text-xs font-bold border border-[#DCA134] transition-all"
-                title="Switch to Master View"
-              >
-                <ShieldCheck className="w-3.5 h-3.5 text-[#DCA134]" />
-                <span className="hidden xs:inline">Master View</span>
-              </button>
-            )}
-
             <button
               onClick={onToggleTheme}
               className="px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-[#0D3B36] border border-slate-200 text-xs font-bold flex items-center gap-1 transition-colors"

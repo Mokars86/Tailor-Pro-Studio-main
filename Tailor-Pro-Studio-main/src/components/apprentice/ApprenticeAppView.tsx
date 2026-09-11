@@ -91,7 +91,7 @@ export const ApprenticeAppView: React.FC<ApprenticeAppViewProps> = ({
       />
 
       {/* Main Dynamic View Area */}
-      <main className="max-w-4xl mx-auto px-3 sm:px-6 pt-[max(162px,calc(150px+env(safe-area-inset-top,0px)))] sm:pt-40 md:pt-44">
+      <main className="max-w-4xl mx-auto px-3 sm:px-6 pt-[max(88px,calc(78px+env(safe-area-inset-top,0px)))] sm:pt-32 md:pt-36">
         {/* TAB 1: PRODUCTION */}
         {activeTab === 'production' && (
           <ApprenticeProductionTab
@@ -135,6 +135,8 @@ export const ApprenticeAppView: React.FC<ApprenticeAppViewProps> = ({
             studioName={studioName}
             studioLogoUrl={studioLogoUrl}
             apprentice={activeApprenticeRecord}
+            tasks={tasks}
+            clients={clients}
           />
         )}
       </main>

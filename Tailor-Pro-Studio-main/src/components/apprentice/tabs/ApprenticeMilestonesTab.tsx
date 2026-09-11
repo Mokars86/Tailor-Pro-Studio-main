@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import { Sparkles, Lock, ChevronDown, ChevronUp, Award, Printer, Handshake, CheckCircle2 } from 'lucide-react';
+import { Sparkles, Lock, ChevronDown, ChevronUp, Award, Printer, Handshake, CheckCircle2, CheckSquare, Square } from 'lucide-react';
 import { ApprenticeCertificateModal } from '../../modals/ApprenticeCertificateModal';
 import { GraduationPaymentModal } from '../../modals/GraduationPaymentModal';
-import { Apprentice } from '../../../types';
+import { Apprentice, ApprenticeTask, Client } from '../../../types';
 import { getGraduationPayment } from '../../../services/subscriptionService';
 
 interface ApprenticeMilestonesTabProps {
@@ -11,6 +11,8 @@ interface ApprenticeMilestonesTabProps {
   studioName?: string;
   studioLogoUrl?: string;
   apprentice?: Apprentice;
+  tasks?: ApprenticeTask[];
+  clients?: Client[];
   onToggleHandshake?: (id: string) => void;
 }
 
@@ -20,11 +22,21 @@ export const ApprenticeMilestonesTab: React.FC<ApprenticeMilestonesTabProps> = (
   studioName = 'MOKARS STITCHES STUDIO',
   studioLogoUrl,
   apprentice,
+  tasks = [],
+  clients = [],
   onToggleHandshake
 }) => {
   const [expandedStage, setExpandedStage] = useState<number | null>(1);
   const [isCertModalOpen, setIsCertModalOpen] = useState(false);
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
+
+  // Default checked units for basic stage
+  const [checkedUnits, setCheckedUnits] = useState<string[]>([
+    'Body Measurements & Tape Handling',
+    'Fabric Pressing & Steam Ironing',
+    'Fabric Identification & Color Matching',
+    'Hand Sewing & Button Attachments'
+  ]);
 
   const activeApprentice: Apprentice = apprentice || {
     id: `app_${Date.now()}`,
@@ -44,6 +56,12 @@ export const ApprenticeMilestonesTab: React.FC<ApprenticeMilestonesTabProps> = (
   };
 
   const isHandshakeApproved = !activeApprentice.handshakeLocked;
+
+  const toggleUnitCheck = (unitName: string) => {
+    setCheckedUnits((prev) =>
+      prev.includes(unitName) ? prev.filter((u) => u !== unitName) : [...prev, unitName]
+    );
+  };
 
   const stages = [
     {
@@ -162,6 +180,23 @@ export const ApprenticeMilestonesTab: React.FC<ApprenticeMilestonesTabProps> = (
     }
   ];
 
+  // Dynamic Real-Data Progress Calculation
+  const totalCoreUnits = 13; // Stages 1, 2 & 3 core curriculum units
+  const totalAllUnits = stages.reduce((acc, s) => acc + s.units.length, 0);
+  const unitsProgress = Math.round((checkedUnits.length / totalCoreUnits) * 100);
+
+  const passedTasksCount = (tasks || []).filter((t) => t.isCompleted || t.status === 'passed').length;
+  const totalTasksCount = (tasks || []).length;
+  const taskProgress = totalTasksCount > 0 ? Math.round((passedTasksCount / totalTasksCount) * 100) : 0;
+
+  const hoursCompleted = activeApprentice.hoursCompleted || 0;
+  const totalRequiredHours = activeApprentice.totalRequiredHours || 120;
+  const hoursProgress = Math.round((Math.min(hoursCompleted, totalRequiredHours) / totalRequiredHours) * 100);
+
+  const realProgressPercent = isHandshakeApproved
+    ? 100
+    : Math.min(100, Math.max(unitsProgress, taskProgress, hoursProgress, 10));
+
   return (
     <div className="space-y-4 pt-2 sm:pt-2 font-['Outfit'] select-none">
       {/* Section 4.1: Progress Tracker Card */}
@@ -170,22 +205,27 @@ export const ApprenticeMilestonesTab: React.FC<ApprenticeMilestonesTabProps> = (
           <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 block leading-tight">
             APPRENTICE CURRICULUM MASTERY PROGRESS
           </span>
-          <span className="text-xs font-black text-[#0D3B36] dark:text-amber-300">
-            {isHandshakeApproved ? '100% Curriculum Approved' : 'In Training'}
+          <span className="text-xs font-black text-[#0D3B36] dark:text-amber-300 bg-amber-500/10 px-2.5 py-1 rounded-full border border-amber-500/30">
+            {isHandshakeApproved ? '100% Curriculum Approved ✓' : `${realProgressPercent}% Completed`}
           </span>
         </div>
 
         <div className="flex items-center justify-between">
-          <h3 className="font-['Outfit'] font-black text-sm sm:text-base text-slate-900 dark:text-slate-100">
-            {isHandshakeApproved ? 'Master Handshake Granted' : 'Apprentice Training Stage'}
-          </h3>
+          <div>
+            <h3 className="font-['Outfit'] font-black text-sm sm:text-base text-slate-900 dark:text-slate-100">
+              {isHandshakeApproved ? 'Master Handshake Granted' : 'Apprentice Training Stage'}
+            </h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400 font-bold mt-0.5">
+              {checkedUnits.length} of {totalAllUnits} Curriculum Units Mastered ({passedTasksCount} / {totalTasksCount} Tasks Passed)
+            </p>
+          </div>
         </div>
 
-        {/* Progress Bar */}
-        <div className="w-full h-2.5 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden border border-slate-200/60 dark:border-slate-700">
+        {/* Dynamic Real-Data Progress Bar */}
+        <div className="w-full h-3 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden border border-slate-200/60 dark:border-slate-700">
           <div
-            className="h-full bg-[#0D3B36] dark:bg-amber-400 rounded-full transition-all duration-500"
-            style={{ width: isHandshakeApproved ? '100%' : '35%' }}
+            className="h-full bg-gradient-to-r from-[#0D3B36] via-[#10B981] to-[#DCA134] rounded-full transition-all duration-500 shadow-sm"
+            style={{ width: `${realProgressPercent}%` }}
           />
         </div>
       </div>
@@ -193,7 +233,7 @@ export const ApprenticeMilestonesTab: React.FC<ApprenticeMilestonesTabProps> = (
       {/* Section 4.2: Official Curriculum Stage Checklist */}
       <div className="space-y-2.5">
         <h3 className="font-['Outfit'] font-black text-xs text-[#0D3B36] dark:text-amber-300 tracking-wider uppercase px-1">
-          OFFICIAL CURRICULUM STAGE CHECKLIST
+          OFFICIAL CURRICULUM STAGE CHECKLIST (CLICK UNIT TO TOGGLE MASTERY)
         </h3>
 
         <div className="space-y-2.5">
@@ -233,17 +273,35 @@ export const ApprenticeMilestonesTab: React.FC<ApprenticeMilestonesTabProps> = (
                 {/* Expanded Units List */}
                 {isExpanded && (
                   <div className="pt-3 border-t border-slate-100 dark:border-slate-800 space-y-2 animate-fade-in">
-                    {stg.units.map((unit, idx) => (
-                      <div
-                        key={idx}
-                        className="flex flex-col xs:flex-row xs:items-center justify-between p-2.5 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200/60 dark:border-slate-800 text-xs text-slate-700 dark:text-slate-300 font-semibold gap-1.5"
-                      >
-                        <span className="leading-snug">{unit}</span>
-                        <span className="text-[9.5px] font-bold text-slate-400 uppercase shrink-0">
-                          {isHandshakeApproved ? 'Verified ✓' : 'Unverified'}
-                        </span>
-                      </div>
-                    ))}
+                    {stg.units.map((unit, idx) => {
+                      const isChecked = checkedUnits.includes(unit) || isHandshakeApproved;
+
+                      return (
+                        <div
+                          key={idx}
+                          onClick={() => toggleUnitCheck(unit)}
+                          className={`flex items-center justify-between p-2.5 rounded-xl border text-xs font-semibold gap-2 transition-all cursor-pointer ${
+                            isChecked
+                              ? 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-300 dark:border-emerald-700 text-emerald-900 dark:text-emerald-200'
+                              : 'bg-slate-50 dark:bg-slate-900/60 border-slate-200/60 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
+                          }`}
+                        >
+                          <div className="flex items-center gap-2">
+                            {isChecked ? (
+                              <CheckSquare className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                            ) : (
+                              <Square className="w-4 h-4 text-slate-400 shrink-0" />
+                            )}
+                            <span className="leading-snug">{unit}</span>
+                          </div>
+                          <span className={`text-[9.5px] font-bold uppercase shrink-0 px-2 py-0.5 rounded-md ${
+                            isChecked ? 'bg-emerald-200 dark:bg-emerald-900 text-emerald-800 dark:text-emerald-200' : 'text-slate-400'
+                          }`}>
+                            {isChecked ? 'Verified ✓' : 'Pending ⭕'}
+                          </span>
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
               </div>

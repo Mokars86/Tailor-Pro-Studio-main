@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { User, Edit, FileText, Target, ShoppingBag, CheckCircle, Award, Sparkles, Scissors, ShieldCheck, CheckCircle2, Star, Calendar, Check, X } from 'lucide-react';
+import { User, Edit, FileText, Target, ShoppingBag, CheckCircle, Award, Sparkles, Scissors, ShieldCheck, CheckCircle2, Star, Calendar, Check, X, Quote } from 'lucide-react';
 import { Client, ApprenticeTask } from '../../../types';
 
 interface ApprenticePortfolioTabProps {
@@ -22,6 +22,12 @@ export const ApprenticePortfolioTab: React.FC<ApprenticePortfolioTabProps> = ({
   const [currentApprenticeName, setCurrentApprenticeName] = useState(apprenticeName);
   const [isEditingName, setIsEditingName] = useState(false);
   const [nameSaveNotice, setNameSaveNotice] = useState<string | null>(null);
+
+  // Master Testimonial & Recommendation Letter state
+  const [testimonialText, setTestimonialText] = useState(
+    `${apprenticeName} has displayed exceptional commitment, discipline, and outstanding technical craftsmanship throughout the bespoke atelier training program. Having mastered pattern drafting, precision client measurement, and high-level garment construction, I unreservedly recommend ${apprenticeName} to clients, ateliers, and fashion institutions worldwide.`
+  );
+  const [isEditingTestimonial, setIsEditingTestimonial] = useState(false);
 
   useEffect(() => {
     if (apprenticeName && !isEditingName) {
@@ -585,6 +591,381 @@ export const ApprenticePortfolioTab: React.FC<ApprenticePortfolioTabProps> = ({
     }
   };
 
+  const handlePrintRecommendationLetter = () => {
+    const printWindow = window.open('', '_blank', 'width=900,height=1200');
+    if (printWindow) {
+      const tailorProLogoUrl = `${window.location.origin}/tailor_pro_logo.jpg`;
+      const dateStr = new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+
+      printWindow.document.write(`
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+          <meta charset="UTF-8" />
+          <base href="${window.location.origin}/" />
+          <title>Recommendation Letter — ${currentApprenticeName} — Master Atelier</title>
+          <style>
+            @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800;900&family=Outfit:wght@400;600;700;800;900&family=JetBrains+Mono:wght@700;800&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap');
+            
+            @page {
+              size: A4 portrait;
+              margin: 0;
+            }
+
+            * {
+              box-sizing: border-box;
+              margin: 0;
+              padding: 0;
+              -webkit-print-color-adjust: exact !important;
+              print-color-adjust: exact !important;
+            }
+            
+            body {
+              font-family: 'Plus Jakarta Sans', sans-serif;
+              background: #041916;
+              color: #0F2D2A;
+              padding: 25px;
+              display: flex;
+              justify-content: center;
+              min-height: 100vh;
+            }
+            
+            .a4-page {
+              background: #FFFFFF;
+              width: 210mm;
+              min-height: 297mm;
+              padding: 16mm 16mm 14mm 16mm;
+              border-radius: 20px;
+              box-shadow: 0 25px 60px rgba(0,0,0,0.5);
+              border: 4px solid #DCA134;
+              position: relative;
+              display: flex;
+              flex-direction: column;
+              justify-content: space-between;
+            }
+
+            .watermark {
+              position: absolute;
+              top: 50%;
+              left: 50%;
+              transform: translate(-50%, -50%) rotate(-30deg);
+              font-family: 'Cinzel', serif;
+              font-size: 64px;
+              font-weight: 900;
+              color: rgba(220, 161, 52, 0.04);
+              letter-spacing: 10px;
+              pointer-events: none;
+              text-transform: uppercase;
+              white-space: nowrap;
+              z-index: 0;
+            }
+
+            .content-wrapper {
+              position: relative;
+              z-index: 1;
+            }
+
+            .top-seal-banner {
+              text-align: center;
+              margin-bottom: 14px;
+            }
+
+            .seal-badge {
+              display: inline-flex;
+              align-items: center;
+              gap: 8px;
+              background: #061E1B;
+              color: #DCA134;
+              font-size: 9px;
+              font-weight: 900;
+              letter-spacing: 2px;
+              text-transform: uppercase;
+              padding: 6px 18px;
+              border-radius: 999px;
+              border: 1.5px solid #DCA134;
+            }
+
+            .header-card {
+              background: linear-gradient(135deg, #0D3B36 0%, #061E1B 100%);
+              border-radius: 16px;
+              padding: 20px 24px;
+              color: #FFFFFF;
+              border: 2px solid #DCA134;
+              display: flex;
+              align-items: center;
+              justify-content: space-between;
+              margin-bottom: 16px;
+            }
+
+            .apprentice-title-group h1 {
+              font-family: 'Outfit', sans-serif;
+              font-size: 22px;
+              font-weight: 900;
+              color: #FFFFFF;
+              text-transform: uppercase;
+            }
+
+            .apprentice-title-group .sub {
+              font-size: 11px;
+              font-weight: 800;
+              color: #FBBF24;
+              text-transform: uppercase;
+              letter-spacing: 1.5px;
+              margin-bottom: 4px;
+            }
+
+            .apprentice-title-group .meta {
+              font-size: 11px;
+              color: #E2E8F0;
+              margin-top: 8px;
+              display: flex;
+              gap: 16px;
+            }
+
+            .brand-logo-box {
+              width: 64px;
+              height: 64px;
+              border-radius: 16px;
+              background: #FFFFFF;
+              border: 2px solid #DCA134;
+              overflow: hidden;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              padding: 4px;
+            }
+
+            .brand-logo-box img {
+              width: 100%;
+              height: 100%;
+              object-fit: contain;
+            }
+
+            .section-header {
+              font-family: 'Outfit', sans-serif;
+              font-size: 11px;
+              font-weight: 900;
+              color: #0D3B36;
+              text-transform: uppercase;
+              letter-spacing: 1.5px;
+              margin-bottom: 10px;
+              padding-bottom: 4px;
+              border-bottom: 2px solid #0D3B36;
+              display: flex;
+              align-items: center;
+              justify-content: space-between;
+            }
+
+            .stats-row {
+              display: grid;
+              grid-template-columns: repeat(3, 1fr);
+              gap: 10px;
+              margin-bottom: 16px;
+            }
+
+            .stat-card {
+              background: #F8FAF9;
+              border: 1.5px solid #CBD5E1;
+              border-radius: 14px;
+              padding: 10px 12px;
+              text-align: center;
+            }
+
+            .stat-card .val {
+              font-family: 'Outfit', sans-serif;
+              font-size: 15px;
+              font-weight: 900;
+              color: #15803D;
+            }
+
+            .stat-card .lbl {
+              font-size: 9px;
+              font-weight: 800;
+              color: #64748B;
+              text-transform: uppercase;
+              margin-top: 2px;
+            }
+
+            .footer-section {
+              border-top: 2px dashed #CBD5E1;
+              padding-top: 14px;
+              display: flex;
+              align-items: flex-end;
+              justify-content: space-between;
+              margin-top: 10px;
+            }
+
+            .sig-box {
+              text-align: left;
+              min-width: 170px;
+            }
+
+            .sig-line {
+              width: 100%;
+              border-bottom: 1.5px solid #0D3B36;
+              margin-bottom: 6px;
+            }
+
+            .sig-box strong {
+              font-family: 'Cinzel', serif;
+              font-size: 12px;
+              font-weight: 800;
+              color: #0D3B36;
+              display: block;
+            }
+
+            .sig-box span {
+              font-size: 9px;
+              font-weight: 800;
+              color: #64748B;
+              text-transform: uppercase;
+            }
+
+            .verification-seal {
+              text-align: center;
+              background: #061E1B;
+              color: #DCA134;
+              padding: 8px 16px;
+              border-radius: 12px;
+              border: 1px solid #DCA134;
+            }
+
+            .verification-seal .code {
+              font-family: 'JetBrains Mono', monospace;
+              font-size: 10px;
+              font-weight: 800;
+              display: block;
+            }
+
+            .verification-seal .date {
+              font-size: 8.5px;
+              font-weight: 700;
+              color: #94A3B8;
+              text-transform: uppercase;
+              margin-top: 2px;
+            }
+
+            @media print {
+              body {
+                background: #FFFFFF !important;
+                padding: 0 !important;
+              }
+              .a4-page {
+                box-shadow: none !important;
+                border: 2px solid #0D3B36 !important;
+                width: 100% !important;
+                height: 100% !important;
+                min-height: 297mm !important;
+                border-radius: 0 !important;
+                padding: 12mm 15mm !important;
+              }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="a4-page">
+            <div class="watermark">OFFICIAL TESTIMONIAL</div>
+
+            <div class="content-wrapper">
+              <div class="top-seal-banner">
+                <div class="seal-badge">
+                  <span>★ OFFICIAL MASTER ATELIER TESTIMONIAL & LETTER OF RECOMMENDATION ★</span>
+                </div>
+              </div>
+
+              <div class="header-card">
+                <div class="apprentice-title-group">
+                  <div class="sub">LETTER OF RECOMMENDATION & GRADUATION ENDORSEMENT</div>
+                  <h1>GRADUATE: ${currentApprenticeName}</h1>
+                  <div class="meta">
+                    <span>Master Trainer: <strong style="color: #FBBF24;">${masterName}</strong></span>
+                    <span>Atelier: <strong style="color: #FBBF24;">${studioName}</strong></span>
+                  </div>
+                </div>
+
+                <div class="brand-logo-box">
+                  <img src="${tailorProLogoUrl}" alt="Tailor Pro Logo" onerror="this.onerror=null; this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'40\' height=\'40\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'%230D3B36\' stroke-width=\'2\' stroke-linecap=\'round\' stroke-linejoin=\'round\'><polygon points=\'12 2 2 7 12 12 22 7 12 2\'/><polyline points=\'2 17 12 22 22 17\'/><polyline points=\'2 12 12 17 22 12\'/></svg>';" />
+                </div>
+              </div>
+
+              <div class="section-header">
+                <span>📜 MASTER TRAINER ENDORSEMENT & RECOMMENDATION STATEMENT</span>
+                <span style="font-size: 9px; color: #DCA134; font-weight: 800;">VERIFIED GRADUATION TESTIMONIAL</span>
+              </div>
+
+              <div style="background: #FDFBF7; border: 2px solid #DCA134; border-radius: 16px; padding: 24px; margin-bottom: 20px; line-height: 1.8; color: #0F2D2A; font-size: 13px;">
+                <p style="font-weight: 800; font-size: 14px; color: #0D3B36; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.5px;">
+                  TO WHOM IT MAY CONCERN / PROSPECTIVE CLIENTS & ATELIERS:
+                </p>
+                <p style="margin-bottom: 14px; font-weight: 600;">
+                  This official document serves as a full master recommendation and testimonial for <strong>${currentApprenticeName}</strong> upon successful completion of the accredited bespoke tailoring curriculum at <strong>${studioName}</strong> under my direct mentorship.
+                </p>
+                <div style="background: #F0FDF4; border-left: 4px solid #10B981; border-top: 1px solid #A7F3D0; border-right: 1px solid #A7F3D0; border-bottom: 1px solid #A7F3D0; padding: 16px; border-radius: 10px; font-style: italic; margin-bottom: 14px; color: #064E3B; font-weight: 700; font-size: 13.5px;">
+                  "${testimonialText}"
+                </div>
+                <p style="font-weight: 600;">
+                  Throughout the program, ${currentApprenticeName} completed over <strong>120 mentorship hours</strong>, demonstrated mastery in precision client tape measurement, fabric grain matching, pattern cutting, and runway stage quality control. ${currentApprenticeName} possesses the technical expertise, work ethic, and creative vision required for professional fashion design and bespoke atelier production.
+                </p>
+              </div>
+
+              <div class="section-header">
+                <span>🌟 ACCREDITED APPRENTICE HIGHLIGHTS & CAPABILITIES</span>
+              </div>
+              <div class="stats-row">
+                <div class="stat-card">
+                  <div class="val">✓ Certified</div>
+                  <div class="lbl">Precision Measurement & Fit</div>
+                </div>
+                <div class="stat-card">
+                  <div class="val">✓ Certified</div>
+                  <div class="lbl">Bespoke Cutting & Sewing</div>
+                </div>
+                <div class="stat-card">
+                  <div class="val">✓ Certified</div>
+                  <div class="lbl">CAD Specification & QC</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="footer-section">
+              <div class="sig-box">
+                <div class="sig-line"></div>
+                <strong>${masterName}</strong>
+                <span>Master Trainer & Studio Director</span>
+              </div>
+
+              <div class="verification-seal">
+                <span class="code">AUTHENTICATED · TP-TESTIMONIAL-2026</span>
+                <span class="date">DATE: ${dateStr}</span>
+              </div>
+
+              <div class="sig-box" style="text-align: right;">
+                <div class="sig-line"></div>
+                <strong>MUBARIK TUAHIR ALI</strong>
+                <span>CEO, MOKARS TECH CORP</span>
+              </div>
+            </div>
+          </div>
+
+          <script>
+            function startPrint() {
+              setTimeout(function() {
+                window.print();
+              }, 400);
+            }
+            if (document.readyState === 'complete') {
+              startPrint();
+            } else {
+              window.addEventListener('load', startPrint);
+            }
+          </script>
+        </body>
+        </html>
+      `);
+      printWindow.document.close();
+    }
+  };
+
   return (
     <div className="space-y-6 select-none font-['Plus_Jakarta_Sans',sans-serif]">
       
@@ -677,14 +1058,24 @@ export const ApprenticePortfolioTab: React.FC<ApprenticePortfolioTabProps> = ({
               </p>
             </div>
 
-            {/* Print Career CV Action Button */}
-            <button
-              onClick={handlePrintCV}
-              className="py-3.5 px-6 rounded-2xl bg-[#0D3B36] hover:bg-[#082824] text-[#DCA134] font-black text-xs sm:text-sm flex items-center justify-center gap-2.5 border-2 border-[#DCA134] shadow-xl shadow-[#0D3B36]/30 transition-all hover:scale-[1.03] active:scale-[0.97] cursor-pointer shrink-0"
-            >
-              <FileText className="w-4.5 h-4.5 text-[#DCA134]" />
-              <span>Print Career CV & Dossier</span>
-            </button>
+            {/* Action Buttons: Print Career CV & Print Recommendation Letter */}
+            <div className="flex items-center gap-2 flex-wrap shrink-0">
+              <button
+                onClick={handlePrintCV}
+                className="py-3 px-5 rounded-2xl bg-[#0D3B36] hover:bg-[#082824] text-[#DCA134] font-black text-xs sm:text-sm flex items-center justify-center gap-2 border-2 border-[#DCA134] shadow-xl shadow-[#0D3B36]/30 transition-all hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
+              >
+                <FileText className="w-4 h-4 text-[#DCA134]" />
+                <span>Print Career CV 📄</span>
+              </button>
+
+              <button
+                onClick={handlePrintRecommendationLetter}
+                className="py-3 px-5 rounded-2xl bg-[#DCA134] hover:bg-[#c9902b] text-[#061E1B] font-black text-xs sm:text-sm flex items-center justify-center gap-2 border-2 border-[#061E1B]/30 shadow-xl transition-all hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
+              >
+                <Award className="w-4 h-4 text-[#061E1B]" />
+                <span>Print Recommendation Letter 📜</span>
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -848,6 +1239,95 @@ export const ApprenticePortfolioTab: React.FC<ApprenticePortfolioTabProps> = ({
                 </div>
               </div>
             ))}
+          </div>
+        )}
+      </div>
+
+      {/* 6. MASTER GRADUATION TESTIMONIAL & LETTER OF RECOMMENDATION */}
+      <div className="bg-gradient-to-br from-white via-slate-50 to-amber-50/40 dark:from-[#061E1B] dark:via-[#082824] dark:to-[#0A3832] rounded-3xl p-5 sm:p-6 border-2 border-[#DCA134] shadow-lg space-y-4">
+        <div className="flex items-center justify-between flex-wrap gap-2">
+          <div className="flex items-center gap-2">
+            <Quote className="w-5 h-5 text-[#DCA134]" />
+            <div>
+              <h3 className="font-['Outfit'] font-black text-xs sm:text-sm text-[#0D3B36] dark:text-amber-300 tracking-wider uppercase">
+                MASTER GRADUATION TESTIMONIAL & LETTER OF RECOMMENDATION
+              </h3>
+              <p className="text-[10.5px] font-bold text-slate-500 dark:text-slate-400">
+                Official endorsement document issued by Master Trainer {masterName}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            {!isEditingTestimonial ? (
+              <button
+                onClick={() => setIsEditingTestimonial(true)}
+                className="px-3 py-1.5 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-[#0D3B36] dark:text-amber-300 text-xs font-extrabold border border-[#DCA134]/50 flex items-center gap-1 transition-all cursor-pointer"
+              >
+                <Edit className="w-3.5 h-3.5 text-[#DCA134]" />
+                <span>Customize Remarks</span>
+              </button>
+            ) : (
+              <button
+                onClick={() => setIsEditingTestimonial(false)}
+                className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black flex items-center gap-1 transition-all shadow-xs cursor-pointer"
+              >
+                <Check className="w-3.5 h-3.5" />
+                <span>Save Remarks</span>
+              </button>
+            )}
+
+            <button
+              onClick={handlePrintRecommendationLetter}
+              className="px-3.5 py-1.5 rounded-xl bg-[#0D3B36] hover:bg-[#082824] text-[#DCA134] text-xs font-black border border-[#DCA134] flex items-center gap-1.5 shadow-md transition-all cursor-pointer"
+            >
+              <Award className="w-3.5 h-3.5 text-[#DCA134]" />
+              <span>Print Recommendation Letter 📜</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Testimonial Quote Display / Edit Mode */}
+        {isEditingTestimonial ? (
+          <div className="space-y-2">
+            <textarea
+              rows={4}
+              value={testimonialText}
+              onChange={(e) => setTestimonialText(e.target.value)}
+              className="w-full p-4 rounded-2xl bg-white dark:bg-[#041916] border-2 border-[#DCA134] text-xs sm:text-sm font-semibold text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-[#DCA134]"
+              placeholder="Enter custom master testimonial remarks..."
+            />
+            <p className="text-[10.5px] text-slate-500 dark:text-slate-400 font-medium">
+              * Custom remarks will be included in the official printed CV dossier and recommendation letter.
+            </p>
+          </div>
+        ) : (
+          <div className="relative p-4 sm:p-5 rounded-2xl bg-white/90 dark:bg-[#041916]/90 border border-amber-300/50 dark:border-amber-500/30 shadow-2xs space-y-3">
+            <Quote className="w-8 h-8 text-[#DCA134]/30 absolute top-3 right-3 pointer-events-none" />
+            <p className="text-xs sm:text-sm font-semibold text-slate-700 dark:text-slate-200 leading-relaxed italic pr-6">
+              "{testimonialText}"
+            </p>
+
+            <div className="flex items-center justify-between pt-2 border-t border-slate-200 dark:border-slate-800 flex-wrap gap-2">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-full bg-[#0D3B36] text-[#DCA134] border border-[#DCA134] flex items-center justify-center font-black text-xs">
+                  {masterName.charAt(0)}
+                </div>
+                <div>
+                  <h4 className="font-extrabold text-xs text-[#0D3B36] dark:text-amber-300">
+                    {masterName}
+                  </h4>
+                  <span className="text-[10px] text-slate-500 dark:text-slate-400 block font-medium">
+                    Master Trainer & Studio Director · {studioName}
+                  </span>
+                </div>
+              </div>
+
+              <span className="px-3 py-1 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 text-[10px] font-black border border-emerald-300 dark:border-emerald-700 flex items-center gap-1">
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                <span>Verified Master Endorsement</span>
+              </span>
+            </div>
           </div>
         )}
       </div>
