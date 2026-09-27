@@ -122,6 +122,7 @@ export const ApprenticeAppView: React.FC<ApprenticeAppViewProps> = ({
             onUpdateApprenticeName={onUpdateApprenticeName}
             masterName={masterName}
             studioName={studioName}
+            studioLogoUrl={studioLogoUrl}
             clients={clients}
             tasks={tasks}
           />

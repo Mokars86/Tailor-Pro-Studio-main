@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { X, Printer, Upload, CreditCard, User, Calendar, MapPin, BadgeCheck, Hash, Layers, Sparkles, Camera } from 'lucide-react';
+import { X, Printer, Upload, CreditCard, User, Calendar, MapPin, BadgeCheck, Hash, Layers, Sparkles, Camera, Download } from 'lucide-react';
 import { StudioSettings } from '../../types';
+import { downloadOrShareDocument } from '../../utils/mobileDocumentDownloader';
 
 interface TailorProMembershipCardModalProps {
   isOpen: boolean;
@@ -87,16 +88,13 @@ export const TailorProMembershipCardModal: React.FC<TailorProMembershipCardModal
   };
 
   // Open Self-Contained Perfect 1-Page Printable PDF & Badge Popup
-  const handlePrintCard = () => {
-    const printWin = window.open('', '_blank', 'width=780,height=920');
-    if (!printWin) return;
-
+  const handlePrintCard = async () => {
     const effectiveStudioLogo = studioLogoUrl || `${window.location.origin}/tailor_pro_logo.jpg`;
     const effectiveAppLogo = appLogoUrl || `${window.location.origin}/tailor_pro_logo.jpg`;
     const badgeRoleTitle = formatCleanBadgeRole(category);
     const detailRoleTitle = formatCleanDetailRole(category);
 
-    printWin.document.write(`
+    const cardHtml = `
       <!DOCTYPE html>
       <html lang="en">
       <head>
@@ -646,8 +644,14 @@ export const TailorProMembershipCardModal: React.FC<TailorProMembershipCardModal
 
       </body>
       </html>
-    `);
-    printWin.document.close();
+    `;
+
+    await downloadOrShareDocument({
+      filename: `TailorPro_Membership_ID_${memberName.replace(/[^a-zA-Z0-9_-]/g, '_')}.html`,
+      title: `Tailor Pro Official Membership Badge — ${memberName}`,
+      htmlContent: cardHtml,
+      text: `Tailor Pro Official Membership & ID Badge for ${memberName}.`
+    });
   };
 
   const badgeRoleTitle = formatCleanBadgeRole(category);

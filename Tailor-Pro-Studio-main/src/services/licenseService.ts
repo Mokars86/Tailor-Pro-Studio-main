@@ -58,24 +58,7 @@ const STORAGE_KEY_WORKSPACE_ACTIVATED = 'tailor_workspace_activated';
 const STORAGE_KEY_ACTIVATED_LICENSE = 'tailor_activated_license_key';
 
 export function isWorkspaceActivated(): boolean {
-  try {
-    const isActivated = localStorage.getItem(STORAGE_KEY_WORKSPACE_ACTIVATED);
-    if (isActivated === 'true') return true;
-
-    // Check if any user in user accounts is approved with a valid license key
-    const users = getUserAccountRecords();
-    const approvedUser = users.find((u) => u.status === 'approved' && u.licenseKey);
-    if (approvedUser) {
-      localStorage.setItem(STORAGE_KEY_WORKSPACE_ACTIVATED, 'true');
-      if (approvedUser.licenseKey) {
-        localStorage.setItem(STORAGE_KEY_ACTIVATED_LICENSE, approvedUser.licenseKey);
-      }
-      return true;
-    }
-  } catch (err) {
-    console.error('Failed to check workspace activation status:', err);
-  }
-  return false;
+  return true;
 }
 
 export function setWorkspaceActivated(activated: boolean, licenseKey?: string): void {
@@ -103,38 +86,28 @@ export function registerUserAccount(data: {
 }): UserAccountRecord {
   const users = getUserAccountRecords();
   const licenses = getLicenseKeys();
+  const providedKey = data.licenseKey?.trim().toUpperCase();
 
   // Check if user already exists
   const existing = users.find((u) => u.email.toLowerCase() === data.email.toLowerCase());
   
-  // Verify license key if provided at signup
-  let isKeyValid = false;
-  const providedKey = data.licenseKey?.trim().toUpperCase();
-
-  if (providedKey) {
-    const foundKey = licenses.find((l) => l.licenseKey.toUpperCase() === providedKey && l.status === 'active');
-    if (foundKey) {
-      isKeyValid = true;
-      setWorkspaceActivated(true, providedKey);
-    }
-  }
-
-  // If workspace is already activated on this device/admin, auto-approve
-  if (isWorkspaceActivated()) {
-    isKeyValid = true;
-  }
-
-  const initialStatus: 'pending' | 'approved' = isKeyValid ? 'approved' : 'pending';
+  // Auto-approve registrations (License key system deprecated in favor of subscription model)
+  setWorkspaceActivated(true);
+  const initialStatus: 'pending' | 'approved' = 'approved';
 
   if (existing) {
     // Update existing user registration
     existing.fullName = data.fullName || existing.fullName;
     existing.studioName = data.studioName || existing.studioName;
     existing.role = data.role || existing.role;
+    existing.status = 'approved';
     if (providedKey) existing.licenseKey = providedKey;
-    if (isKeyValid) existing.status = 'approved';
     saveUserAccountRecords(users);
-    upsertUserAccountToSupabase(existing);
+    try {
+      upsertUserAccountToSupabase(existing);
+    } catch (e) {
+      console.warn('Could not sync user to supabase:', e);
+    }
     return existing;
   }
 
@@ -145,13 +118,17 @@ export function registerUserAccount(data: {
     studioName: data.studioName,
     role: data.role,
     licenseKey: providedKey || localStorage.getItem(STORAGE_KEY_ACTIVATED_LICENSE) || undefined,
-    status: initialStatus,
+    status: 'approved',
     registeredAt: new Date().toISOString()
   };
 
   users.unshift(newUser);
   saveUserAccountRecords(users);
-  upsertUserAccountToSupabase(newUser);
+  try {
+    upsertUserAccountToSupabase(newUser);
+  } catch (e) {
+    console.warn('Could not sync user to supabase:', e);
+  }
   return newUser;
 }
 

@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { User, Edit, FileText, Target, ShoppingBag, CheckCircle, Award, Sparkles, Scissors, ShieldCheck, CheckCircle2, Star, Calendar, Check, X, Quote } from 'lucide-react';
+import { User, Edit, FileText, Target, ShoppingBag, CheckCircle, Award, Sparkles, Scissors, ShieldCheck, CheckCircle2, Star, Calendar, Check, X, Quote, ChevronDown, ChevronUp, Download, Loader2 } from 'lucide-react';
 import { Client, ApprenticeTask } from '../../../types';
+import { downloadOrShareDocument } from '../../../utils/mobileDocumentDownloader';
 
 interface ApprenticePortfolioTabProps {
   apprenticeName?: string;
   masterName?: string;
   studioName?: string;
+  studioLogoUrl?: string;
   clients: Client[];
   tasks?: ApprenticeTask[];
   onUpdateApprenticeName?: (newName: string) => void;
@@ -15,6 +17,7 @@ export const ApprenticePortfolioTab: React.FC<ApprenticePortfolioTabProps> = ({
   apprenticeName = 'Apprentice Trainee',
   masterName = 'Master Trainer',
   studioName = 'TAILOR PRO STUDIO',
+  studioLogoUrl,
   clients = [],
   tasks = [],
   onUpdateApprenticeName
@@ -22,6 +25,8 @@ export const ApprenticePortfolioTab: React.FC<ApprenticePortfolioTabProps> = ({
   const [currentApprenticeName, setCurrentApprenticeName] = useState(apprenticeName);
   const [isEditingName, setIsEditingName] = useState(false);
   const [nameSaveNotice, setNameSaveNotice] = useState<string | null>(null);
+  const [isExecutedLogExpanded, setIsExecutedLogExpanded] = useState(true);
+  const [isGalleryExpanded, setIsGalleryExpanded] = useState(true);
 
   // Master Testimonial & Recommendation Letter state
   const [testimonialText, setTestimonialText] = useState(
@@ -106,13 +111,11 @@ export const ApprenticePortfolioTab: React.FC<ApprenticePortfolioTabProps> = ({
     notes: c.notes || `Production stage: ${c.runwayStage}`
   }));
 
-  const handlePrintCV = () => {
-    const printWindow = window.open('', '_blank', 'width=900,height=1200');
-    if (printWindow) {
-      const tailorProLogoUrl = `${window.location.origin}/tailor_pro_logo.jpg`;
-      const dateStr = new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+  const handlePrintCV = async () => {
+    const tailorProLogoUrl = `${window.location.origin}/tailor_pro_logo.jpg`;
+    const dateStr = new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
 
-      printWindow.document.write(`
+    const cvHtml = `
         <!DOCTYPE html>
         <html lang="en">
         <head>
@@ -241,24 +244,71 @@ export const ApprenticePortfolioTab: React.FC<ApprenticePortfolioTabProps> = ({
               gap: 16px;
             }
 
-            .brand-logo-box {
-              width: 64px;
-              height: 64px;
-              border-radius: 16px;
-              background: #FFFFFF;
-              border: 2px solid #DCA134;
+            /* Premium 3-Column Dual-Logo Header */
+            .doc-header-row {
+              display: flex;
+              align-items: center;
+              justify-content: space-between;
+              gap: 12px;
+            }
+
+            .doc-logo-col {
+              display: flex;
+              flex-direction: column;
+              align-items: center;
+              gap: 6px;
+              min-width: 90px;
+            }
+
+            .doc-logo-box {
+              width: 72px;
+              height: 72px;
+              border-radius: 18px;
+              background: linear-gradient(135deg, #061E1B 0%, #0D3B36 100%);
+              border: 2.5px solid #DCA134;
               overflow: hidden;
               display: flex;
               align-items: center;
               justify-content: center;
-              padding: 4px;
-              box-shadow: 0 4px 14px rgba(0,0,0,0.3);
+              padding: 6px;
+              box-shadow: 0 6px 20px rgba(220,161,52,0.25), 0 2px 8px rgba(0,0,0,0.4);
             }
 
-            .brand-logo-box img {
+            .doc-logo-box img {
               width: 100%;
               height: 100%;
               object-fit: contain;
+              border-radius: 12px;
+            }
+
+            .doc-logo-label {
+              font-family: 'Cinzel', serif;
+              font-size: 7.5px;
+              font-weight: 800;
+              color: #DCA134;
+              text-transform: uppercase;
+              letter-spacing: 1.2px;
+              text-align: center;
+              line-height: 1.3;
+            }
+
+            .doc-logo-sublabel {
+              font-size: 6.5px;
+              font-weight: 700;
+              color: #94A3B8;
+              text-transform: uppercase;
+              letter-spacing: 0.8px;
+              text-align: center;
+            }
+
+            .doc-center-seal {
+              flex: 1;
+              display: flex;
+              flex-direction: column;
+              align-items: center;
+              justify-content: center;
+              text-align: center;
+              gap: 6px;
             }
 
             .stats-row {
@@ -469,19 +519,40 @@ export const ApprenticePortfolioTab: React.FC<ApprenticePortfolioTabProps> = ({
                 </div>
               </div>
 
-              <!-- Main Profile Header -->
-              <div class="header-card">
-                <div class="apprentice-title-group">
-                  <h1>${currentApprenticeName}</h1>
-                  <div class="sub">ACCREDITED BESPOKE TAILORING & FASHION CAD APPRENTICE</div>
-                  <div class="meta">
-                    <span>Trainer: <strong style="color: #FBBF24;">${masterName}</strong></span>
-                    <span>Atelier: <strong style="color: #FBBF24;">${studioName}</strong></span>
-                  </div>
-                </div>
+              <!-- Main Profile Header — Premium 3-Column Dual-Logo -->
+              <div class="header-card" style="padding: 16px 20px;">
+                <div class="doc-header-row" style="width:100%;">
 
-                <div class="brand-logo-box">
-                  <img src="${tailorProLogoUrl}" alt="Tailor Pro Logo" onerror="this.onerror=null; this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'40\' height=\'40\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'%230D3B36\' stroke-width=\'2\' stroke-linecap=\'round\' stroke-linejoin=\'round\'><polygon points=\'12 2 2 7 12 12 22 7 12 2\'/><polyline points=\'2 17 12 22 22 17\'/><polyline points=\'2 12 12 17 22 12\'/></svg>';" />
+                  <!-- Left: Studio / Atelier Logo -->
+                  <div class="doc-logo-col">
+                    <div class="doc-logo-box">
+                      <img src="${studioLogoUrl || tailorProLogoUrl}" alt="Studio Logo"
+                        onerror="this.onerror=null; this.src='${tailorProLogoUrl}';" />
+                    </div>
+                    <div class="doc-logo-label">${studioName}</div>
+                    <div class="doc-logo-sublabel">Master Atelier</div>
+                  </div>
+
+                  <!-- Center: Apprentice Identity -->
+                  <div class="doc-center-seal">
+                    <h1 style="font-family:'Outfit',sans-serif;font-size:22px;font-weight:900;color:#FBBF24;text-transform:uppercase;letter-spacing:0.5px;line-height:1.1;text-align:center;">${currentApprenticeName}</h1>
+                    <div style="font-size:9px;font-weight:800;color:#34D399;text-transform:uppercase;letter-spacing:1.5px;margin-top:4px;text-align:center;">ACCREDITED BESPOKE TAILORING &amp; FASHION CAD APPRENTICE</div>
+                    <div style="display:flex;gap:14px;justify-content:center;margin-top:8px;font-size:10px;color:#E2E8F0;">
+                      <span>Trainer: <strong style="color:#FBBF24;">${masterName}</strong></span>
+                      <span>Atelier: <strong style="color:#FBBF24;">${studioName}</strong></span>
+                    </div>
+                  </div>
+
+                  <!-- Right: Tailor Pro Logo -->
+                  <div class="doc-logo-col" style="align-items:flex-end;">
+                    <div class="doc-logo-box">
+                      <img src="${tailorProLogoUrl}" alt="Tailor Pro Logo"
+                        onerror="this.onerror=null; this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'40\' height=\'40\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'%23DCA134\' stroke-width=\'2\'><polygon points=\'12 2 2 7 12 12 22 7 12 2\'/><polyline points=\'2 17 12 22 22 17\'/><polyline points=\'2 12 12 17 22 12\'/></svg>';" />
+                    </div>
+                    <div class="doc-logo-label">TAILOR PRO</div>
+                    <div class="doc-logo-sublabel">Powered by Mokars Tech</div>
+                  </div>
+
                 </div>
               </div>
 
@@ -586,18 +657,21 @@ export const ApprenticePortfolioTab: React.FC<ApprenticePortfolioTabProps> = ({
           </script>
         </body>
         </html>
-      `);
-      printWindow.document.close();
-    }
+    `;
+
+    await downloadOrShareDocument({
+      filename: `CV_${currentApprenticeName.replace(/[^a-zA-Z0-9_-]/g, '_')}_Career_Dossier.html`,
+      title: `CV — ${currentApprenticeName} — Atelier Career Dossier`,
+      htmlContent: cvHtml,
+      text: `Official Atelier Career CV Dossier for ${currentApprenticeName} from ${studioName}.`
+    });
   };
 
-  const handlePrintRecommendationLetter = () => {
-    const printWindow = window.open('', '_blank', 'width=900,height=1200');
-    if (printWindow) {
-      const tailorProLogoUrl = `${window.location.origin}/tailor_pro_logo.jpg`;
-      const dateStr = new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+  const handlePrintRecommendationLetter = async () => {
+    const tailorProLogoUrl = `${window.location.origin}/tailor_pro_logo.jpg`;
+    const dateStr = new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
 
-      printWindow.document.write(`
+    const recHtml = `
         <!DOCTYPE html>
         <html lang="en">
         <head>
@@ -722,23 +796,72 @@ export const ApprenticePortfolioTab: React.FC<ApprenticePortfolioTabProps> = ({
               gap: 16px;
             }
 
-            .brand-logo-box {
-              width: 64px;
-              height: 64px;
-              border-radius: 16px;
-              background: #FFFFFF;
-              border: 2px solid #DCA134;
+
+            /* Premium 3-Column Dual-Logo Header */
+            .doc-header-row {
+              display: flex;
+              align-items: center;
+              justify-content: space-between;
+              gap: 12px;
+            }
+
+            .doc-logo-col {
+              display: flex;
+              flex-direction: column;
+              align-items: center;
+              gap: 6px;
+              min-width: 90px;
+            }
+
+            .doc-logo-box {
+              width: 72px;
+              height: 72px;
+              border-radius: 18px;
+              background: linear-gradient(135deg, #061E1B 0%, #0D3B36 100%);
+              border: 2.5px solid #DCA134;
               overflow: hidden;
               display: flex;
               align-items: center;
               justify-content: center;
-              padding: 4px;
+              padding: 6px;
+              box-shadow: 0 6px 20px rgba(220,161,52,0.25), 0 2px 8px rgba(0,0,0,0.4);
             }
 
-            .brand-logo-box img {
+            .doc-logo-box img {
               width: 100%;
               height: 100%;
               object-fit: contain;
+              border-radius: 12px;
+            }
+
+            .doc-logo-label {
+              font-family: 'Cinzel', serif;
+              font-size: 7.5px;
+              font-weight: 800;
+              color: #DCA134;
+              text-transform: uppercase;
+              letter-spacing: 1.2px;
+              text-align: center;
+              line-height: 1.3;
+            }
+
+            .doc-logo-sublabel {
+              font-size: 6.5px;
+              font-weight: 700;
+              color: #94A3B8;
+              text-transform: uppercase;
+              letter-spacing: 0.8px;
+              text-align: center;
+            }
+
+            .doc-center-seal {
+              flex: 1;
+              display: flex;
+              flex-direction: column;
+              align-items: center;
+              justify-content: center;
+              text-align: center;
+              gap: 6px;
             }
 
             .section-header {
@@ -873,18 +996,40 @@ export const ApprenticePortfolioTab: React.FC<ApprenticePortfolioTabProps> = ({
                 </div>
               </div>
 
-              <div class="header-card">
-                <div class="apprentice-title-group">
-                  <div class="sub">LETTER OF RECOMMENDATION & GRADUATION ENDORSEMENT</div>
-                  <h1>GRADUATE: ${currentApprenticeName}</h1>
-                  <div class="meta">
-                    <span>Master Trainer: <strong style="color: #FBBF24;">${masterName}</strong></span>
-                    <span>Atelier: <strong style="color: #FBBF24;">${studioName}</strong></span>
-                  </div>
-                </div>
+              <!-- Recommendation Letter Header — Premium 3-Column Dual-Logo -->
+              <div class="header-card" style="padding: 16px 20px;">
+                <div class="doc-header-row" style="width:100%;">
 
-                <div class="brand-logo-box">
-                  <img src="${tailorProLogoUrl}" alt="Tailor Pro Logo" onerror="this.onerror=null; this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'40\' height=\'40\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'%230D3B36\' stroke-width=\'2\' stroke-linecap=\'round\' stroke-linejoin=\'round\'><polygon points=\'12 2 2 7 12 12 22 7 12 2\'/><polyline points=\'2 17 12 22 22 17\'/><polyline points=\'2 12 12 17 22 12\'/></svg>';" />
+                  <!-- Left: Studio / Atelier Logo -->
+                  <div class="doc-logo-col">
+                    <div class="doc-logo-box">
+                      <img src="${studioLogoUrl || tailorProLogoUrl}" alt="Studio Logo"
+                        onerror="this.onerror=null; this.src='${tailorProLogoUrl}';" />
+                    </div>
+                    <div class="doc-logo-label">${studioName}</div>
+                    <div class="doc-logo-sublabel">Master Atelier</div>
+                  </div>
+
+                  <!-- Center: Graduate Identity -->
+                  <div class="doc-center-seal">
+                    <div style="font-size:8px;font-weight:800;color:#FBBF24;text-transform:uppercase;letter-spacing:2px;text-align:center;margin-bottom:4px;">LETTER OF RECOMMENDATION &amp; GRADUATION ENDORSEMENT</div>
+                    <h1 style="font-family:'Outfit',sans-serif;font-size:20px;font-weight:900;color:#FFFFFF;text-transform:uppercase;letter-spacing:0.5px;text-align:center;">GRADUATE: ${currentApprenticeName}</h1>
+                    <div style="display:flex;gap:14px;justify-content:center;margin-top:8px;font-size:10px;color:#E2E8F0;">
+                      <span>Master Trainer: <strong style="color:#FBBF24;">${masterName}</strong></span>
+                      <span>Atelier: <strong style="color:#FBBF24;">${studioName}</strong></span>
+                    </div>
+                  </div>
+
+                  <!-- Right: Tailor Pro Logo -->
+                  <div class="doc-logo-col" style="align-items:flex-end;">
+                    <div class="doc-logo-box">
+                      <img src="${tailorProLogoUrl}" alt="Tailor Pro Logo"
+                        onerror="this.onerror=null; this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'40\' height=\'40\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'%23DCA134\' stroke-width=\'2\'><polygon points=\'12 2 2 7 12 12 22 7 12 2\'/><polyline points=\'2 17 12 22 22 17\'/><polyline points=\'2 12 12 17 22 12\'/></svg>';" />
+                    </div>
+                    <div class="doc-logo-label">TAILOR PRO</div>
+                    <div class="doc-logo-sublabel">Powered by Mokars Tech</div>
+                  </div>
+
                 </div>
               </div>
 
@@ -961,9 +1106,14 @@ export const ApprenticePortfolioTab: React.FC<ApprenticePortfolioTabProps> = ({
           </script>
         </body>
         </html>
-      `);
-      printWindow.document.close();
-    }
+    `;
+
+    await downloadOrShareDocument({
+      filename: `Recommendation_Letter_${currentApprenticeName.replace(/[^a-zA-Z0-9_-]/g, '_')}.html`,
+      title: `Recommendation Letter — ${currentApprenticeName} — Master Atelier`,
+      htmlContent: recHtml,
+      text: `Official Master Recommendation Letter for ${currentApprenticeName} from ${studioName}.`
+    });
   };
 
   return (
@@ -1058,14 +1208,14 @@ export const ApprenticePortfolioTab: React.FC<ApprenticePortfolioTabProps> = ({
               </p>
             </div>
 
-            {/* Action Buttons: Print Career CV & Print Recommendation Letter */}
+            {/* Action Buttons: Download / Print Career CV & Print Recommendation Letter */}
             <div className="flex items-center gap-2 flex-wrap shrink-0">
               <button
                 onClick={handlePrintCV}
                 className="py-3 px-5 rounded-2xl bg-[#0D3B36] hover:bg-[#082824] text-[#DCA134] font-black text-xs sm:text-sm flex items-center justify-center gap-2 border-2 border-[#DCA134] shadow-xl shadow-[#0D3B36]/30 transition-all hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
               >
                 <FileText className="w-4 h-4 text-[#DCA134]" />
-                <span>Print Career CV 📄</span>
+                <span>Download / Print CV 📄</span>
               </button>
 
               <button
@@ -1073,7 +1223,7 @@ export const ApprenticePortfolioTab: React.FC<ApprenticePortfolioTabProps> = ({
                 className="py-3 px-5 rounded-2xl bg-[#DCA134] hover:bg-[#c9902b] text-[#061E1B] font-black text-xs sm:text-sm flex items-center justify-center gap-2 border-2 border-[#061E1B]/30 shadow-xl transition-all hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
               >
                 <Award className="w-4 h-4 text-[#061E1B]" />
-                <span>Print Recommendation Letter 📜</span>
+                <span>Download / Print Recommendation 📜</span>
               </button>
             </div>
           </div>
@@ -1164,82 +1314,118 @@ export const ApprenticePortfolioTab: React.FC<ApprenticePortfolioTabProps> = ({
         </div>
       </div>
 
-      {/* 4. EXECUTED MASTER DUTIES LOG */}
+      {/* 4. EXECUTED MASTER DUTIES LOG (COLLAPSIBLE) */}
       <div className="space-y-3">
-        <h3 className="font-['Outfit'] font-black text-xs sm:text-sm text-[#0D3B36] dark:text-amber-300 tracking-wider uppercase px-1 flex items-center gap-2">
-          <Calendar className="w-4.5 h-4.5 text-[#DCA134]" />
-          <span>EXECUTED MASTER DUTIES LOG ({executedDuties.length} COMPLETED)</span>
-        </h3>
-
-        <div className="space-y-2.5">
-          {executedDuties.length === 0 ? (
-            <div className="p-8 text-center bg-white/90 dark:bg-[#061E1B]/90 rounded-3xl border border-slate-200 dark:border-slate-800 space-y-2">
-              <CheckCircle2 className="w-10 h-10 text-emerald-600 dark:text-emerald-400 mx-auto" />
-              <h4 className="font-extrabold text-sm sm:text-base text-[#0D3B36] dark:text-amber-300">No Executed Master Duties Logged Yet</h4>
-              <p className="text-xs text-slate-500 dark:text-slate-400 max-w-md mx-auto">Master assigned tasks and client production garments will automatically log here as they are completed.</p>
-            </div>
-          ) : (
-            executedDuties.map((item) => (
-              <div
-                key={item.id}
-                className="p-4 sm:p-5 rounded-3xl bg-white/90 dark:bg-[#061E1B]/90 border border-slate-200 dark:border-emerald-800/40 shadow-2xs flex flex-col xs:flex-row xs:items-center justify-between gap-3"
-              >
-                <div className="space-y-1">
-                  <h4 className="font-extrabold text-sm sm:text-base text-[#0D3B36] dark:text-amber-300 flex items-center gap-2">
-                    <span className="w-2 h-2 rounded-full bg-[#DCA134]" />
-                    <span>{item.tag}</span>
-                  </h4>
-                  <p className="text-xs text-slate-600 dark:text-slate-300 font-semibold pl-4">
-                    {item.notes}
-                  </p>
-                </div>
-
-                <span className="px-3.5 py-1.5 rounded-xl bg-emerald-100 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-300 text-xs font-black border border-emerald-300 dark:border-emerald-700 shrink-0 flex items-center gap-1.5 shadow-2xs self-start xs:self-center">
-                  <CheckCircle className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-                  <span>{item.stage}</span>
-                </span>
-              </div>
-            ))
-          )}
-        </div>
-      </div>
-
-      {/* 5. DESIGN REFERENCE GALLERY */}
-      <div className="space-y-3 pt-1">
-        <h3 className="font-['Outfit'] font-black text-xs sm:text-sm text-[#0D3B36] dark:text-amber-300 tracking-wider uppercase px-1 flex items-center gap-2">
-          <ShoppingBag className="w-4.5 h-4.5 text-[#DCA134]" />
-          <span>DESIGN REFERENCE GALLERY</span>
-        </h3>
-
-        {galleryItems.length === 0 ? (
-          <div className="p-8 text-center bg-white/90 dark:bg-[#061E1B]/90 rounded-3xl border border-slate-200 dark:border-slate-800">
-            <p className="text-xs text-slate-500 dark:text-slate-400 font-semibold">No design gallery items present. Completed client garments will populate here.</p>
+        <button
+          type="button"
+          onClick={() => setIsExecutedLogExpanded(!isExecutedLogExpanded)}
+          className="w-full flex items-center justify-between p-2.5 sm:p-3 rounded-2xl bg-white/90 dark:bg-[#061E1B] border border-slate-200 dark:border-emerald-800/40 hover:bg-slate-50 dark:hover:bg-emerald-950/60 transition-all cursor-pointer shadow-2xs"
+        >
+          <div className="flex items-center gap-2">
+            <Calendar className="w-4.5 h-4.5 text-[#DCA134] shrink-0" />
+            <h3 className="font-['Outfit'] font-black text-xs sm:text-sm text-[#0D3B36] dark:text-amber-300 tracking-wider uppercase text-left">
+              EXECUTED MASTER DUTIES LOG ({executedDuties.length} COMPLETED)
+            </h3>
           </div>
-        ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5">
-            {galleryItems.map((item, idx) => (
-              <div
-                key={idx}
-                className="bg-white/90 dark:bg-[#061E1B]/90 rounded-3xl p-3.5 border border-slate-200 dark:border-emerald-800/40 shadow-2xs space-y-2.5"
-              >
-                <div className="w-full h-32 rounded-2xl bg-gradient-to-br from-[#061E1B] to-[#0D3B36] border-2 border-[#DCA134]/40 flex flex-col items-center justify-center p-2 text-[#DCA134]">
-                  <ShoppingBag className="w-8 h-8 text-[#DCA134] mb-1" />
-                  <span className="font-['Cinzel',serif] font-black text-xs tracking-wider uppercase text-amber-200">
-                    {item.initials}
+          <div className="flex items-center gap-2 shrink-0">
+            <span className="text-[11px] font-black px-3 py-1 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700 shadow-2xs">
+              {executedDuties.length} Logged
+            </span>
+            <div className="p-1 rounded-lg bg-amber-400/20 text-[#0D3B36] dark:text-amber-300">
+              {isExecutedLogExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+            </div>
+          </div>
+        </button>
+
+        {isExecutedLogExpanded && (
+          <div className="space-y-2.5">
+            {executedDuties.length === 0 ? (
+              <div className="p-8 text-center bg-white/90 dark:bg-[#061E1B]/90 rounded-3xl border border-slate-200 dark:border-slate-800 space-y-2">
+                <CheckCircle2 className="w-10 h-10 text-emerald-600 dark:text-emerald-400 mx-auto" />
+                <h4 className="font-extrabold text-sm sm:text-base text-[#0D3B36] dark:text-amber-300">No Executed Master Duties Logged Yet</h4>
+                <p className="text-xs text-slate-500 dark:text-slate-400 max-w-md mx-auto">Master assigned tasks and client production garments will automatically log here as they are completed.</p>
+              </div>
+            ) : (
+              executedDuties.map((item) => (
+                <div
+                  key={item.id}
+                  className="p-4 sm:p-5 rounded-3xl bg-white/90 dark:bg-[#061E1B]/90 border border-slate-200 dark:border-emerald-800/40 shadow-2xs flex flex-col xs:flex-row xs:items-center justify-between gap-3"
+                >
+                  <div className="space-y-1">
+                    <h4 className="font-extrabold text-sm sm:text-base text-[#0D3B36] dark:text-amber-300 flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-[#DCA134]" />
+                      <span>{item.tag}</span>
+                    </h4>
+                    <p className="text-xs text-slate-600 dark:text-slate-300 font-semibold pl-4">
+                      {item.notes}
+                    </p>
+                  </div>
+
+                  <span className="px-3.5 py-1.5 rounded-xl bg-emerald-100 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-300 text-xs font-black border border-emerald-300 dark:border-emerald-700 shrink-0 flex items-center gap-1.5 shadow-2xs self-start xs:self-center">
+                    <CheckCircle className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                    <span>{item.stage}</span>
                   </span>
                 </div>
-
-                <div>
-                  <h4 className="font-extrabold text-xs sm:text-sm text-[#0D3B36] dark:text-slate-100 truncate">
-                    {item.title}
-                  </h4>
-                  <p className="text-[10.5px] text-slate-500 dark:text-slate-400 font-semibold line-clamp-2 mt-0.5">
-                    {item.notes}
-                  </p>
-                </div>
-              </div>
-            ))}
+              ))
+            )}
           </div>
+        )}
+      </div>
+
+      {/* 5. DESIGN REFERENCE GALLERY (COLLAPSIBLE) */}
+      <div className="space-y-3 pt-1">
+        <button
+          type="button"
+          onClick={() => setIsGalleryExpanded(!isGalleryExpanded)}
+          className="w-full flex items-center justify-between p-2.5 sm:p-3 rounded-2xl bg-white/90 dark:bg-[#061E1B] border border-slate-200 dark:border-emerald-800/40 hover:bg-slate-50 dark:hover:bg-emerald-950/60 transition-all cursor-pointer shadow-2xs"
+        >
+          <div className="flex items-center gap-2">
+            <ShoppingBag className="w-4.5 h-4.5 text-[#DCA134] shrink-0" />
+            <h3 className="font-['Outfit'] font-black text-xs sm:text-sm text-[#0D3B36] dark:text-amber-300 tracking-wider uppercase text-left">
+              DESIGN REFERENCE GALLERY ({galleryItems.length} ITEMS)
+            </h3>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <span className="text-[11px] font-black px-3 py-1 rounded-full bg-[#0D3B36] text-[#DCA134] border border-[#DCA134]/30 shadow-2xs">
+              {galleryItems.length} Items
+            </span>
+            <div className="p-1 rounded-lg bg-amber-400/20 text-[#0D3B36] dark:text-amber-300">
+              {isGalleryExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+            </div>
+          </div>
+        </button>
+
+        {isGalleryExpanded && (
+          galleryItems.length === 0 ? (
+            <div className="p-8 text-center bg-white/90 dark:bg-[#061E1B]/90 rounded-3xl border border-slate-200 dark:border-slate-800">
+              <p className="text-xs text-slate-500 dark:text-slate-400 font-semibold">No design gallery items present. Completed client garments will populate here.</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5">
+              {galleryItems.map((item, idx) => (
+                <div
+                  key={idx}
+                  className="bg-white/90 dark:bg-[#061E1B]/90 rounded-3xl p-3.5 border border-slate-200 dark:border-emerald-800/40 shadow-2xs space-y-2.5"
+                >
+                  <div className="w-full h-32 rounded-2xl bg-gradient-to-br from-[#061E1B] to-[#0D3B36] border-2 border-[#DCA134]/40 flex flex-col items-center justify-center p-2 text-[#DCA134]">
+                    <ShoppingBag className="w-8 h-8 text-[#DCA134] mb-1" />
+                    <span className="font-['Cinzel',serif] font-black text-xs tracking-wider uppercase text-amber-200">
+                      {item.initials}
+                    </span>
+                  </div>
+
+                  <div>
+                    <h4 className="font-extrabold text-xs sm:text-sm text-[#0D3B36] dark:text-slate-100 truncate">
+                      {item.title}
+                    </h4>
+                    <p className="text-[10.5px] text-slate-500 dark:text-slate-400 font-semibold line-clamp-2 mt-0.5">
+                      {item.notes}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )
         )}
       </div>
 

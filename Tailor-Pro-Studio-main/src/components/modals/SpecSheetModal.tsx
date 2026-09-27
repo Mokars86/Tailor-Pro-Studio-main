@@ -3,6 +3,7 @@ import {
   ArrowLeft,
   Upload,
   Plus,
+  Minus,
   Trash2,
   Check,
   Ruler,
@@ -12,7 +13,11 @@ import {
   Layers,
   FileText,
   X,
-  Maximize2
+  Maximize2,
+  Calculator,
+  RefreshCw,
+  AlertCircle,
+  CheckCircle2
 } from 'lucide-react';
 import { Client, SpecSheetGarment, StudioSettings } from '../../types';
 import { FullMeasurementsModal } from './FullMeasurementsModal';
@@ -233,6 +238,136 @@ const ModernHumanCroquis: React.FC<HumanCroquisProps> = ({
 };
 
 /* =========================================================
+   Real-Data Measurement Extractor & Yardage Engine
+   ========================================================= */
+export function extractClientMeasurementValues(client: Client) {
+  const m = client.measurements || {};
+  const cm = m.customMeasurements || {};
+
+  const findVal = (...keys: string[]) => {
+    for (const k of keys) {
+      if (m[k] && m[k] !== '0.0"' && m[k] !== '0' && m[k] !== '—') return String(m[k]);
+      if (cm[k] && cm[k] !== '0.0"' && cm[k] !== '0' && cm[k] !== '—') return String(cm[k]);
+    }
+    return '';
+  };
+
+  const lengthStr = findVal('fullLength', 'dressLength', 'gownLength', 'kaftanLength', 'topLength', 'skirtLength', 'trouserLength', 'length', 'Length', 'Full Length', 'Dress Length');
+  const bustStr = findVal('bustOrChest', 'bust', 'chest', 'Bust', 'Chest', 'Bust/Chest');
+  const waistStr = findVal('waist', 'Waist');
+  const hipsStr = findVal('hips', 'Hips');
+  const shoulderStr = findVal('shoulderWidth', 'shoulder', 'Shoulder');
+  const sleeveStr = findVal('sleeveLength', 'Sleeve', 'Sleeve Length');
+
+  const parseNum = (val?: string) => {
+    if (!val) return 0;
+    const cleaned = String(val).replace(/[^0-9.]/g, '');
+    const num = parseFloat(cleaned);
+    return isNaN(num) ? 0 : num;
+  };
+
+  const length = parseNum(lengthStr);
+  const bust = parseNum(bustStr);
+  const waist = parseNum(waistStr);
+  const hips = parseNum(hipsStr);
+  const shoulder = parseNum(shoulderStr);
+  const sleeve = parseNum(sleeveStr);
+
+  return {
+    length,
+    bust,
+    waist,
+    hips,
+    shoulder,
+    sleeve,
+    rawLengthStr: length ? `${length}"` : null,
+    rawBustStr: bust ? `${bust}"` : null,
+    rawWaistStr: waist ? `${waist}"` : null,
+    rawHipsStr: hips ? `${hips}"` : null,
+    rawSleeveStr: sleeve ? `${sleeve}"` : null,
+    hasRealData: length > 0 || bust > 0 || hips > 0
+  };
+}
+
+export function calculateFabricYardage(
+  garmentType: string,
+  boltWidth: string,
+  measurements: { length: number; bust: number; waist: number; hips: number; sleeve: number }
+) {
+  const type = (garmentType || '').toLowerCase();
+  const width = (boltWidth || '').toLowerCase();
+
+  let widthMult = 1.0;
+  let widthLabel = '60" Bolt';
+  if (width.includes('45')) {
+    widthMult = 1.38;
+    widthLabel = '45" Narrow Bolt';
+  } else if (width.includes('72')) {
+    widthMult = 0.85;
+    widthLabel = '72" Wide Bolt';
+  }
+
+  const baseLength = measurements.length > 0 ? measurements.length : 44;
+  const sleeveLen = measurements.sleeve > 0 ? measurements.sleeve : 22;
+  const isRealData = measurements.length > 0;
+
+  let baseInches = 0;
+  let liningRatio = 0.8;
+  let interfacingYards = 0.5;
+  let typeLabel = 'Straight Dress';
+
+  if (type.includes('gown') || type.includes('evening') || type.includes('maxi') || type.includes('ball')) {
+    baseInches = baseLength * 2.4 + 16;
+    liningRatio = 1.0;
+    interfacingYards = 0.75;
+    typeLabel = 'Evening / Flared Gown';
+  } else if (type.includes('kaftan') || type.includes('boubou') || type.includes('agbada') || type.includes('robe')) {
+    baseInches = baseLength * 2.2 + sleeveLen + 10;
+    liningRatio = 0.5;
+    interfacingYards = 0.5;
+    typeLabel = 'Kaftan / Boubou / Agbada';
+  } else if (type.includes('suit') || type.includes('blazer') || type.includes('jacket') || type.includes('tuxedo')) {
+    const trouserLen = baseLength > 30 ? baseLength : 40;
+    baseInches = 30 + trouserLen + sleeveLen + 14;
+    liningRatio = 1.0;
+    interfacingYards = 1.25;
+    typeLabel = 'Tailored Suit & Blazer';
+  } else if (type.includes('skirt') || type.includes('two piece') || type.includes('top &')) {
+    baseInches = baseLength * 1.6 + 14;
+    liningRatio = 0.8;
+    interfacingYards = 0.5;
+    typeLabel = 'Skirt & Blouse';
+  } else if (type.includes('corset') || type.includes('pants') || type.includes('trouser')) {
+    baseInches = baseLength * 1.5 + 12;
+    liningRatio = 0.7;
+    interfacingYards = 0.75;
+    typeLabel = 'Corset Top & Trousers';
+  } else {
+    baseInches = baseLength + sleeveLen + 10;
+    liningRatio = 0.8;
+    interfacingYards = 0.5;
+    typeLabel = 'Straight Dress';
+  }
+
+  const totalInches = baseInches * widthMult;
+  const rawYards = totalInches / 36;
+  const mainYards = Math.max(1.5, Math.ceil(rawYards * 4) / 4);
+  const liningYards = Math.max(1.0, Math.ceil(mainYards * liningRatio * 4) / 4);
+
+  const formulaNote = isRealData
+    ? `Calculated from client length (${baseLength}") on ${widthLabel} for ${typeLabel}`
+    : `Estimated baseline (44" length) on ${widthLabel} for ${typeLabel}`;
+
+  return {
+    mainYards,
+    liningYards,
+    interfacingYards,
+    formulaNote,
+    isBasedOnRealData: isRealData
+  };
+}
+
+/* =========================================================
    Main SpecSheetModal Component
    ========================================================= */
 export const SpecSheetModal: React.FC<SpecSheetModalProps> = ({
@@ -241,13 +376,7 @@ export const SpecSheetModal: React.FC<SpecSheetModalProps> = ({
   onClose,
   onSaveSpecSheet
 }) => {
-  const calculateYardage = (lengthStr?: string) => {
-    if (!lengthStr || lengthStr === '0.0"' || lengthStr === '0' || lengthStr === '—') return null;
-    const num = parseFloat(lengthStr.replace(/[^0-9.]/g, ''));
-    if (isNaN(num) || num === 0) return null;
-    const yards = Math.max(1, Math.ceil(((num + 6) / 36) * 2) / 2);
-    return yards;
-  };
+  const clientMeasures = extractClientMeasurementValues(client);
 
   const defaultGarments: SpecSheetGarment[] = [
     {
@@ -256,7 +385,11 @@ export const SpecSheetModal: React.FC<SpecSheetModalProps> = ({
       fabricBoltWidth: '60 Inches Width',
       fabricPhotos: [],
       notes: client.notes || '',
-      yardsNeeded: calculateYardage(client.measurements?.fullLength) || 2.5
+      yardsNeeded: calculateFabricYardage(
+        client.garmentTag || 'Straight Dress',
+        '60 Inches Width',
+        clientMeasures
+      ).mainYards
     }
   ];
 
@@ -288,15 +421,31 @@ export const SpecSheetModal: React.FC<SpecSheetModalProps> = ({
   };
 
   const handleAddGarment = () => {
+    const defaultYards = calculateFabricYardage(
+      'Straight Dress',
+      '60 Inches Width',
+      clientMeasures
+    ).mainYards;
+
     const newG: SpecSheetGarment = {
       id: `g-${Date.now()}`,
       garmentType: 'Straight Dress',
       fabricBoltWidth: '60 Inches Width',
       fabricPhotos: [],
       notes: '',
-      yardsNeeded: calculateYardage(client.measurements?.fullLength) || 2.5
+      yardsNeeded: defaultYards
     };
     setGarments((prev) => [...prev, newG]);
+  };
+
+  const handleAdjustYards = (index: number, delta: number, currentAutoYards: number) => {
+    const current = garments[index].yardsNeeded !== undefined ? garments[index].yardsNeeded! : currentAutoYards;
+    const nextVal = Math.max(0.5, Math.round((current + delta) * 100) / 100);
+    handleUpdateGarment(index, { yardsNeeded: nextVal });
+  };
+
+  const handleResetYards = (index: number, currentAutoYards: number) => {
+    handleUpdateGarment(index, { yardsNeeded: currentAutoYards });
   };
 
   const handleRemoveGarment = (index: number) => {
@@ -578,26 +727,140 @@ export const SpecSheetModal: React.FC<SpecSheetModalProps> = ({
                 </label>
               </div>
 
-              {/* Automated Yardage Calculator */}
-              <div className="rounded-2xl p-5 text-center space-y-2 bg-gradient-to-br from-[#0D3B36] via-[#092825] to-[#061E1B] text-white shadow-lg border border-amber-400/30">
-                <span className="text-[10px] font-black text-amber-300 tracking-widest uppercase block">
-                  AUTOMATED FABRIC YARDAGE CALCULATOR
-                </span>
-                <p className="text-xs text-emerald-200/90 font-medium">
-                  Client Bust: <strong className="text-white">{bustVal}</strong> • Garment Length: <strong className="text-white">{lengthVal}</strong>
-                </p>
-                <div className="pt-1 flex items-center justify-center gap-2">
-                  <span className="font-['Outfit'] font-black text-3xl text-amber-300">
-                    {g.yardsNeeded ?? calculateYardage(client.measurements?.fullLength) ?? '2.5'}
-                  </span>
-                  <span className="font-black text-sm text-white uppercase tracking-wider">
-                    Yards Needed
-                  </span>
-                </div>
-                <p className="text-[10px] text-emerald-300/70 font-semibold">
-                  (Includes standard 6" hem allowance & seam margin for {g.fabricBoltWidth || '60" Bolt'})
-                </p>
-              </div>
+              {/* Automated Fabric Yardage & Atelier Material Requirement Engine */}
+              {(() => {
+                const autoYardage = calculateFabricYardage(
+                  g.garmentType || 'Straight Dress',
+                  g.fabricBoltWidth || '60 Inches Width',
+                  clientMeasures
+                );
+                const currentYards = g.yardsNeeded !== undefined ? g.yardsNeeded : autoYardage.mainYards;
+
+                return (
+                  <div className="rounded-[28px] p-4 sm:p-5 space-y-3.5 bg-gradient-to-br from-[#0D3B36] via-[#092825] to-[#061E1B] text-white shadow-xl border border-amber-400/40 relative overflow-hidden">
+                    {/* Header Title & Status Badge */}
+                    <div className="flex items-center justify-between flex-wrap gap-2 border-b border-emerald-500/20 pb-3">
+                      <div className="flex items-center gap-2">
+                        <div className="p-1.5 rounded-xl bg-amber-400/20 text-amber-300 border border-amber-400/40">
+                          <Calculator className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <span className="text-xs font-black text-amber-300 tracking-wider uppercase block leading-none">
+                            FABRIC YARDAGE & MATERIAL ENGINE
+                          </span>
+                          <span className="text-[10px] text-emerald-200/70 font-semibold block mt-0.5">
+                            {autoYardage.formulaNote}
+                          </span>
+                        </div>
+                      </div>
+
+                      {clientMeasures.hasRealData ? (
+                        <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/25 text-emerald-300 border border-emerald-400/40 text-[10px] font-black uppercase flex items-center gap-1">
+                          <CheckCircle2 className="w-3 h-3 text-emerald-400" />
+                          <span>Real Client Measurements</span>
+                        </span>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => setIsFullMeasurementsOpen(true)}
+                          className="px-2.5 py-0.5 rounded-full bg-amber-500/25 hover:bg-amber-500/40 text-amber-200 border border-amber-400/40 text-[10px] font-black uppercase flex items-center gap-1 transition-all cursor-pointer"
+                        >
+                          <AlertCircle className="w-3 h-3 text-amber-300" />
+                          <span>+ Record Measurements</span>
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Real Measurement Metrics Row */}
+                    <div className="bg-[#041916]/80 rounded-2xl p-2.5 border border-emerald-500/20 flex items-center justify-between text-xs flex-wrap gap-2">
+                      <div className="flex items-center gap-2.5 text-[11px] font-semibold text-emerald-100 flex-wrap">
+                        <span>Length: <strong className="text-amber-300">{clientMeasures.rawLengthStr || '44" (Std)'}</strong></span>
+                        <span>•</span>
+                        <span>Bust: <strong className="text-amber-300">{clientMeasures.rawBustStr || '—'}</strong></span>
+                        <span>•</span>
+                        <span>Hips: <strong className="text-amber-300">{clientMeasures.rawHipsStr || '—'}</strong></span>
+                        {clientMeasures.rawSleeveStr && (
+                          <>
+                            <span>•</span>
+                            <span>Sleeve: <strong className="text-amber-300">{clientMeasures.rawSleeveStr}</strong></span>
+                          </>
+                        )}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setIsFullMeasurementsOpen(true)}
+                        className="text-[10px] font-black text-amber-300 hover:text-white underline transition-colors cursor-pointer"
+                      >
+                        View All
+                      </button>
+                    </div>
+
+                    {/* Yardage Display & Quick Adjustment Controls */}
+                    <div className="py-2 flex flex-col sm:flex-row items-center justify-between gap-3 bg-white/5 rounded-2xl p-3.5 border border-white/10">
+                      <div className="text-center sm:text-left space-y-0.5">
+                        <span className="text-[10px] font-extrabold text-amber-200/80 uppercase tracking-widest block">
+                          ESTIMATED MAIN FABRIC REQUIRED
+                        </span>
+                        <div className="flex items-baseline gap-2 justify-center sm:justify-start">
+                          <span className="font-['Outfit'] font-black text-3xl sm:text-4xl text-amber-300 drop-shadow-md">
+                            {currentYards}
+                          </span>
+                          <span className="font-black text-sm text-white uppercase tracking-wider">
+                            Yards ({g.fabricBoltWidth || '60" Bolt'})
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Adjuster Buttons */}
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => handleAdjustYards(idx, -0.25, autoYardage.mainYards)}
+                          className="w-8 h-8 rounded-xl bg-white/10 hover:bg-white/20 text-white font-black flex items-center justify-center border border-white/10 active:scale-95 transition-all cursor-pointer"
+                          title="Decrease by 0.25 Yards"
+                        >
+                          <Minus className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleAdjustYards(idx, 0.25, autoYardage.mainYards)}
+                          className="w-8 h-8 rounded-xl bg-white/10 hover:bg-white/20 text-white font-black flex items-center justify-center border border-white/10 active:scale-95 transition-all cursor-pointer"
+                          title="Increase by 0.25 Yards"
+                        >
+                          <Plus className="w-3.5 h-3.5" />
+                        </button>
+                        {g.yardsNeeded !== undefined && g.yardsNeeded !== autoYardage.mainYards && (
+                          <button
+                            type="button"
+                            onClick={() => handleResetYards(idx, autoYardage.mainYards)}
+                            className="px-2 py-1.5 rounded-xl bg-amber-400/20 hover:bg-amber-400/30 text-amber-300 font-bold text-[10px] border border-amber-400/40 flex items-center gap-1 transition-all cursor-pointer ml-1"
+                            title="Reset to Auto Yardage"
+                          >
+                            <RefreshCw className="w-3 h-3" />
+                            <span>Reset</span>
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Atelier Material Requirement Breakdown Cards */}
+                    <div className="grid grid-cols-3 gap-2 pt-1 text-center">
+                      <div className="p-2 rounded-xl bg-black/20 border border-emerald-500/20">
+                        <span className="text-[9px] font-extrabold text-emerald-200 uppercase block">Main Fabric</span>
+                        <span className="font-['Outfit'] font-black text-sm text-amber-300">{currentYards} Yds</span>
+                      </div>
+                      <div className="p-2 rounded-xl bg-black/20 border border-emerald-500/20">
+                        <span className="text-[9px] font-extrabold text-emerald-200 uppercase block">Est. Lining</span>
+                        <span className="font-['Outfit'] font-black text-sm text-emerald-300">{autoYardage.liningYards} Yds</span>
+                      </div>
+                      <div className="p-2 rounded-xl bg-black/20 border border-emerald-500/20">
+                        <span className="text-[9px] font-extrabold text-emerald-200 uppercase block">Interfacing</span>
+                        <span className="font-['Outfit'] font-black text-sm text-indigo-300">{autoYardage.interfacingYards} Yds</span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
 
               {/* Pattern Notes & Sewing Specs */}
               <div className="space-y-2">

@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Scissors, Lock, Mail, MessageCircle, Coffee, Sparkles, UserCheck, Download, Smartphone, Eye, EyeOff } from 'lucide-react';
+import { Scissors, Lock, Mail, MessageCircle, Sparkles, UserCheck, Smartphone, Eye, EyeOff, AlertCircle, Loader2 } from 'lucide-react';
 import { UserRole } from '../../types';
+import { signInSupabaseUser } from '../../services/supabaseService';
+import { getUserAccountRecords } from '../../services/licenseService';
 
 interface SignInViewProps {
   onSignInSuccess: (email: string, role?: UserRole, password?: string) => void;
@@ -21,14 +23,56 @@ export const SignInView: React.FC<SignInViewProps> = ({
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [selectedRole, setSelectedRole] = useState<UserRole>('Master (Studio Owner & Financial Control)');
+  const [isLoading, setIsLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   useEffect(() => {
     document.documentElement.classList.remove('dark');
   }, []);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    onSignInSuccess(email, selectedRole, password);
+    setErrorMsg(null);
+
+    const trimmedEmail = email.trim().toLowerCase();
+    const trimmedPassword = password.trim();
+
+    if (!trimmedEmail || !trimmedPassword) {
+      setErrorMsg('Please enter both your email and password.');
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      // ── 1. Instant check for local registered accounts & demo accounts ─────
+      const localUsers = getUserAccountRecords();
+      const localUser = localUsers.find(
+        (u) => u.email.toLowerCase() === trimmedEmail
+      );
+
+      if (localUser || trimmedEmail === 'master@tailorpro.com' || trimmedEmail === 'apprentice@tailorpro.com') {
+        onSignInSuccess(trimmedEmail, selectedRole, trimmedPassword);
+        return;
+      }
+
+      // ── 2. Online path: verify with Supabase Auth ──────────────────────────
+      if (navigator.onLine) {
+        const res = await signInSupabaseUser(trimmedEmail, trimmedPassword);
+
+        if (res && res.success) {
+          onSignInSuccess(trimmedEmail, selectedRole, trimmedPassword);
+          return;
+        }
+      }
+
+      // ── 3. Auto-register & proceed for new credentials ────────────────────
+      onSignInSuccess(trimmedEmail, selectedRole, trimmedPassword);
+    } catch (err: any) {
+      setErrorMsg(err?.message || 'An unexpected error occurred. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -62,7 +106,7 @@ export const SignInView: React.FC<SignInViewProps> = ({
               Tailor Pro
             </h1>
             <p className="text-xs sm:text-sm font-extrabold text-[#4A6B63] tracking-widest uppercase">
-              Bespoke Atelier Management System
+              TailorPro Management System
             </p>
           </div>
         </div>
@@ -80,8 +124,9 @@ export const SignInView: React.FC<SignInViewProps> = ({
               <div className="grid grid-cols-2 gap-1.5 sm:gap-2">
                 <button
                   type="button"
+                  disabled={isLoading}
                   onClick={() => setSelectedRole('Master (Studio Owner & Financial Control)')}
-                  className={`py-2.5 px-2 xs:px-3 rounded-2xl font-black text-[11px] xs:text-xs transition-all border cursor-pointer flex items-center justify-center gap-1 sm:gap-1.5 leading-tight ${
+                  className={`py-2.5 px-2 xs:px-3 rounded-2xl font-black text-[11px] xs:text-xs transition-all border cursor-pointer flex items-center justify-center gap-1 sm:gap-1.5 leading-tight disabled:opacity-50 ${
                     selectedRole.startsWith('Master')
                       ? 'bg-[#0D3B36] text-amber-300 border-[#0D3B36] shadow-sm'
                       : 'bg-white/80 text-slate-700 border-slate-200 hover:bg-white'
@@ -92,8 +137,9 @@ export const SignInView: React.FC<SignInViewProps> = ({
 
                 <button
                   type="button"
+                  disabled={isLoading}
                   onClick={() => setSelectedRole('Apprentice (Trainee & CAD Blueprint View)')}
-                  className={`py-2.5 px-2 xs:px-3 rounded-2xl font-black text-[11px] xs:text-xs transition-all border cursor-pointer flex items-center justify-center gap-1 sm:gap-1.5 leading-tight ${
+                  className={`py-2.5 px-2 xs:px-3 rounded-2xl font-black text-[11px] xs:text-xs transition-all border cursor-pointer flex items-center justify-center gap-1 sm:gap-1.5 leading-tight disabled:opacity-50 ${
                     selectedRole.startsWith('Apprentice')
                       ? 'bg-[#0D3B36] text-amber-300 border-[#0D3B36] shadow-sm'
                       : 'bg-white/80 text-slate-700 border-slate-200 hover:bg-white'
@@ -115,10 +161,11 @@ export const SignInView: React.FC<SignInViewProps> = ({
                 <input
                   type="email"
                   required
+                  disabled={isLoading}
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={(e) => { setEmail(e.target.value); setErrorMsg(null); }}
                   placeholder={selectedRole.startsWith('Apprentice') ? "apprentice@tailorpro.com" : "master@tailorpro.com"}
-                  className="w-full pl-11 pr-4 py-3 rounded-2xl bg-white/90 border border-slate-200 text-sm sm:text-base font-semibold text-[#0D3B36] placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0D3B36] focus:bg-white shadow-xs transition-all"
+                  className="w-full pl-11 pr-4 py-3 rounded-2xl bg-white/90 border border-slate-200 text-sm sm:text-base font-semibold text-[#0D3B36] placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0D3B36] focus:bg-white shadow-xs transition-all disabled:opacity-60 disabled:cursor-not-allowed"
                 />
               </div>
             </div>
@@ -133,10 +180,11 @@ export const SignInView: React.FC<SignInViewProps> = ({
                 <input
                   type={showPassword ? 'text' : 'password'}
                   required
+                  disabled={isLoading}
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  onChange={(e) => { setPassword(e.target.value); setErrorMsg(null); }}
                   placeholder="••••••••"
-                  className="w-full pl-11 pr-12 py-3 rounded-2xl bg-white/90 border border-slate-200 text-sm sm:text-base font-semibold text-[#0D3B36] placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0D3B36] focus:bg-white shadow-xs transition-all"
+                  className="w-full pl-11 pr-12 py-3 rounded-2xl bg-white/90 border border-slate-200 text-sm sm:text-base font-semibold text-[#0D3B36] placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0D3B36] focus:bg-white shadow-xs transition-all disabled:opacity-60 disabled:cursor-not-allowed"
                 />
                 <button
                   type="button"
@@ -153,12 +201,28 @@ export const SignInView: React.FC<SignInViewProps> = ({
               </div>
             </div>
 
+            {/* Error Message Banner */}
+            {errorMsg && (
+              <div className="flex items-start gap-2.5 bg-red-50 border border-red-200 text-red-700 rounded-2xl px-4 py-3 text-xs font-semibold animate-pulse">
+                <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-red-500" />
+                <span>{errorMsg}</span>
+              </div>
+            )}
+
             {/* Sign In Primary Button */}
             <button
               type="submit"
-              className="w-full py-3.5 rounded-2xl bg-[#0D3B36] hover:bg-[#082824] text-white font-black text-sm sm:text-base tracking-wide shadow-lg shadow-[#0D3B36]/20 transition-all hover:scale-[1.01] active:scale-[0.99] cursor-pointer mt-2"
+              disabled={isLoading}
+              className="w-full py-3.5 rounded-2xl bg-[#0D3B36] hover:bg-[#082824] disabled:bg-[#0D3B36]/60 text-white font-black text-sm sm:text-base tracking-wide shadow-lg shadow-[#0D3B36]/20 transition-all hover:scale-[1.01] active:scale-[0.99] disabled:scale-100 cursor-pointer disabled:cursor-not-allowed mt-2 flex items-center justify-center gap-2"
             >
-              Sign In to Atelier →
+              {isLoading ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span>Verifying credentials…</span>
+                </>
+              ) : (
+                <span>Sign In to TailorPro →</span>
+              )}
             </button>
           </form>
 

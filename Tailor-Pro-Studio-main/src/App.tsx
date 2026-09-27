@@ -345,6 +345,8 @@ export default function App() {
             if (!loc || isMockId(loc.id)) continue;
             if (!remoteMap.has(loc.id)) {
               merged.unshift(loc);
+              // Auto-backup local clients to Supabase cloud database
+              upsertClientToSupabase(loc);
             }
           }
 
@@ -911,17 +913,25 @@ export default function App() {
   };
 
   const handleAdvanceRunwayStage = (clientId: string, newStage: RunwayStage) => {
-    setClients((prev) =>
-      prev.map((c) => {
-        if (c.id === clientId) {
-          const updated = { ...c, runwayStage: newStage };
-          upsertClientToSupabase(updated);
-          queueOfflineAction('client', updated);
-          return updated;
+    setClients((prev) => {
+      const updatedList = prev.map((c) => {
+        if (c && c.id === clientId) {
+          return { ...c, runwayStage: newStage };
         }
         return c;
-      })
-    );
+      });
+      const target = updatedList.find((c) => c && c.id === clientId);
+      if (target) {
+        upsertClientToSupabase(target);
+        queueOfflineAction('client', target);
+      }
+      try {
+        localStorage.setItem('tailor_clients', JSON.stringify(updatedList));
+      } catch (e) {
+        console.warn('Could not save clients to localStorage:', e);
+      }
+      return updatedList;
+    });
   };
 
   const handleUpdateApprenticeHours = (id: string, additionalHours: number) => {
@@ -1302,15 +1312,7 @@ export default function App() {
     const userEmail = email.trim() || 'master@tailorpro.com';
     setActiveUserEmail(userEmail);
 
-    if (password && userEmail) {
-      signInSupabaseUser(userEmail, password).then((res) => {
-        if (res && res.success && 'user' in res && res.user) {
-          console.log('[Supabase Auth] Successfully authenticated user with Supabase:', res.user.email);
-        } else if (res && 'error' in res && res.error) {
-          console.warn('[Supabase Auth] Remote auth notice:', res.error);
-        }
-      });
-    }
+    // Note: credentials have already been verified by SignInView before this callback fires.
 
     const isApprenticeEmail =
       userEmail.toLowerCase().includes('apprentice') ||
@@ -1365,84 +1367,97 @@ export default function App() {
     masterWorkshopCode?: string,
     password?: string
   ) => {
-    const userEmail = email.trim() || 'designer@tailorpro.com';
-    const masterBrandName = studioName && studioName.trim() ? studioName.trim() : 'TAILOR PRO STUDIO';
+    try {
+      const userEmail = email.trim() || 'designer@tailorpro.com';
+      const masterBrandName = studioName && studioName.trim() ? studioName.trim() : 'TAILOR PRO STUDIO';
 
-    if (password && userEmail) {
-      signUpSupabaseUser(userEmail, password, {
-        fullName: fullName || 'Atelier Designer',
-        role,
-        studioName: masterBrandName
-      });
-    }
+      if (password && userEmail) {
+        signUpSupabaseUser(userEmail, password, {
+          fullName: fullName || 'Atelier Designer',
+          role,
+          studioName: masterBrandName
+        }).catch((err) => console.warn('[Supabase Auth] Sign up warning:', err));
+      }
 
-    const isApprentice = role.startsWith('Apprentice');
-    const newPairCode = isApprentice
-      ? (masterWorkshopCode && masterWorkshopCode.trim() ? masterWorkshopCode.trim() : (studioSettings.pairCode || generateMasterWorkshopCode(masterBrandName)))
-      : generateMasterWorkshopCode(masterBrandName);
+      const isApprentice = role.startsWith('Apprentice');
+      const newPairCode = isApprentice
+        ? (masterWorkshopCode && masterWorkshopCode.trim() ? masterWorkshopCode.trim() : (studioSettings.pairCode || generateMasterWorkshopCode(masterBrandName)))
+        : generateMasterWorkshopCode(masterBrandName);
 
-    const updatedSettings: StudioSettings = {
-      ...studioSettings,
-      studioName: masterBrandName,
-      pairCode: newPairCode
-    };
-
-    setStudioSettings(updatedSettings);
-    localStorage.setItem('tailor_studio_settings', JSON.stringify(updatedSettings));
-    upsertStudioSettingsToSupabase(updatedSettings);
-
-    setUserRole(role);
-    setActiveUserEmail(userEmail);
-    if (fullName && fullName.trim()) {
-      setActiveUserFullName(fullName.trim());
-    }
-
-    if (role.startsWith('Apprentice')) {
-      const rawName = fullName && fullName.trim() ? fullName.trim() : (userEmail ? userEmail.split('@')[0] : 'Apprentice Trainee');
-      const appName = rawName.charAt(0).toUpperCase() + rawName.slice(1);
-      const initials = appName.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2) || 'AT';
-
-      const newApprenticeRecord: Apprentice = {
-        id: `app_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
-        name: appName,
-        initials,
-        role: 'Apprentice Trainee',
-        mentor: studioSettings.ownerName || 'Master Atelier',
-        isLinked: true,
-        handshakeLocked: true,
-        hasCert: false,
-        hoursCompleted: 0,
-        totalRequiredHours: 120,
-        certifications: [],
-        tasksCount: 0,
-        status: 'On Track',
-        specialty: 'Couture Assembly & Garment Construction'
+      const updatedSettings: StudioSettings = {
+        ...studioSettings,
+        studioName: masterBrandName,
+        pairCode: newPairCode
       };
 
-      setApprentices((prev) => {
-        const filtered = prev.filter(
-          (a) => a.name.toLowerCase() !== appName.toLowerCase()
-        );
-        const updated = [newApprenticeRecord, ...filtered];
-        localStorage.setItem('tailor_apprentices', JSON.stringify(updated));
-        upsertApprenticeToSupabase(newApprenticeRecord);
-        return updated;
+      setStudioSettings(updatedSettings);
+      localStorage.setItem('tailor_studio_settings', JSON.stringify(updatedSettings));
+      try {
+        upsertStudioSettingsToSupabase(updatedSettings);
+      } catch (e) {
+        console.warn('Could not sync settings to supabase:', e);
+      }
+
+      setUserRole(role);
+      setActiveUserEmail(userEmail);
+      if (fullName && fullName.trim()) {
+        setActiveUserFullName(fullName.trim());
+      }
+
+      if (role.startsWith('Apprentice')) {
+        const rawName = fullName && fullName.trim() ? fullName.trim() : (userEmail ? userEmail.split('@')[0] : 'Apprentice Trainee');
+        const appName = rawName.charAt(0).toUpperCase() + rawName.slice(1);
+        const initials = appName.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2) || 'AT';
+
+        const newApprenticeRecord: Apprentice = {
+          id: `app_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+          name: appName,
+          initials,
+          role: 'Apprentice Trainee',
+          mentor: studioSettings.ownerName || 'Master Atelier',
+          isLinked: true,
+          handshakeLocked: true,
+          hasCert: false,
+          hoursCompleted: 0,
+          totalRequiredHours: 120,
+          certifications: [],
+          tasksCount: 0,
+          status: 'On Track',
+          specialty: 'Couture Assembly & Garment Construction'
+        };
+
+        setApprentices((prev) => {
+          const filtered = prev.filter(
+            (a) => a.name.toLowerCase() !== appName.toLowerCase()
+          );
+          const updated = [newApprenticeRecord, ...filtered];
+          localStorage.setItem('tailor_apprentices', JSON.stringify(updated));
+          try {
+            upsertApprenticeToSupabase(newApprenticeRecord);
+          } catch (e) {
+            console.warn('Could not sync apprentice to supabase:', e);
+          }
+          return updated;
+        });
+      }
+
+      registerUserAccount({
+        email: userEmail,
+        fullName: fullName || 'Atelier Designer',
+        studioName: masterBrandName,
+        role,
+        licenseKey
       });
-    }
 
-    const registered = registerUserAccount({
-      email: userEmail,
-      fullName: fullName || 'Atelier Designer',
-      studioName: masterBrandName,
-      role,
-      licenseKey
-    });
-
-    if (registered.status === 'approved' || isWorkspaceActivated()) {
+      setWorkspaceActivated(true);
       setIsLicensePromptOpen(false);
       setAuthScreen('app');
-    } else {
-      setIsLicensePromptOpen(true);
+    } catch (err) {
+      console.error('Registration processing failed:', err);
+      // Fallback: activate workspace and navigate to app
+      setWorkspaceActivated(true);
+      setIsLicensePromptOpen(false);
+      setAuthScreen('app');
     }
   };
 
@@ -1456,6 +1471,7 @@ export default function App() {
     return (
       <CustomerTrackingModal
         clients={clients}
+        studioSettings={studioSettings}
         onClose={() => setIsCustomerTrackerOpen(false)}
       />
     );
@@ -1805,7 +1821,11 @@ export default function App() {
               onOpenNewConsult={handleTriggerAddClient}
               onSelectClient={(client) => setProfileClient(client)}
               onDeleteClient={(clientId) => {
-                setClients((prev) => prev.filter((c) => c.id !== clientId));
+                setClients((prev) => {
+                  const filtered = prev.filter((c) => c.id !== clientId);
+                  localStorage.setItem('tailor_clients', JSON.stringify(filtered));
+                  return filtered;
+                });
                 deleteClientFromSupabase(clientId);
               }}
               onAssignDuty={() => setIsCustomTaskOpen(true)}
@@ -1860,6 +1880,7 @@ export default function App() {
           <div className="animate-fade-in">
             <InventoryView
               items={inventory}
+              studioSettings={studioSettings}
               onRestockItem={handleRestockInventoryItem}
               onOpenAddMaterialModal={handleTriggerAddMaterial}
               onOpenFabricScanner={(tab) => handleOpenFabricScanner(tab || 'sides')}
@@ -1947,6 +1968,7 @@ export default function App() {
       {isCustomerTrackerOpen && (
         <CustomerTrackingModal
           clients={clients}
+          studioSettings={studioSettings}
           onClose={() => setIsCustomerTrackerOpen(false)}
         />
       )}
@@ -1984,9 +2006,10 @@ export default function App() {
         <InvoiceModal
           client={invoiceClient}
           onClose={() => setInvoiceClient(null)}
+          studioSettings={studioSettings}
           studioName={studioSettings.studioName}
           momoNumber={studioSettings.momoNumber}
-          momoHolderName={studioSettings.momoHolderName}
+          momoHolderName={studioSettings.momoHolderName || studioSettings.momoName}
           studioLogoUrl={studioSettings.logoUrl}
         />
       )}
@@ -2010,16 +2033,19 @@ export default function App() {
             setMeasurementClient(clientToMeasure);
           }}
           onUpdateClientPhoto={(clientId, photoUrl) => {
-            setClients((prev) =>
-              prev.map((c) => {
+            setClients((prev) => {
+              const updatedList = prev.map((c) => {
                 if (c.id === clientId) {
                   const updated = { ...c, avatarUrl: photoUrl };
                   upsertClientToSupabase(updated);
+                  queueOfflineAction('client', updated);
                   return updated;
                 }
                 return c;
-              })
-            );
+              });
+              localStorage.setItem('tailor_clients', JSON.stringify(updatedList));
+              return updatedList;
+            });
           }}
         />
       )}
@@ -2036,13 +2062,22 @@ export default function App() {
             setIsAddClientOpen(true);
           }}
           onUpdateClient={(updatedClient) => {
-            setClients((prev) =>
-              prev.map((c) => (c.id === updatedClient.id ? updatedClient : c))
-            );
+            setClients((prev) => {
+              const updatedList = prev.map((c) => (c.id === updatedClient.id ? updatedClient : c));
+              localStorage.setItem('tailor_clients', JSON.stringify(updatedList));
+              return updatedList;
+            });
+            upsertClientToSupabase(updatedClient);
+            queueOfflineAction('client', updatedClient);
             setProfileClient(updatedClient);
           }}
           onDeleteClient={(clientId) => {
-            setClients((prev) => prev.filter((c) => c.id !== clientId));
+            setClients((prev) => {
+              const filtered = prev.filter((c) => c.id !== clientId);
+              localStorage.setItem('tailor_clients', JSON.stringify(filtered));
+              return filtered;
+            });
+            deleteClientFromSupabase(clientId);
             setProfileClient(null);
           }}
           onOpenMeasurements={(clientToMeasure) => {
@@ -2055,9 +2090,19 @@ export default function App() {
             setInvoiceClient(clientToInvoice);
           }}
           onUpdateNotes={(clientId, newNotes) => {
-            setClients((prev) =>
-              prev.map((c) => (c.id === clientId ? { ...c, notes: newNotes } : c))
-            );
+            setClients((prev) => {
+              const updatedList = prev.map((c) => {
+                if (c.id === clientId) {
+                  const updated = { ...c, notes: newNotes };
+                  upsertClientToSupabase(updated);
+                  queueOfflineAction('client', updated);
+                  return updated;
+                }
+                return c;
+              });
+              localStorage.setItem('tailor_clients', JSON.stringify(updatedList));
+              return updatedList;
+            });
             setProfileClient((prev) => (prev ? { ...prev, notes: newNotes } : null));
           }}
         />

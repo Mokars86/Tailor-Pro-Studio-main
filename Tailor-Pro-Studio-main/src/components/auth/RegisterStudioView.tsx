@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Upload, ChevronDown, CheckCircle2, ArrowLeft, Sparkles, UserCheck, Building2, Mail, Lock, User, AlertCircle, QrCode, Eye, EyeOff } from 'lucide-react';
+import { Upload, ChevronDown, CheckCircle2, ArrowLeft, Sparkles, UserCheck, Building2, Mail, Lock, User, AlertCircle, QrCode, Eye, EyeOff, Loader2 } from 'lucide-react';
 import { UserRole } from '../../types';
 import { formatWorkshopCodeInput, validateWorkshopCode } from '../../utils/workshopCode';
 
@@ -28,8 +28,9 @@ export const RegisterStudioView: React.FC<RegisterStudioViewProps> = ({
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [showPin, setShowPin] = useState(false);
   const [passwordError, setPasswordError] = useState('');
+  const [formError, setFormError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
   const [pin, setPin] = useState('');
-  const [licenseKey, setLicenseKey] = useState('');
   const [masterWorkshopCode, setMasterWorkshopCode] = useState('');
   const [workshopCodeError, setWorkshopCodeError] = useState('');
   const [logoName, setLogoName] = useState<string | null>(null);
@@ -46,10 +47,11 @@ export const RegisterStudioView: React.FC<RegisterStudioViewProps> = ({
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setPasswordError('');
     setWorkshopCodeError('');
+    setFormError('');
 
     if (password.length < 6) {
       setPasswordError('Password must be at least 6 characters long.');
@@ -69,15 +71,24 @@ export const RegisterStudioView: React.FC<RegisterStudioViewProps> = ({
       }
     }
 
-    onRegisterSuccess(
-      studioName || 'TAILOR PRO STUDIO',
-      role,
-      email,
-      licenseKey,
-      fullName,
-      masterWorkshopCode,
-      password
-    );
+    try {
+      setIsLoading(true);
+      await Promise.resolve(
+        onRegisterSuccess(
+          studioName || 'TAILOR PRO STUDIO',
+          role,
+          email,
+          undefined,
+          fullName,
+          masterWorkshopCode,
+          password
+        )
+      );
+    } catch (err: any) {
+      console.error('Registration error:', err);
+      setFormError(err?.message || 'Failed to complete registration. Please try again.');
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -119,7 +130,7 @@ export const RegisterStudioView: React.FC<RegisterStudioViewProps> = ({
               Register Studio
             </h1>
             <p className="text-xs sm:text-sm font-extrabold text-[#4A6B63] tracking-wider uppercase mt-0.5">
-              Create Bespoke Atelier Account
+              Create TailorPro Account
             </p>
           </div>
         </div>
@@ -315,32 +326,27 @@ export const RegisterStudioView: React.FC<RegisterStudioViewProps> = ({
               </div>
             )}
 
-            {/* ATELIER LICENSE KEY (OPTIONAL) */}
-            <div className="space-y-1.5">
-              <div className="flex items-center justify-between">
-                <label className="text-xs font-extrabold uppercase tracking-wider text-[#0D3B36]/80 flex items-center gap-1.5">
-                  <Sparkles className="w-3.5 h-3.5 text-[#0D3B36]" />
-                  <span>LICENSE KEY</span>
-                </label>
-                <span className="text-[10px] font-black text-slate-600 bg-slate-200 px-2 py-0.5 rounded-full uppercase">
-                  OPTIONAL
-                </span>
+            {formError && (
+              <div className="p-3 rounded-xl bg-red-500/15 border border-red-500/30 text-red-600 text-xs font-extrabold flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                <span>{formError}</span>
               </div>
-              <input
-                type="text"
-                value={licenseKey}
-                onChange={(e) => setLicenseKey(e.target.value)}
-                placeholder="e.g. TPS-KEY-2026 (Optional)"
-                className="w-full px-4 py-3 rounded-2xl bg-white/90 border border-slate-200 text-sm font-mono font-bold text-[#0D3B36] uppercase placeholder:text-slate-400 placeholder:font-sans focus:outline-none focus:ring-2 focus:ring-[#0D3B36] focus:bg-white shadow-xs transition-all"
-              />
-            </div>
+            )}
 
             {/* Submit Button */}
             <button
               type="submit"
-              className="w-full py-3.5 rounded-2xl bg-[#0D3B36] hover:bg-[#082824] text-white font-black text-sm sm:text-base tracking-wide shadow-lg shadow-[#0D3B36]/20 transition-all hover:scale-[1.01] active:scale-[0.99] cursor-pointer mt-2"
+              disabled={isLoading}
+              className="w-full py-3.5 rounded-2xl bg-[#0D3B36] hover:bg-[#082824] disabled:bg-[#0D3B36]/60 text-white font-black text-sm sm:text-base tracking-wide shadow-lg shadow-[#0D3B36]/20 transition-all hover:scale-[1.01] active:scale-[0.99] disabled:scale-100 cursor-pointer disabled:cursor-not-allowed mt-2 flex items-center justify-center gap-2"
             >
-              {role.startsWith('Apprentice') ? 'Register Apprentice Account →' : 'Register Studio Account →'}
+              {isLoading ? (
+                <>
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                  <span>Creating Studio Account…</span>
+                </>
+              ) : (
+                <span>{role.startsWith('Apprentice') ? 'Register Apprentice Account →' : 'Register Studio Account →'}</span>
+              )}
             </button>
           </form>
 

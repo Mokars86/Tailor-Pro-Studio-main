@@ -1,7 +1,8 @@
-import React, { useRef } from 'react';
-import { X, Printer, Handshake, ShieldCheck, Lock, Calendar, Scissors, Building2, Award, GraduationCap } from 'lucide-react';
+import React, { useRef, useState } from 'react';
+import { X, Printer, Handshake, ShieldCheck, Lock, Calendar, Scissors, Building2, Award, GraduationCap, Download, CheckCircle2 } from 'lucide-react';
 import { Apprentice } from '../../types';
 import { generateUniqueCertNumber, formatCertificateDate, generateQRCodeUrl } from '../../utils/certificateGenerator';
+import { downloadOrShareDocument, generateApprenticeCertificateHtml } from '../../utils/mobileDocumentDownloader';
 
 interface ApprenticeCertificateModalProps {
   isOpen: boolean;
@@ -23,6 +24,8 @@ export const ApprenticeCertificateModal: React.FC<ApprenticeCertificateModalProp
   masterTrainer
 }) => {
   const certificateRef = useRef<HTMLDivElement | null>(null);
+  const [downloadNotice, setDownloadNotice] = useState<string | null>(null);
+  const [isExporting, setIsExporting] = useState<boolean>(false);
 
   if (!isOpen || !apprentice) return null;
 
@@ -35,8 +38,36 @@ export const ApprenticeCertificateModal: React.FC<ApprenticeCertificateModalProp
   const certNumber = generateUniqueCertNumber(apprentice.id || apprentice.name);
   const qrCodeUrl = generateQRCodeUrl(certNumber, apprentice.name, displayStudioName);
 
-  const handlePrint = () => {
-    window.print();
+  const handleDownload = async () => {
+    try {
+      setIsExporting(true);
+      const html = generateApprenticeCertificateHtml({
+        apprenticeName: apprentice.name,
+        studioName: displayStudioName,
+        masterTrainer: displayMasterTrainer,
+        hoursCompleted: apprentice.hoursCompleted,
+        totalRequiredHours: apprentice.totalRequiredHours || 120,
+        specialty: apprentice.specialty || 'Haute Couture & Pattern Cutting',
+        issueDate,
+        certCode: certNumber,
+        qrCodeUrl,
+        studioLogoUrl: logoSrc
+      });
+
+      const res = await downloadOrShareDocument({
+        filename: `Apprentice_Graduation_Certificate_${apprentice.name.replace(/\s+/g, '_')}.html`,
+        title: `Apprentice Certificate — ${apprentice.name}`,
+        htmlContent: html,
+        text: `Official Graduation Certificate for ${apprentice.name} from ${displayStudioName}. Code: ${certNumber}`
+      });
+
+      setDownloadNotice(res.message);
+      setTimeout(() => setDownloadNotice(null), 4000);
+    } catch (err: any) {
+      console.error('Apprentice cert export failed:', err);
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   return (
@@ -46,7 +77,7 @@ export const ApprenticeCertificateModal: React.FC<ApprenticeCertificateModalProp
       <div className="w-full max-w-5xl my-auto space-y-3 sm:space-y-4">
         
         {/* Top Control Bar */}
-        <div className="flex items-center justify-between bg-slate-900/90 border border-white/10 rounded-2xl px-4 py-2.5 text-white shadow-xl">
+        <div className="flex items-center justify-between bg-slate-900/90 border border-white/10 rounded-2xl px-4 py-2.5 text-white shadow-xl flex-wrap gap-2">
           <div className="flex items-center gap-2">
             <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
             <span className="text-xs sm:text-sm font-extrabold tracking-wide uppercase text-amber-300 flex items-center gap-1.5">
@@ -77,16 +108,16 @@ export const ApprenticeCertificateModal: React.FC<ApprenticeCertificateModalProp
 
             <button
               type="button"
-              onClick={handlePrint}
-              disabled={!isHandshakeApproved}
+              onClick={handleDownload}
+              disabled={!isHandshakeApproved || isExporting}
               className={`px-3.5 py-1.5 rounded-xl text-xs font-black flex items-center gap-1.5 transition-all ${
                 isHandshakeApproved
                   ? 'bg-[#DCA134] hover:bg-[#c9902b] text-[#0A332C] shadow-md active:scale-95 cursor-pointer'
                   : 'bg-slate-800 text-slate-500 cursor-not-allowed border border-slate-700'
               }`}
             >
-              <Printer className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Print / Save PDF (Landscape)</span>
+              <Download className="w-3.5 h-3.5" />
+              <span>{isExporting ? 'Generating…' : 'Print / Download (PDF)'}</span>
             </button>
 
             <button
@@ -99,6 +130,14 @@ export const ApprenticeCertificateModal: React.FC<ApprenticeCertificateModalProp
             </button>
           </div>
         </div>
+
+        {/* Download Notice Toast */}
+        {downloadNotice && (
+          <div className="p-3 rounded-2xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-200 text-xs font-bold flex items-center justify-center gap-2 animate-fade-in shadow-lg text-center">
+            <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+            <span>{downloadNotice}</span>
+          </div>
+        )}
 
         {/* Status Lock Warning Banner if Handshake Pending */}
         {!isHandshakeApproved && (

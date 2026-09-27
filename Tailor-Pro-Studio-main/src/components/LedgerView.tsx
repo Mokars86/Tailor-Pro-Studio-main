@@ -18,9 +18,18 @@ import {
   Download,
   X,
   Search,
-  Eye
+  Calendar,
+  Layers,
+  Sparkles,
+  TrendingDown,
+  DollarSign,
+  Eye,
+  Archive,
+  Filter,
+  RotateCcw
 } from 'lucide-react';
 import { Client, LedgerTransaction, RunwayStage } from '../types';
+import { downloadOrShareDocument } from '../utils/mobileDocumentDownloader';
 
 interface LedgerViewProps {
   transactions: LedgerTransaction[];
@@ -48,6 +57,42 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [isAllCashflowModalOpen, setIsAllCashflowModalOpen] = useState<boolean>(false);
   const [modalSearchQuery, setModalSearchQuery] = useState<string>('');
+
+  // Client Ledger filter state: 'unpaid' (default - active receivables) | 'paid' | 'all' | 'archived'
+  const [ledgerFilter, setLedgerFilter] = useState<'unpaid' | 'paid' | 'all' | 'archived'>('unpaid');
+  const [clientSearchQuery, setClientSearchQuery] = useState<string>('');
+
+  // Persisted set of explicitly archived client IDs from active ledger
+  const [archivedClientIds, setArchivedClientIds] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem('tailor_archived_ledger_clients');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  const archiveClient = (clientId: string, clientName: string) => {
+    const next = [...archivedClientIds, clientId];
+    setArchivedClientIds(next);
+    localStorage.setItem('tailor_archived_ledger_clients', JSON.stringify(next));
+    showNotification(`Archived ${clientName} from active ledger.`);
+  };
+
+  const unarchiveClient = (clientId: string, clientName: string) => {
+    const next = archivedClientIds.filter((id) => id !== clientId);
+    setArchivedClientIds(next);
+    localStorage.setItem('tailor_archived_ledger_clients', JSON.stringify(next));
+    showNotification(`Restored ${clientName} to active ledger.`);
+  };
+
+  const archiveAllPaidClients = () => {
+    const paidIds = displayClients.filter((c) => c.balanceDue === 0).map((c) => c.id);
+    const next = Array.from(new Set([...archivedClientIds, ...paidIds]));
+    setArchivedClientIds(next);
+    localStorage.setItem('tailor_archived_ledger_clients', JSON.stringify(next));
+    showNotification(`Archived ${paidIds.length} fully paid account(s) from active ledger.`);
+  };
 
   const showNotification = (msg: string) => {
     setToastMessage(msg);
@@ -127,10 +172,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
   });
 
   // Official Financial Ledger & Cashflow Printout Generator
-  const handlePrintFinancialReport = () => {
-    const printWindow = window.open('', '_blank');
-    if (!printWindow) return;
-
+  const handlePrintFinancialReport = async () => {
     const reportDate = new Date().toLocaleDateString('en-US', {
       weekday: 'long',
       year: 'numeric',
@@ -179,7 +221,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
       )
       .join('');
 
-    printWindow.document.write(`
+    const reportHtml = `
       <!DOCTYPE html>
       <html>
         <head>
@@ -280,14 +322,27 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
           </div>
 
           <script>
-            window.onload = function() {
-              window.print();
-            };
+            function startPrint() {
+              setTimeout(function() {
+                window.print();
+              }, 400);
+            }
+            if (document.readyState === 'complete') {
+              startPrint();
+            } else {
+              window.addEventListener('load', startPrint);
+            }
           </script>
         </body>
       </html>
-    `);
-    printWindow.document.close();
+    `;
+
+    await downloadOrShareDocument({
+      filename: `Financial_Ledger_Cashflow_Report_${new Date().toISOString().split('T')[0]}.html`,
+      title: `Financial Ledger & Cashflow Report - Tailor Pro`,
+      htmlContent: reportHtml,
+      text: `Official Financial Ledger & Cashflow Audit Report from Tailor Pro Studio.`
+    });
   };
 
   return (
@@ -613,51 +668,37 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
 
       {/* Dedicated Full-Screen All Cashflow Receipts & Financial Transactions Modal */}
       {isAllCashflowModalOpen && (
-        <div className="fixed inset-0 z-[100] bg-slate-900/60 dark:bg-slate-950/85 backdrop-blur-md flex flex-col items-center justify-start p-2 sm:p-4 overflow-y-auto animate-fade-in font-['Outfit'] select-none min-h-screen">
-          <div className="w-full max-w-4xl my-auto space-y-3.5 sm:space-y-4">
+        <div className="fixed inset-0 z-[100] bg-slate-900/70 dark:bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-2 sm:p-4 animate-fade-in font-['Outfit'] select-none">
+          <div className="w-full max-w-4xl h-[92vh] sm:h-[88vh] max-h-[850px] bg-slate-50 dark:bg-[#092825] border-2 border-slate-200 dark:border-amber-400/40 rounded-2xl sm:rounded-3xl shadow-2xl flex flex-col overflow-hidden">
             
-            {/* Modal Header Bar */}
-            <div className="bg-white dark:bg-slate-900/95 border border-slate-200 dark:border-amber-400/30 rounded-2xl p-3 sm:p-4 sm:px-5 text-slate-900 dark:text-white shadow-2xl space-y-2.5 sm:space-y-3 w-full">
-              {/* Top Row: Icon + Title + Close Button */}
-              <div className="flex items-start justify-between gap-2.5">
+            {/* STATIC TOP HEADER BAR (Locked at top, never scrolls away) */}
+            <div className="shrink-0 bg-white dark:bg-slate-900/95 border-b border-slate-200 dark:border-amber-400/30 p-3 sm:p-4 sm:px-5 text-slate-900 dark:text-white shadow-md space-y-2.5 z-20">
+              {/* Top Row: Icon + Title + Action Buttons + Close Button */}
+              <div className="flex items-center justify-between gap-2">
                 <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
-                  <div className="p-1.5 sm:p-2.5 rounded-xl bg-[#0D3B36]/10 dark:bg-amber-400/20 border border-[#0D3B36]/20 dark:border-amber-400/40 text-[#0D3B36] dark:text-amber-300 shrink-0">
-                    <FileText className="w-4.5 h-4.5 sm:w-6 sm:h-6" />
+                  <div className="p-2 sm:p-2.5 rounded-xl bg-[#0D3B36]/10 dark:bg-amber-400/20 border border-[#0D3B36]/20 dark:border-amber-400/40 text-[#0D3B36] dark:text-amber-300 shrink-0">
+                    <FileText className="w-4 h-4 sm:w-5 sm:h-5" />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <h3 className="text-xs sm:text-base font-black tracking-wide uppercase text-[#0D3B36] dark:text-amber-300 leading-snug break-words">
-                      ALL CASHFLOW RECEIPTS & FINANCIAL TRANSACTIONS ({allCashflowTransactions.length})
+                    <h3 className="text-xs sm:text-base font-black tracking-tight uppercase text-[#0D3B36] dark:text-amber-300 leading-tight truncate">
+                      CASHFLOW RECEIPTS ({allCashflowTransactions.length})
                     </h3>
-                    <p className="text-[10px] sm:text-xs text-slate-600 dark:text-slate-400 font-semibold leading-tight mt-0.5 hidden xs:block">
-                      Complete financial receipts audit, consultation deposit tracking, and full payment settlements.
+                    <p className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400 font-semibold leading-none mt-0.5 truncate hidden xs:block">
+                      Complete receipts audit, consultation deposits & payment settlements
                     </p>
                   </div>
                 </div>
 
-                <button
-                  type="button"
-                  onClick={() => setIsAllCashflowModalOpen(false)}
-                  className="p-1.5 sm:p-2 rounded-xl bg-slate-100 dark:bg-white/10 hover:bg-slate-200 dark:hover:bg-white/20 text-slate-700 dark:text-slate-300 transition-all cursor-pointer border border-slate-200 dark:border-white/10 shrink-0"
-                  title="Close Screen"
-                >
-                  <X className="w-4.5 h-4.5 sm:w-5 sm:h-5" />
-                </button>
-              </div>
-
-              {/* Subtitle for mobile & Action Row */}
-              <div className="flex flex-col xs:flex-row items-stretch xs:items-center justify-between gap-2 pt-2 border-t border-slate-100 dark:border-slate-800/80">
-                <p className="text-[10px] sm:text-xs text-slate-600 dark:text-slate-400 font-semibold leading-tight xs:hidden">
-                  Complete receipts audit & payment settlements log.
-                </p>
-
-                <div className="flex items-center gap-2 w-full xs:w-auto ml-auto">
+                {/* Actions & Close X Button */}
+                <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
                   <button
                     type="button"
                     onClick={handlePrintFinancialReport}
-                    className="flex-1 xs:flex-none px-3.5 py-2 rounded-xl bg-amber-400/20 hover:bg-amber-400/30 text-[#0D3B36] dark:text-amber-300 border border-amber-400/40 font-black text-xs flex items-center justify-center gap-1.5 shadow-md transition-all active:scale-95 cursor-pointer"
+                    className="px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-xl bg-amber-400/20 hover:bg-amber-400/30 text-[#0D3B36] dark:text-amber-300 border border-amber-400/40 font-black text-[11px] sm:text-xs flex items-center justify-center gap-1 shadow-xs transition-all active:scale-95 cursor-pointer"
+                    title="Print Financial Report"
                   >
-                    <Printer className="w-4 h-4 text-[#DCA134]" />
-                    <span>Print All</span>
+                    <Printer className="w-3.5 h-3.5 text-[#DCA134]" />
+                    <span className="hidden xs:inline">Print All</span>
                   </button>
 
                   <button
@@ -666,31 +707,39 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                       setIsAllCashflowModalOpen(false);
                       onOpenLogTransaction();
                     }}
-                    className="flex-1 xs:flex-none px-3.5 py-2 rounded-xl bg-[#0D3B36] dark:bg-amber-400 hover:bg-[#082824] dark:hover:bg-amber-300 text-white dark:text-[#0D3B36] font-black text-xs flex items-center justify-center gap-1.5 shadow-md transition-all active:scale-95 cursor-pointer"
+                    className="px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-xl bg-[#0D3B36] dark:bg-amber-400 hover:bg-[#082824] dark:hover:bg-amber-300 text-white dark:text-[#0D3B36] font-black text-[11px] sm:text-xs flex items-center justify-center gap-1 shadow-xs transition-all active:scale-95 cursor-pointer"
+                    title="Log Manual Transaction"
                   >
-                    <Plus className="w-4 h-4 text-white dark:text-[#0D3B36]" />
-                    <span>+ Log Manual</span>
+                    <Plus className="w-3.5 h-3.5 text-white dark:text-[#0D3B36]" />
+                    <span className="hidden xs:inline">Log Manual</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setIsAllCashflowModalOpen(false)}
+                    className="p-1.5 sm:p-2 rounded-xl bg-slate-100 dark:bg-white/10 hover:bg-slate-200 dark:hover:bg-white/20 text-slate-700 dark:text-slate-300 transition-all cursor-pointer border border-slate-200 dark:border-white/10 shrink-0"
+                    title="Close Screen"
+                  >
+                    <X className="w-4 h-4 sm:w-5 sm:h-5" />
                   </button>
                 </div>
               </div>
-            </div>
 
-            {/* Modal Body Container */}
-            <div className="bg-slate-50 dark:bg-[#092825] border-2 border-slate-200 dark:border-amber-400/40 rounded-2xl sm:rounded-3xl p-3 sm:p-5 shadow-2xl space-y-4 text-slate-800 dark:text-slate-100 max-h-[75vh] overflow-y-auto custom-scrollbar">
-              
-              {/* Live Search Bar inside Modal */}
+              {/* Embedded Live Search Bar inside Static Top Header */}
               <div className="relative w-full">
-                <Search className="w-4 h-4 text-[#0D3B36] dark:text-amber-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                <Search className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#0D3B36] dark:text-amber-400 absolute left-3 top-1/2 -translate-y-1/2" />
                 <input
                   type="text"
                   value={modalSearchQuery}
                   onChange={(e) => setModalSearchQuery(e.target.value)}
-                  placeholder="Filter transactions by client name, description, date, or category..."
-                  className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-white dark:bg-[#041614] border border-slate-300 dark:border-amber-400/30 text-xs font-bold text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-amber-200/50 focus:outline-none focus:ring-2 focus:ring-[#0D3B36] dark:focus:ring-amber-400 shadow-xs"
+                  placeholder="Filter by client name, description, date, or category..."
+                  className="w-full pl-9 pr-3 py-2 rounded-xl bg-slate-100 dark:bg-[#041614] border border-slate-200 dark:border-amber-400/30 text-[11px] sm:text-xs font-bold text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-amber-200/50 focus:outline-none focus:ring-2 focus:ring-[#0D3B36] dark:focus:ring-amber-400 shadow-2xs"
                 />
               </div>
+            </div>
 
-              {/* Transactions List */}
+            {/* SCROLLABLE RECEIPTS BODY (Only this region scrolls) */}
+            <div className="flex-1 overflow-y-auto min-h-0 p-3 sm:p-4 space-y-2.5 text-slate-800 dark:text-slate-100 custom-scrollbar">
               {(() => {
                 const modalFilteredTx = allCashflowTransactions.filter((tx) => {
                   if (!modalSearchQuery.trim()) return true;
@@ -713,24 +762,24 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                 }
 
                 return (
-                  <div className="space-y-2.5">
+                  <div className="space-y-2">
                     {modalFilteredTx.map((tx) => (
                       <div
                         key={tx.id}
-                        className="glass-card rounded-2xl p-3.5 sm:p-4 bg-white dark:bg-[#061E1B] border border-slate-200 dark:border-white/10 flex items-center justify-between text-xs shadow-xs hover:border-[#0D3B36]/30 dark:hover:border-amber-400/40 transition-all gap-3"
+                        className="rounded-2xl p-3 sm:p-3.5 bg-white dark:bg-[#061E1B] border border-slate-200 dark:border-white/10 flex items-center justify-between text-xs shadow-2xs hover:border-[#0D3B36]/30 dark:hover:border-amber-400/40 transition-all gap-2.5 min-w-0"
                       >
-                        <div className="flex items-center gap-3 min-w-0 flex-1">
+                        <div className="flex items-center gap-2.5 min-w-0 flex-1">
                           <div
-                            className={`w-9 h-9 rounded-2xl flex items-center justify-center font-bold shrink-0 border ${
+                            className={`w-8 h-8 sm:w-9 sm:h-9 rounded-xl flex items-center justify-center font-bold shrink-0 border ${
                               tx.type === 'deposit' || tx.type === 'revenue'
                                 ? 'bg-emerald-50 dark:bg-emerald-950/80 border-emerald-300 dark:border-emerald-700 text-emerald-800 dark:text-emerald-300'
                                 : 'bg-rose-50 dark:bg-rose-950/80 border-rose-300 dark:border-rose-700 text-rose-800 dark:text-rose-300'
                             }`}
                           >
                             {tx.type === 'deposit' || tx.type === 'revenue' ? (
-                              <ArrowUpRight className="w-4 h-4" />
+                              <ArrowUpRight className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                             ) : (
-                              <ArrowDownLeft className="w-4 h-4" />
+                              <ArrowDownLeft className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                             )}
                           </div>
                           
@@ -738,7 +787,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                             <h4 className="font-extrabold text-xs sm:text-sm text-slate-900 dark:text-slate-100 truncate">
                               {tx.description}
                             </h4>
-                            <p className="text-[11px] text-slate-500 dark:text-slate-400 font-semibold flex items-center gap-2 flex-wrap">
+                            <p className="text-[10px] sm:text-[11px] text-slate-500 dark:text-slate-400 font-semibold flex items-center gap-1.5 flex-wrap truncate">
                               <span>Date: <strong>{tx.date}</strong></span>
                               <span>•</span>
                               <span>Method: <strong>{tx.method || 'Cash'}</strong></span>
@@ -748,7 +797,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                           </div>
                         </div>
 
-                        <span className="font-black text-xs sm:text-base text-[#0D3B36] dark:text-amber-300 shrink-0">
+                        <span className="font-black text-xs sm:text-sm text-[#0D3B36] dark:text-amber-300 shrink-0 whitespace-nowrap">
                           +GHS {(tx.amount || 0).toLocaleString()}
                         </span>
                       </div>
@@ -756,18 +805,17 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                   </div>
                 );
               })()}
-
             </div>
 
-            {/* Modal Footer Controls */}
-            <div className="flex flex-col sm:flex-row items-center justify-between bg-white dark:bg-slate-900/90 border border-slate-200 dark:border-amber-400/30 rounded-2xl p-3 px-4 text-slate-700 dark:text-white text-xs font-semibold gap-2 shadow-xl">
-              <span className="text-slate-600 dark:text-amber-200/80">
+            {/* STATIC BOTTOM FOOTER BAR */}
+            <div className="shrink-0 bg-white dark:bg-slate-900/95 border-t border-slate-200 dark:border-amber-400/30 p-2.5 sm:p-3 px-3 sm:px-4 text-slate-700 dark:text-white text-xs font-semibold flex flex-col xs:flex-row items-center justify-between gap-2 z-20">
+              <span className="text-[11px] sm:text-xs text-slate-600 dark:text-amber-200/80 text-center xs:text-left">
                 Showing {allCashflowTransactions.length} cashflow receipts in financial audit log
               </span>
               <button
                 type="button"
                 onClick={() => setIsAllCashflowModalOpen(false)}
-                className="w-full sm:w-auto px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-amber-300 border border-slate-300 dark:border-amber-400/40 font-bold text-xs cursor-pointer transition-all active:scale-95 text-center"
+                className="w-full xs:w-auto px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-amber-300 border border-slate-300 dark:border-amber-400/40 font-bold text-xs cursor-pointer transition-all active:scale-95 text-center"
               >
                 Close Cashflow Screen
               </button>
@@ -778,192 +826,384 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
       )}
 
       {/* SUB-TAB 2: CLIENT LEDGER */}
-      {activeSubTab === 'ledger' && (
-        <div className="space-y-3.5 sm:space-y-4 animate-fade-in">
-          {displayClients.map((client) => {
-            const isPaidInFull = client.balanceDue === 0;
+      {activeSubTab === 'ledger' && (() => {
+        // Telemetry count metrics
+        const unpaidCount = displayClients.filter((c) => c.balanceDue > 0 && !archivedClientIds.includes(c.id)).length;
+        const paidCount = displayClients.filter((c) => c.balanceDue === 0 && !archivedClientIds.includes(c.id)).length;
+        const archivedCount = displayClients.filter((c) => archivedClientIds.includes(c.id)).length;
 
-            return (
-              <div
-                key={client.id}
-                className="bg-white dark:bg-[#092825] backdrop-blur-md rounded-2xl sm:rounded-[28px] p-3.5 sm:p-5 border border-slate-200/90 dark:border-white/10 shadow-2xs space-y-3 transition-all hover:shadow-md"
-              >
-                {/* Row 1: Client Name & Garment Tag */}
-                <div className="flex flex-col xs:flex-row items-start xs:items-center justify-between gap-1.5 min-w-0">
-                  <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                    <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-[#0D3B36] text-amber-300 font-black text-xs sm:text-sm flex items-center justify-center border border-amber-400/30 shrink-0">
-                      {client.name.substring(0, 2).toUpperCase()}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <h3 className="font-extrabold text-sm sm:text-lg text-slate-900 dark:text-slate-100 tracking-tight leading-tight truncate">
-                        {client.name}
-                      </h3>
-                      <p className="text-[11px] text-slate-500 dark:text-slate-400 font-semibold truncate mt-0.5">
-                        Phone: {client.phone || 'No phone'}
-                      </p>
-                    </div>
-                  </div>
+        // Filtered clients list
+        const filteredClients = displayClients.filter((client) => {
+          // Search query check
+          if (clientSearchQuery.trim()) {
+            const q = clientSearchQuery.toLowerCase();
+            const matchesName = client.name.toLowerCase().includes(q);
+            const matchesPhone = (client.phone || '').includes(q);
+            const matchesGarment = (client.garmentTag || '').toLowerCase().includes(q);
+            if (!matchesName && !matchesPhone && !matchesGarment) return false;
+          }
 
-                  <span className="px-2.5 py-1 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-amber-300 font-black text-[10px] sm:text-xs border border-slate-200 dark:border-slate-700 uppercase tracking-wider shrink-0 self-start xs:self-auto">
-                    {client.garmentTag || 'GARMENT'}
-                  </span>
+          const isArchived = archivedClientIds.includes(client.id);
+
+          if (ledgerFilter === 'unpaid') {
+            return !isArchived && client.balanceDue > 0;
+          }
+          if (ledgerFilter === 'paid') {
+            return !isArchived && client.balanceDue === 0;
+          }
+          if (ledgerFilter === 'archived') {
+            return isArchived;
+          }
+          // 'all'
+          return !isArchived;
+        });
+
+        return (
+          <div className="space-y-3.5 sm:space-y-4 animate-fade-in">
+            {/* Filter & Search Header Card */}
+            <div className="bg-white dark:bg-[#092825] rounded-[24px] p-3.5 sm:p-4 border border-slate-200/90 dark:border-white/10 shadow-2xs space-y-3">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5">
+                <div>
+                  <h3 className="font-black text-xs sm:text-sm text-[#0D3B36] dark:text-amber-300 uppercase tracking-wider flex items-center gap-2">
+                    <Filter className="w-4 h-4 text-[#DCA134]" />
+                    <span>Client Ledger Directory ({displayClients.length})</span>
+                  </h3>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium mt-0.5">
+                    Default view shows active unpaid balances. Fully paid clients can be archived to keep your active ledger clean.
+                  </p>
                 </div>
 
-                {/* Row 2: Financial Summary Telemetry Badges */}
-                <div className="grid grid-cols-3 gap-1.5 sm:gap-2 text-center text-xs">
-                  <div className="p-2 rounded-xl bg-slate-50 dark:bg-[#041614] border border-slate-200 dark:border-amber-400/20">
-                    <span className="text-[9px] sm:text-[10px] font-extrabold text-slate-400 uppercase tracking-wider block">
-                      TOTAL COST
-                    </span>
-                    <span className="font-black text-xs sm:text-sm text-slate-900 dark:text-slate-100 truncate block mt-0.5">
-                      GHS {client.totalCost}
-                    </span>
-                  </div>
-
-                  <div className="p-2 rounded-xl bg-emerald-50/80 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800/60">
-                    <span className="text-[9px] sm:text-[10px] font-extrabold text-emerald-800 dark:text-emerald-400 uppercase tracking-wider block">
-                      PAID DEPOSIT
-                    </span>
-                    <span className="font-black text-xs sm:text-sm text-emerald-700 dark:text-emerald-300 truncate block mt-0.5">
-                      GHS {client.depositPaid}
-                    </span>
-                  </div>
-
-                  <div className={`p-2 rounded-xl border ${
-                    isPaidInFull
-                      ? 'bg-teal-50 dark:bg-teal-950/60 border-teal-200 dark:border-teal-800 text-teal-800 dark:text-teal-300'
-                      : 'bg-rose-50 dark:bg-rose-950/60 border-rose-200 dark:border-rose-800 text-rose-800 dark:text-rose-300'
-                  }`}>
-                    <span className="text-[9px] sm:text-[10px] font-extrabold uppercase tracking-wider block">
-                      {isPaidInFull ? 'STATUS' : 'BALANCE DUE'}
-                    </span>
-                    <span className="font-black text-xs sm:text-sm truncate block mt-0.5">
-                      {isPaidInFull ? 'PAID IN FULL' : `GHS ${client.balanceDue}`}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Row 3: Action Buttons Grid */}
-                <div className="pt-1.5 grid grid-cols-2 xs:flex xs:flex-wrap items-center gap-1.5 sm:gap-2">
-                  {/* View / Download Invoice Button */}
+                {paidCount > 0 && (
                   <button
                     type="button"
-                    onClick={() => {
-                      if (onOpenInvoice) {
-                        onOpenInvoice(client);
-                      } else {
-                        showNotification(`Generating invoice for ${client.name}...`);
-                      }
-                    }}
-                    className="px-3 py-2 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 font-extrabold text-[11px] sm:text-xs flex items-center justify-center gap-1.5 shadow-2xs transition-all active:scale-95 cursor-pointer truncate"
+                    onClick={archiveAllPaidClients}
+                    className="px-3 py-1.5 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-[#0D3B36] dark:text-amber-300 border border-amber-400/30 text-xs font-black flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer shrink-0 self-end sm:self-auto"
+                    title="Archive all settled accounts at once"
                   >
-                    <Download className="w-3.5 h-3.5 text-[#0D3B36] dark:text-amber-300 shrink-0" />
-                    <span>Invoice</span>
+                    <Archive className="w-3.5 h-3.5 text-[#DCA134]" />
+                    <span>Archive All Paid ({paidCount})</span>
                   </button>
-
-                  {/* WhatsApp Quick Share Invoice Button */}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const invoiceNum = `INV-${client.id ? client.id.toUpperCase().slice(-6) : 'B0B271'}`;
-                      const text = encodeURIComponent(
-                        `*MOKARS STITCHES STUDIO - OFFICIAL INVOICE #${invoiceNum}*\n\n` +
-                        `👤 Billed To: ${client.name}\n` +
-                        `👗 Order: ${client.garmentTag || 'Custom Order'}\n\n` +
-                        `💵 Total Cost: GHS ${client.totalCost}\n` +
-                        `✅ Deposit Paid: GHS ${client.depositPaid}\n` +
-                        `💰 Balance Due: GHS ${client.balanceDue}\n\n` +
-                        `💳 MoMo Payment Details:\n` +
-                        `Number: 0546920418 (Mubarik Tuahir Ali)\n` +
-                        `Reference: #${invoiceNum}`
-                      );
-                      const phoneNum = client.phone ? client.phone.replace(/[^0-9]/g, '') : '';
-                      const url = phoneNum ? `https://wa.me/${phoneNum}?text=${text}` : `https://wa.me/?text=${text}`;
-                      window.open(url, '_blank');
-                    }}
-                    className="px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-[11px] sm:text-xs flex items-center justify-center gap-1.5 shadow-2xs transition-all active:scale-95 cursor-pointer truncate"
-                    title="Share Invoice directly to Client WhatsApp"
-                  >
-                    <MessageSquare className="w-3.5 h-3.5 text-white shrink-0" />
-                    <span>WhatsApp</span>
-                  </button>
-
-                  {/* Mark Paid / Collect Deposit Button (Shown when balance due > 0) */}
-                  {!isPaidInFull && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (onOpenCollectDeposit) {
-                          onOpenCollectDeposit(client);
-                        } else if (onMarkPaidDirectly) {
-                          onMarkPaidDirectly(client.id);
-                          showNotification(`Marked balance as paid for ${client.name}`);
-                        } else {
-                          showNotification(`Opened payment collector for ${client.name}`);
-                        }
-                      }}
-                      className="px-3 py-2 rounded-xl bg-[#0D3B36] hover:bg-[#082824] dark:bg-amber-400 dark:hover:bg-amber-300 text-white dark:text-[#0D3B36] font-extrabold text-[11px] sm:text-xs flex items-center justify-center gap-1.5 shadow-xs transition-all active:scale-95 cursor-pointer truncate"
-                    >
-                      <Check className="w-3.5 h-3.5 text-emerald-400 dark:text-[#0D3B36] shrink-0" />
-                      <span>Mark Paid</span>
-                    </button>
-                  )}
-
-                  {/* Fitting Button */}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (onOpenFittingSession) {
-                        onOpenFittingSession(client);
-                      } else if (onAdvanceStage) {
-                        onAdvanceStage(client.id, 'FITTING');
-                        showNotification(`Fitting scheduled for ${client.name}`);
-                      } else {
-                        showNotification(`Fitting appointment set for ${client.name}`);
-                      }
-                    }}
-                    className="px-3 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-[11px] sm:text-xs flex items-center justify-center gap-1.5 shadow-2xs transition-all active:scale-95 cursor-pointer truncate"
-                  >
-                    <Scissors className="w-3.5 h-3.5 text-white shrink-0" />
-                    <span>Fitting</span>
-                  </button>
-
-                  {/* Pickup Button */}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (onAdvanceStage) {
-                        onAdvanceStage(client.id, 'DELIVERED');
-                      }
-                      showNotification(`${client.name}'s garment marked Ready for Pickup!`);
-                    }}
-                    className="px-3 py-2 rounded-xl bg-[#22C55E] hover:bg-emerald-600 text-white font-extrabold text-[11px] sm:text-xs flex items-center justify-center gap-1.5 shadow-2xs transition-all active:scale-95 cursor-pointer truncate"
-                  >
-                    <ShoppingBag className="w-3.5 h-3.5 text-white shrink-0" />
-                    <span>Pickup</span>
-                  </button>
-
-                  {/* Bill Statement Button */}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (onOpenInvoice) {
-                        onOpenInvoice(client);
-                      } else {
-                        showNotification(`Billing receipt printed for ${client.name}`);
-                      }
-                    }}
-                    className="px-3 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-extrabold text-[11px] sm:text-xs flex items-center justify-center gap-1.5 shadow-2xs transition-all active:scale-95 cursor-pointer truncate"
-                  >
-                    <CreditCard className="w-3.5 h-3.5 text-white shrink-0" />
-                    <span>Bill</span>
-                  </button>
-                </div>
+                )}
               </div>
-            );
-          })}
-        </div>
-      )}
+
+              {/* Filter Switcher Pills */}
+              <div className="flex items-center gap-1.5 flex-wrap pt-0.5">
+                <button
+                  type="button"
+                  onClick={() => setLedgerFilter('unpaid')}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-black flex items-center gap-1.5 transition-all cursor-pointer border ${
+                    ledgerFilter === 'unpaid'
+                      ? 'bg-[#0D3B36] dark:bg-amber-400 text-white dark:text-[#0D3B36] border-[#0D3B36] dark:border-amber-400 shadow-xs'
+                      : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-200'
+                  }`}
+                >
+                  <span>Active Receivables</span>
+                  <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-extrabold ${
+                    ledgerFilter === 'unpaid'
+                      ? 'bg-rose-500 text-white dark:bg-[#0D3B36] dark:text-amber-300'
+                      : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300'
+                  }`}>
+                    {unpaidCount}
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setLedgerFilter('paid')}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-black flex items-center gap-1.5 transition-all cursor-pointer border ${
+                    ledgerFilter === 'paid'
+                      ? 'bg-[#0D3B36] dark:bg-amber-400 text-white dark:text-[#0D3B36] border-[#0D3B36] dark:border-amber-400 shadow-xs'
+                      : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-200'
+                  }`}
+                >
+                  <span>Paid in Full</span>
+                  <span className="px-1.5 py-0.2 rounded-full text-[10px] font-extrabold bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300">
+                    {paidCount}
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setLedgerFilter('archived')}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-black flex items-center gap-1.5 transition-all cursor-pointer border ${
+                    ledgerFilter === 'archived'
+                      ? 'bg-[#0D3B36] dark:bg-amber-400 text-white dark:text-[#0D3B36] border-[#0D3B36] dark:border-amber-400 shadow-xs'
+                      : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-200'
+                  }`}
+                >
+                  <Archive className="w-3 h-3 text-[#DCA134]" />
+                  <span>Archived</span>
+                  <span className="px-1.5 py-0.2 rounded-full text-[10px] font-extrabold bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300">
+                    {archivedCount}
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setLedgerFilter('all')}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-black flex items-center gap-1.5 transition-all cursor-pointer border ${
+                    ledgerFilter === 'all'
+                      ? 'bg-[#0D3B36] dark:bg-amber-400 text-white dark:text-[#0D3B36] border-[#0D3B36] dark:border-amber-400 shadow-xs'
+                      : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-200'
+                  }`}
+                >
+                  <span>All Clients</span>
+                  <span className="px-1.5 py-0.2 rounded-full text-[10px] font-extrabold bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300">
+                    {displayClients.length}
+                  </span>
+                </button>
+              </div>
+
+              {/* Live Search Bar */}
+              <div className="relative w-full">
+                <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                <input
+                  type="text"
+                  value={clientSearchQuery}
+                  onChange={(e) => setClientSearchQuery(e.target.value)}
+                  placeholder="Search ledger by client name, phone number, or garment type..."
+                  className="w-full pl-9 pr-3 py-2 rounded-xl bg-slate-50 dark:bg-[#041614] border border-slate-200 dark:border-amber-400/30 text-xs font-bold text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-[#0D3B36] dark:focus:ring-amber-400"
+                />
+              </div>
+            </div>
+
+            {/* List of Client Cards */}
+            {filteredClients.length === 0 ? (
+              <div className="bg-white dark:bg-[#092825] rounded-2xl p-8 text-center space-y-2 border border-slate-200 dark:border-white/10 shadow-2xs">
+                <CheckCircle2 className="w-8 h-8 text-emerald-500 mx-auto opacity-80" />
+                <h4 className="font-extrabold text-sm text-slate-900 dark:text-slate-100">
+                  {ledgerFilter === 'unpaid'
+                    ? 'No Active Unpaid Balances!'
+                    : ledgerFilter === 'archived'
+                    ? 'No Archived Clients'
+                    : 'No Client Records Found'}
+                </h4>
+                <p className="text-xs text-slate-500 dark:text-slate-400 font-medium max-w-sm mx-auto">
+                  {ledgerFilter === 'unpaid'
+                    ? 'All clients have settled their balances in full. Switch filter to "Paid in Full" or "All Clients" to inspect records.'
+                    : 'No client records matched your search query or selected filter.'}
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-3.5 sm:space-y-4">
+                {filteredClients.map((client) => {
+                  const isPaidInFull = client.balanceDue === 0;
+                  const isArchived = archivedClientIds.includes(client.id);
+
+                  return (
+                    <div
+                      key={client.id}
+                      className="bg-white dark:bg-[#092825] backdrop-blur-md rounded-2xl sm:rounded-[28px] p-3.5 sm:p-5 border border-slate-200/90 dark:border-white/10 shadow-2xs space-y-3 transition-all hover:shadow-md"
+                    >
+                      {/* Row 1: Client Name & Garment Tag */}
+                      <div className="flex flex-col xs:flex-row items-start xs:items-center justify-between gap-1.5 min-w-0">
+                        <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                          <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-[#0D3B36] text-amber-300 font-black text-xs sm:text-sm flex items-center justify-center border border-amber-400/30 shrink-0">
+                            {client.name.substring(0, 2).toUpperCase()}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <h3 className="font-extrabold text-sm sm:text-lg text-slate-900 dark:text-slate-100 tracking-tight leading-tight truncate">
+                              {client.name}
+                            </h3>
+                            <p className="text-[11px] text-slate-500 dark:text-slate-400 font-semibold truncate mt-0.5">
+                              Phone: {client.phone || 'No phone'}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-1.5 shrink-0 self-start xs:self-auto">
+                          {isArchived && (
+                            <span className="px-2.5 py-1 rounded-xl bg-amber-500/10 text-amber-800 dark:text-amber-300 font-black text-[10px] border border-amber-400/30 uppercase tracking-wider">
+                              ARCHIVED
+                            </span>
+                          )}
+                          <span className="px-2.5 py-1 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-amber-300 font-black text-[10px] sm:text-xs border border-slate-200 dark:border-slate-700 uppercase tracking-wider">
+                            {client.garmentTag || 'GARMENT'}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Row 2: Financial Summary Telemetry Badges */}
+                      <div className="grid grid-cols-3 gap-1.5 sm:gap-2 text-center text-xs">
+                        <div className="p-2 rounded-xl bg-slate-50 dark:bg-[#041614] border border-slate-200 dark:border-amber-400/20">
+                          <span className="text-[9px] sm:text-[10px] font-extrabold text-slate-400 uppercase tracking-wider block">
+                            TOTAL COST
+                          </span>
+                          <span className="font-black text-xs sm:text-sm text-slate-900 dark:text-slate-100 truncate block mt-0.5">
+                            GHS {client.totalCost}
+                          </span>
+                        </div>
+
+                        <div className="p-2 rounded-xl bg-emerald-50/80 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800/60">
+                          <span className="text-[9px] sm:text-[10px] font-extrabold text-emerald-800 dark:text-emerald-400 uppercase tracking-wider block">
+                            PAID DEPOSIT
+                          </span>
+                          <span className="font-black text-xs sm:text-sm text-emerald-700 dark:text-emerald-300 truncate block mt-0.5">
+                            GHS {client.depositPaid}
+                          </span>
+                        </div>
+
+                        <div className={`p-2 rounded-xl border ${
+                          isPaidInFull
+                            ? 'bg-teal-50 dark:bg-teal-950/60 border-teal-200 dark:border-teal-800 text-teal-800 dark:text-teal-300'
+                            : 'bg-rose-50 dark:bg-rose-950/60 border-rose-200 dark:border-rose-800 text-rose-800 dark:text-rose-300'
+                        }`}>
+                          <span className="text-[9px] sm:text-[10px] font-extrabold uppercase tracking-wider block">
+                            {isPaidInFull ? 'STATUS' : 'BALANCE DUE'}
+                          </span>
+                          <span className="font-black text-xs sm:text-sm truncate block mt-0.5">
+                            {isPaidInFull ? 'PAID IN FULL' : `GHS ${client.balanceDue}`}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Row 3: Action Buttons Grid */}
+                      <div className="pt-1.5 grid grid-cols-2 xs:flex xs:flex-wrap items-center gap-1.5 sm:gap-2">
+                        {/* View / Download Invoice Button */}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (onOpenInvoice) {
+                              onOpenInvoice(client);
+                            } else {
+                              showNotification(`Generating invoice for ${client.name}...`);
+                            }
+                          }}
+                          className="px-3 py-2 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 font-extrabold text-[11px] sm:text-xs flex items-center justify-center gap-1.5 shadow-2xs transition-all active:scale-95 cursor-pointer truncate"
+                        >
+                          <Download className="w-3.5 h-3.5 text-[#0D3B36] dark:text-amber-300 shrink-0" />
+                          <span>Invoice</span>
+                        </button>
+
+                        {/* WhatsApp Quick Share Invoice Button */}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const invoiceNum = `INV-${client.id ? client.id.toUpperCase().slice(-6) : 'B0B271'}`;
+                            const text = encodeURIComponent(
+                              `*MOKARS STITCHES STUDIO - OFFICIAL INVOICE #${invoiceNum}*\n\n` +
+                              `👤 Billed To: ${client.name}\n` +
+                              `👗 Order: ${client.garmentTag || 'Custom Order'}\n\n` +
+                              `💵 Total Cost: GHS ${client.totalCost}\n` +
+                              `✅ Deposit Paid: GHS ${client.depositPaid}\n` +
+                              `💰 Balance Due: GHS ${client.balanceDue}\n\n` +
+                              `💳 MoMo Payment Details:\n` +
+                              `Number: 0546920418 (Mubarik Tuahir Ali)\n` +
+                              `Reference: #${invoiceNum}`
+                            );
+                            const phoneNum = client.phone ? client.phone.replace(/[^0-9]/g, '') : '';
+                            const url = phoneNum ? `https://wa.me/${phoneNum}?text=${text}` : `https://wa.me/?text=${text}`;
+                            window.open(url, '_blank');
+                          }}
+                          className="px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-[11px] sm:text-xs flex items-center justify-center gap-1.5 shadow-2xs transition-all active:scale-95 cursor-pointer truncate"
+                          title="Share Invoice directly to Client WhatsApp"
+                        >
+                          <MessageSquare className="w-3.5 h-3.5 text-white shrink-0" />
+                          <span>WhatsApp</span>
+                        </button>
+
+                        {/* Mark Paid / Collect Deposit Button (Shown when balance due > 0) */}
+                        {!isPaidInFull && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (onOpenCollectDeposit) {
+                                onOpenCollectDeposit(client);
+                              } else if (onMarkPaidDirectly) {
+                                onMarkPaidDirectly(client.id);
+                                showNotification(`Marked balance as paid for ${client.name}`);
+                              } else {
+                                showNotification(`Opened payment collector for ${client.name}`);
+                              }
+                            }}
+                            className="px-3 py-2 rounded-xl bg-[#0D3B36] hover:bg-[#082824] dark:bg-amber-400 dark:hover:bg-amber-300 text-white dark:text-[#0D3B36] font-extrabold text-[11px] sm:text-xs flex items-center justify-center gap-1.5 shadow-xs transition-all active:scale-95 cursor-pointer truncate"
+                          >
+                            <Check className="w-3.5 h-3.5 text-emerald-400 dark:text-[#0D3B36] shrink-0" />
+                            <span>Mark Paid</span>
+                          </button>
+                        )}
+
+                        {/* Archive / Restore Button for Paid or Archived Clients */}
+                        {isArchived ? (
+                          <button
+                            type="button"
+                            onClick={() => unarchiveClient(client.id, client.name)}
+                            className="px-3 py-2 rounded-xl bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-800 dark:text-slate-200 font-extrabold text-[11px] sm:text-xs flex items-center justify-center gap-1.5 shadow-2xs transition-all active:scale-95 cursor-pointer truncate"
+                            title="Restore client to active ledger"
+                          >
+                            <RotateCcw className="w-3.5 h-3.5 text-slate-600 dark:text-slate-300 shrink-0" />
+                            <span>Restore</span>
+                          </button>
+                        ) : isPaidInFull ? (
+                          <button
+                            type="button"
+                            onClick={() => archiveClient(client.id, client.name)}
+                            className="px-3 py-2 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-[#0D3B36] dark:text-amber-300 border border-amber-400/30 font-extrabold text-[11px] sm:text-xs flex items-center justify-center gap-1.5 shadow-2xs transition-all active:scale-95 cursor-pointer truncate"
+                            title="Remove / Archive settled client from active ledger"
+                          >
+                            <Archive className="w-3.5 h-3.5 text-[#DCA134] shrink-0" />
+                            <span>Archive</span>
+                          </button>
+                        ) : null}
+
+                        {/* Fitting Button */}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (onOpenFittingSession) {
+                              onOpenFittingSession(client);
+                            } else if (onAdvanceStage) {
+                              onAdvanceStage(client.id, 'FITTING');
+                              showNotification(`Fitting scheduled for ${client.name}`);
+                            } else {
+                              showNotification(`Fitting appointment set for ${client.name}`);
+                            }
+                          }}
+                          className="px-3 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-[11px] sm:text-xs flex items-center justify-center gap-1.5 shadow-2xs transition-all active:scale-95 cursor-pointer truncate"
+                        >
+                          <Scissors className="w-3.5 h-3.5 text-white shrink-0" />
+                          <span>Fitting</span>
+                        </button>
+
+                        {/* Pickup Button */}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (onAdvanceStage) {
+                              onAdvanceStage(client.id, 'DELIVERED');
+                            }
+                            showNotification(`${client.name}'s garment marked Ready for Pickup!`);
+                          }}
+                          className="px-3 py-2 rounded-xl bg-[#22C55E] hover:bg-emerald-600 text-white font-extrabold text-[11px] sm:text-xs flex items-center justify-center gap-1.5 shadow-2xs transition-all active:scale-95 cursor-pointer truncate"
+                        >
+                          <ShoppingBag className="w-3.5 h-3.5 text-white shrink-0" />
+                          <span>Pickup</span>
+                        </button>
+
+                        {/* Bill Statement Button */}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (onOpenInvoice) {
+                              onOpenInvoice(client);
+                            } else {
+                              showNotification(`Billing receipt printed for ${client.name}`);
+                            }
+                          }}
+                          className="px-3 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-extrabold text-[11px] sm:text-xs flex items-center justify-center gap-1.5 shadow-2xs transition-all active:scale-95 cursor-pointer truncate"
+                        >
+                          <CreditCard className="w-3.5 h-3.5 text-white shrink-0" />
+                          <span>Bill</span>
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        );
+      })()}
     </div>
   );
 };

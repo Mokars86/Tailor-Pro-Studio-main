@@ -1,14 +1,16 @@
 import React, { useState } from 'react';
-import { ArrowLeft, Search, Scissors, Phone, CreditCard, Sparkles, CheckCircle2, Clock, Calendar, Shirt, UserCheck, Tag } from 'lucide-react';
-import { Client } from '../../types';
+import { ArrowLeft, Search, Scissors, Phone, CreditCard, Sparkles, CheckCircle2, Calendar, Tag } from 'lucide-react';
+import { Client, StudioSettings } from '../../types';
 
 interface CustomerTrackingModalProps {
   clients: Client[];
+  studioSettings?: StudioSettings;
   onClose: () => void;
 }
 
 export const CustomerTrackingModal: React.FC<CustomerTrackingModalProps> = ({
-  clients,
+  clients = [],
+  studioSettings,
   onClose
 }) => {
   const [phoneNumber, setPhoneNumber] = useState('');
@@ -26,7 +28,7 @@ export const CustomerTrackingModal: React.FC<CustomerTrackingModalProps> = ({
     const queryLower = queryRaw.toLowerCase();
     const queryDigits = queryRaw.replace(/\D/g, '');
 
-    const pool = clients;
+    const pool = (clients || []).filter((c): c is Client => Boolean(c && c.id));
 
     // Remove duplicates by id or phone+garmentTag
     const uniquePool = pool.filter((client, index, self) =>
@@ -66,6 +68,42 @@ export const CustomerTrackingModal: React.FC<CustomerTrackingModalProps> = ({
       setFoundClients([]);
     }
   };
+
+  const formatFittingDate = (client: Client): string => {
+    if (client.fittingDate && client.fittingDate.trim()) {
+      const parsed = new Date(client.fittingDate);
+      if (!isNaN(parsed.getTime())) {
+        return parsed.toLocaleDateString('en-US', {
+          weekday: 'short',
+          year: 'numeric',
+          month: 'short',
+          day: 'numeric'
+        });
+      }
+      return client.fittingDate;
+    }
+
+    // Dynamic estimation based on stage if fittingDate has not been set yet
+    const stage = client.runwayStage || 'CONSULT';
+    switch (stage) {
+      case 'FITTING':
+        return 'Ready for Fitting (Contact Atelier)';
+      case 'COMPLETED':
+      case 'DELIVERED':
+        return 'Garment Ready for Pickup';
+      case 'SEWING':
+        return 'Est. in 3–5 days (Sewing Phase)';
+      case 'CUTTING':
+        return 'Est. in 5–7 days (Cutting Phase)';
+      case 'CONSULT':
+      default:
+        return 'Pending Atelier Scheduling';
+    }
+  };
+
+  const fallbackDesigner = studioSettings?.ownerName || studioSettings?.studioName || 'Master Atelier';
+  const momoNumber = studioSettings?.momoNumber || '0555733036';
+  const momoHolder = studioSettings?.momoHolderName || studioSettings?.ownerName || 'Atelier Master';
 
   return (
     <div className="fixed inset-0 z-[100] bg-[#EBF5F0] text-[#0D3B36] flex flex-col items-center justify-center p-4 sm:p-6 overflow-y-auto font-['Plus_Jakarta_Sans',sans-serif]">
@@ -140,6 +178,9 @@ export const CustomerTrackingModal: React.FC<CustomerTrackingModalProps> = ({
             ) : (
               foundClients.map((client) => {
                 const isCompleted = client.runwayStage === 'COMPLETED' || client.runwayStage === 'DELIVERED';
+                const formattedFittingDate = formatFittingDate(client);
+                const assignedMaster = client.assignedDesigner || fallbackDesigner;
+
                 return (
                   <div
                     key={client.id}
@@ -149,13 +190,13 @@ export const CustomerTrackingModal: React.FC<CustomerTrackingModalProps> = ({
                     <div className="flex items-start justify-between gap-3 border-b border-slate-100 pb-3">
                       <div className="flex items-center gap-3">
                         <div className="w-11 h-11 rounded-2xl bg-[#0D3B36] text-amber-300 font-black flex items-center justify-center text-sm shadow-xs shrink-0">
-                          {client.initials || client.name.substring(0, 2).toUpperCase()}
+                          {client.initials || (client.name ? client.name.trim().substring(0, 2).toUpperCase() : 'CO')}
                         </div>
                         <div>
-                          <h3 className="font-extrabold text-base text-slate-900">{client.name}</h3>
+                          <h3 className="font-extrabold text-base text-slate-900">{client.name || 'Client Order'}</h3>
                           <div className="flex items-center gap-1.5 text-xs text-slate-500 font-medium mt-0.5">
                             <Tag className="w-3.5 h-3.5 text-[#0D3B36]" />
-                            <span className="font-mono font-bold text-[#0D3B36]">{client.garmentTag}</span>
+                            <span className="font-mono font-bold text-[#0D3B36]">{client.garmentTag || 'Custom Garment'}</span>
                           </div>
                         </div>
                       </div>
@@ -165,7 +206,7 @@ export const CustomerTrackingModal: React.FC<CustomerTrackingModalProps> = ({
                           ? 'bg-emerald-100 text-emerald-800 border-emerald-300'
                           : 'bg-amber-100 text-amber-900 border-amber-300'
                       }`}>
-                        {client.runwayStage}
+                        {client.runwayStage || 'CONSULT'}
                       </span>
                     </div>
 
@@ -173,7 +214,7 @@ export const CustomerTrackingModal: React.FC<CustomerTrackingModalProps> = ({
                     <div className="space-y-2 bg-slate-50 p-3.5 rounded-2xl border border-slate-200/80">
                       <div className="flex justify-between text-xs font-extrabold text-slate-700">
                         <span>Production Stage</span>
-                        <span className="text-[#0D3B36] font-black">{client.runwayStage}</span>
+                        <span className="text-[#0D3B36] font-black">{client.runwayStage || 'CONSULT'}</span>
                       </div>
                       
                       <div className="w-full h-2.5 bg-slate-200 rounded-full overflow-hidden">
@@ -218,14 +259,14 @@ export const CustomerTrackingModal: React.FC<CustomerTrackingModalProps> = ({
                       </div>
                     )}
 
-                    {/* Details Grid */}
-                    <div className="grid grid-cols-2 gap-3 text-xs">
+                    {/* Details Grid: Assigned Stylist & Dynamic Expected Fitting Date */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
                       <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200/80">
                         <span className="text-[10px] font-extrabold uppercase text-slate-400 block">
                           Assigned Master / Stylist
                         </span>
-                        <span className="font-bold text-slate-900 mt-0.5 block">
-                          {client.assignedDesigner || 'Kausar Mohammed'}
+                        <span className="font-bold text-slate-900 mt-0.5 block truncate">
+                          {assignedMaster}
                         </span>
                       </div>
 
@@ -233,9 +274,9 @@ export const CustomerTrackingModal: React.FC<CustomerTrackingModalProps> = ({
                         <span className="text-[10px] font-extrabold uppercase text-slate-400 block">
                           Expected Fitting Date
                         </span>
-                        <span className="font-bold text-slate-900 mt-0.5 block flex items-center gap-1">
-                          <Calendar className="w-3.5 h-3.5 text-amber-600" />
-                          <span>{client.fittingDate || '2026-08-20'}</span>
+                        <span className="font-bold text-slate-900 mt-0.5 block flex items-center gap-1.5">
+                          <Calendar className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                          <span className="text-[#0D3B36] font-black">{formattedFittingDate}</span>
                         </span>
                       </div>
                     </div>
@@ -245,13 +286,13 @@ export const CustomerTrackingModal: React.FC<CustomerTrackingModalProps> = ({
                       <div>
                         <span className="text-emerald-800 font-semibold block text-[11px]">Outstanding Balance Due:</span>
                         <span className="font-black text-[#DCA134] text-base">
-                          GH₵ {client.balanceDue}
+                          GH₵ {(client.balanceDue ?? 0).toLocaleString('en-US')}
                         </span>
                       </div>
 
                       <div className="text-[11px] text-emerald-900 font-semibold flex items-center gap-1.5 bg-white px-3 py-1.5 rounded-xl border border-emerald-300">
                         <CreditCard className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                        <span>MoMo: <strong>0555733036</strong> (Kausar Mohammed)</span>
+                        <span>MoMo: <strong>{momoNumber}</strong> ({momoHolder})</span>
                       </div>
                     </div>
 

@@ -17,6 +17,8 @@ import {
 import { Apprentice } from '../../types';
 import { getGraduationPayment, recordGraduationPayment } from '../../services/subscriptionService';
 import { initializePaystackCheckout } from '../../services/paystackService';
+import { downloadOrShareDocument, generateApprenticeCertificateHtml } from '../../utils/mobileDocumentDownloader';
+import { generateUniqueCertNumber, formatCertificateDate, generateQRCodeUrl } from '../../utils/certificateGenerator';
 
 interface GraduationPaymentModalProps {
   isOpen: boolean;
@@ -203,11 +205,33 @@ export const GraduationPaymentModal: React.FC<GraduationPaymentModalProps> = ({
               <div className="pt-2 flex justify-center gap-3">
                 <button
                   type="button"
-                  onClick={() => alert(`Certificate PDF export generated for ${apprentice.name}!`)}
-                  className="px-6 py-2.5 rounded-full bg-[#0D3B36] text-amber-300 font-black text-xs flex items-center gap-2 shadow-md hover:bg-[#082824] cursor-pointer"
+                  onClick={async () => {
+                    const certCode = generateUniqueCertNumber(apprentice.id || apprentice.name);
+                    const qrCodeUrl = generateQRCodeUrl(certCode, apprentice.name, apprentice.mentor || 'MOKARS STITCHES STUDIO');
+                    const html = generateApprenticeCertificateHtml({
+                      apprenticeName: apprentice.name,
+                      studioName: 'MOKARS STITCHES STUDIO',
+                      masterTrainer: apprentice.mentor || 'KAUSARA MOHAMMED',
+                      hoursCompleted: apprentice.hoursCompleted || 120,
+                      totalRequiredHours: apprentice.totalRequiredHours || 120,
+                      specialty: apprentice.specialty || 'Haute Couture & Pattern Cutting',
+                      issueDate: formatCertificateDate(),
+                      certCode,
+                      qrCodeUrl,
+                      studioLogoUrl: apprentice.avatarUrl || '/tailor_pro_logo.jpg'
+                    });
+
+                    await downloadOrShareDocument({
+                      filename: `Official_Certificate_${apprentice.name.replace(/\s+/g, '_')}.html`,
+                      title: `Graduation Certificate — ${apprentice.name}`,
+                      htmlContent: html,
+                      text: `Official Graduation Certificate for ${apprentice.name}. Code: ${certCode}`
+                    });
+                  }}
+                  className="px-6 py-2.5 rounded-full bg-[#0D3B36] text-amber-300 font-black text-xs flex items-center gap-2 shadow-md hover:bg-[#082824] active:scale-95 cursor-pointer transition-all"
                 >
                   <Download className="w-4 h-4 text-amber-300" />
-                  <span>Download High-Res Certificate PDF</span>
+                  <span>Download / Print Certificate (PDF)</span>
                 </button>
               </div>
             </div>

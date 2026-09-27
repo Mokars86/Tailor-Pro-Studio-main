@@ -1,6 +1,7 @@
 import React, { useRef, useState } from 'react';
-import { X, Printer, ShieldCheck, Award, Edit3, Calendar, Scissors, Building2, BadgeCheck, Lock, Sparkles } from 'lucide-react';
+import { X, Printer, ShieldCheck, Award, Edit3, Calendar, Scissors, Building2, BadgeCheck, Lock, Sparkles, Download, CheckCircle2 } from 'lucide-react';
 import { generateUniqueCertNumber, formatCertificateDate, generateQRCodeUrl } from '../../utils/certificateGenerator';
+import { downloadOrShareDocument, generateMasterCertificateHtml } from '../../utils/mobileDocumentDownloader';
 
 interface MasterCertificateModalProps {
   isOpen: boolean;
@@ -29,6 +30,8 @@ export const MasterCertificateModal: React.FC<MasterCertificateModalProps> = ({
   const [issueDate, setIssueDate] = useState<string>(() => formatCertificateDate());
   const [certCode, setCertCode] = useState<string>(() => generateUniqueCertNumber(studioName));
   const [isEditing, setIsEditing] = useState<boolean>(false);
+  const [downloadNotice, setDownloadNotice] = useState<string | null>(null);
+  const [isExporting, setIsExporting] = useState<boolean>(false);
 
   if (!isOpen) return null;
 
@@ -86,8 +89,34 @@ export const MasterCertificateModal: React.FC<MasterCertificateModalProps> = ({
 
   const qrCodeUrl = generateQRCodeUrl(certCode, recipientTitle, studioName);
 
-  const handlePrint = () => {
-    window.print();
+  const handleDownload = async () => {
+    try {
+      setIsExporting(true);
+      const html = generateMasterCertificateHtml({
+        studioName,
+        recipientTitle,
+        masterTrainer: trainerName,
+        ceoName,
+        issueDate,
+        certCode,
+        qrCodeUrl,
+        studioLogoUrl
+      });
+
+      const res = await downloadOrShareDocument({
+        filename: `Master_Craftsman_Certificate_${recipientTitle.replace(/\s+/g, '_')}.html`,
+        title: `Master Craftsman Certificate — ${recipientTitle}`,
+        htmlContent: html,
+        text: `Official Master Craftsman Certificate for ${recipientTitle}. Verification: ${certCode}`
+      });
+
+      setDownloadNotice(res.message);
+      setTimeout(() => setDownloadNotice(null), 4000);
+    } catch (err: any) {
+      console.error('Master cert export failed:', err);
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   return (
@@ -96,7 +125,7 @@ export const MasterCertificateModal: React.FC<MasterCertificateModalProps> = ({
       <div className="w-full max-w-5xl my-auto space-y-3 sm:space-y-4">
         
         {/* Top Control Bar */}
-        <div className="flex items-center justify-between bg-slate-900/90 border border-white/10 rounded-2xl px-4 py-2.5 text-white shadow-xl">
+        <div className="flex items-center justify-between bg-slate-900/90 border border-white/10 rounded-2xl px-4 py-2.5 text-white shadow-xl flex-wrap gap-2">
           <div className="flex items-center gap-2">
             <span className="w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse" />
             <span className="text-xs sm:text-sm font-extrabold tracking-wide uppercase text-amber-300 flex items-center gap-1.5">
@@ -118,11 +147,12 @@ export const MasterCertificateModal: React.FC<MasterCertificateModalProps> = ({
 
             <button
               type="button"
-              onClick={handlePrint}
-              className="px-3.5 py-1.5 rounded-xl bg-[#DCA134] hover:bg-[#c9902b] text-[#0A332C] text-xs font-black flex items-center gap-1.5 shadow-md transition-all active:scale-95 cursor-pointer"
+              disabled={isExporting}
+              onClick={handleDownload}
+              className="px-3.5 py-1.5 rounded-xl bg-[#DCA134] hover:bg-[#c9902b] text-[#0A332C] text-xs font-black flex items-center gap-1.5 shadow-md transition-all active:scale-95 cursor-pointer disabled:opacity-60"
             >
-              <Printer className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Print / Save PDF (Landscape)</span>
+              <Download className="w-3.5 h-3.5" />
+              <span>{isExporting ? 'Generating…' : 'Print / Download (PDF)'}</span>
             </button>
 
             <button
@@ -135,6 +165,14 @@ export const MasterCertificateModal: React.FC<MasterCertificateModalProps> = ({
             </button>
           </div>
         </div>
+
+        {/* Download Notice Toast */}
+        {downloadNotice && (
+          <div className="p-3 rounded-2xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-200 text-xs font-bold flex items-center justify-center gap-2 animate-fade-in shadow-lg text-center">
+            <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+            <span>{downloadNotice}</span>
+          </div>
+        )}
 
         {/* Edit Info Panel (collapsible) */}
         {isEditing && (

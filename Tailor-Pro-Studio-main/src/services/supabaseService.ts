@@ -51,22 +51,23 @@ export async function fetchClientsFromSupabase(): Promise<Client[] | null> {
       id: row.id,
       name: row.name,
       initials: row.initials || '',
-      garmentTag: row.garment_tag || '',
+      garmentTag: row.garment_tag || row.garmentTag || '',
       timestamp: row.timestamp || 'Just now',
       email: row.email || '',
       phone: row.phone || '',
-      avatarUrl: row.avatar_url,
+      avatarUrl: row.avatar_url || row.avatarUrl,
       status: row.status || 'Active',
-      runwayStage: row.runway_stage || 'CONSULT',
-      totalCost: Number(row.total_cost || 0),
-      depositPaid: Number(row.deposit_paid || 0),
-      balanceDue: Number(row.balance_due || 0),
+      runwayStage: row.runway_stage || row.runwayStage || 'CONSULT',
+      totalCost: Number(row.total_cost || row.totalCost || 0),
+      depositPaid: Number(row.deposit_paid || row.depositPaid || 0),
+      balanceDue: Number(row.balance_due || row.balanceDue || 0),
       measurements: row.measurements || {},
       notes: row.notes || '',
-      assignedDesigner: row.assigned_designer || '',
-      tags: row.tags || []
+      assignedDesigner: row.assigned_designer || row.assignedDesigner || '',
+      fittingDate: row.fitting_date || row.fittingDate || undefined,
+      tags: Array.isArray(row.tags) ? row.tags : []
     }));
-  }, 2500);
+  }, 3500);
 }
 
 export async function upsertClientToSupabase(client: Client): Promise<boolean> {
@@ -75,28 +76,32 @@ export async function upsertClientToSupabase(client: Client): Promise<boolean> {
     const dbRecord = {
       id: client.id,
       name: client.name,
-      initials: client.initials,
-      garment_tag: client.garmentTag,
-      timestamp: client.timestamp,
-      email: client.email,
-      phone: client.phone,
-      avatar_url: client.avatarUrl,
-      status: client.status,
-      runway_stage: client.runwayStage,
-      total_cost: client.totalCost,
-      deposit_paid: client.depositPaid,
-      balance_due: client.balanceDue,
+      initials: client.initials || '',
+      garment_tag: client.garmentTag || '',
+      timestamp: client.timestamp || new Date().toISOString(),
+      email: client.email || '',
+      phone: client.phone || '',
+      avatar_url: client.avatarUrl || null,
+      status: client.status || 'Active',
+      runway_stage: client.runwayStage || 'CONSULT',
+      total_cost: Number(client.totalCost || 0),
+      deposit_paid: Number(client.depositPaid || 0),
+      balance_due: Number(client.balanceDue || 0),
       measurements: client.measurements || {},
       notes: client.notes || '',
       assigned_designer: client.assignedDesigner || '',
+      fitting_date: client.fittingDate || null,
       tags: client.tags || [],
       updated_at: new Date().toISOString()
     };
 
     const res = await withTimeout(async () => {
       const { error } = await supabase.from('clients').upsert(dbRecord);
+      if (error) {
+        console.warn('[Supabase DB] Client upsert notice:', error.message);
+      }
       return !error;
-    }, 3000);
+    }, 4000);
     return Boolean(res);
   } catch (err) {
     console.error('[Supabase DB] Failed to upsert client:', err);

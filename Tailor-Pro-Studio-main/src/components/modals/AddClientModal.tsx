@@ -26,6 +26,7 @@ export const AddClientModal: React.FC<AddClientModalProps> = ({
   const [depositPaid, setDepositPaid] = useState<number | ''>('');
   const [notes, setNotes] = useState('');
   const [avatarUrl, setAvatarUrl] = useState('');
+  const [fittingDate, setFittingDate] = useState('');
 
   const sampleAvatars = [
     'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
@@ -46,6 +47,7 @@ export const AddClientModal: React.FC<AddClientModalProps> = ({
       setDepositPaid(editingClient.depositPaid ?? '');
       setNotes(editingClient.notes || '');
       setAvatarUrl(editingClient.avatarUrl || '');
+      setFittingDate(editingClient.fittingDate || '');
     } else {
       setName('');
       setPhone('');
@@ -56,6 +58,7 @@ export const AddClientModal: React.FC<AddClientModalProps> = ({
       setDepositPaid('');
       setNotes('');
       setAvatarUrl('');
+      setFittingDate('');
     }
   }, [editingClient, isOpen, artistsList]);
 
@@ -94,6 +97,7 @@ export const AddClientModal: React.FC<AddClientModalProps> = ({
       totalCost: Number(totalCost) || 0,
       depositPaid: Number(depositPaid) || 0,
       balanceDue: calculatedBalance,
+      fittingDate: fittingDate || undefined,
       notes: notes.trim(),
       assignedDesigner: assignedArtist || artistsList[0] || 'Master Atelier',
       tags: editingClient?.tags || []
@@ -243,6 +247,29 @@ export const AddClientModal: React.FC<AddClientModalProps> = ({
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3">
             <div>
+              <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1 text-xs">Style Preference / Garment Tag</label>
+              <input
+                type="text"
+                value={stylePreference}
+                onChange={(e) => setStylePreference(e.target.value)}
+                placeholder="e.g. Vlisco Kente Gown, Corset Evening Dress"
+                className="w-full px-3 py-2 sm:px-3.5 sm:py-2.5 rounded-xl bg-white/80 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700 font-semibold text-slate-900 dark:text-slate-100 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#0E3832] dark:focus:ring-amber-400"
+              />
+            </div>
+
+            <div>
+              <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1 text-xs">Expected Fitting Date</label>
+              <input
+                type="date"
+                value={fittingDate}
+                onChange={(e) => setFittingDate(e.target.value)}
+                className="w-full px-3 py-2 sm:px-3.5 sm:py-2.5 rounded-xl bg-white/80 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700 font-semibold text-slate-900 dark:text-slate-100 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#0E3832] dark:focus:ring-amber-400"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3">
+            <div>
               <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1 text-xs">Client Status</label>
               <select
                 value={status}
@@ -254,17 +281,6 @@ export const AddClientModal: React.FC<AddClientModalProps> = ({
                 <option value="Pending Deposit">Pending Deposit</option>
                 <option value="Archived">Archived</option>
               </select>
-            </div>
-
-            <div>
-              <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1 text-xs">Style Preference / Garment Tag</label>
-              <input
-                type="text"
-                value={stylePreference}
-                onChange={(e) => setStylePreference(e.target.value)}
-                placeholder="e.g. Vlisco Kente Gown, Corset Evening Dress"
-                className="w-full px-3 py-2 sm:px-3.5 sm:py-2.5 rounded-xl bg-white/80 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700 font-semibold text-slate-900 dark:text-slate-100 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#0E3832] dark:focus:ring-amber-400"
-              />
             </div>
           </div>
 

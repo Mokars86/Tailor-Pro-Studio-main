@@ -1,37 +1,54 @@
 import React, { useState } from 'react';
-import { X, Printer, Phone, MessageSquare, Download, Check, Copy, Sparkles, Building2, ShieldCheck, Award } from 'lucide-react';
-import { Client } from '../../types';
+import { X, Phone, MessageSquare, Download, Check, Copy, Sparkles, ShieldCheck, Loader2 } from 'lucide-react';
+import { Client, StudioSettings } from '../../types';
+import { downloadOrShareDocument, generateInvoiceHtml } from '../../utils/mobileDocumentDownloader';
 
 interface InvoiceModalProps {
-  client: Client | null;
+  isOpen?: boolean;
   onClose: () => void;
+  client: Client | null;
+  studioSettings?: StudioSettings;
   studioName?: string;
   momoNumber?: string;
   momoHolderName?: string;
   studioLogoUrl?: string;
+  currency?: string;
 }
 
 export const InvoiceModal: React.FC<InvoiceModalProps> = ({
-  client,
+  isOpen = true,
   onClose,
-  studioName = 'MOKARS STITCHES STUDIO',
-  momoNumber = '0546920418',
-  momoHolderName = 'Mubarik Tuahir Ali',
-  studioLogoUrl
+  client,
+  studioSettings,
+  studioName: studioNameProp,
+  momoNumber: momoNumberProp,
+  momoHolderName: momoHolderNameProp,
+  studioLogoUrl: studioLogoUrlProp,
+  currency: currencyProp
 }) => {
   const [copiedNotice, setCopiedNotice] = useState<boolean>(false);
+  const [downloadNotice, setDownloadNotice] = useState<string | null>(null);
+  const [isExporting, setIsExporting] = useState<boolean>(false);
 
-  if (!client) return null;
+  if (!isOpen || !client) return null;
 
-  const isPaid = client.balanceDue === 0;
-  const invoiceNum = `INV-${client.id ? client.id.toUpperCase().slice(-6) : 'B0B271'}`;
-  const formattedDate = new Date().toLocaleDateString('en-GB', {
+  const totalCost = Number(client.totalCost) || 0;
+  const depositPaid = Number(client.depositPaid) || 0;
+  const balanceDue = client.balanceDue !== undefined ? Number(client.balanceDue) : Math.max(0, totalCost - depositPaid);
+  const isPaid = balanceDue <= 0;
+
+  const invoiceNumber = `INV-${client.id ? client.id.replace(/[^a-zA-Z0-9]/g, '').slice(-4).toUpperCase() : '1001'}`;
+  const currentDate = new Date().toLocaleDateString('en-GB', {
     day: 'numeric',
     month: 'short',
     year: 'numeric'
   });
 
-  const displayStudioName = studioName && studioName !== 'My Atelier Studio' ? studioName : 'MOKARS STITCHES STUDIO';
+  const displayStudioName = studioSettings?.studioName || studioNameProp || 'MOKARS STITCHES STUDIO';
+  const currency = studioSettings?.currency || currencyProp || 'GHS';
+  const momoNumber = studioSettings?.momoNumber || momoNumberProp || '0546920418';
+  const momoHolderName = studioSettings?.momoName || studioSettings?.momoHolderName || momoHolderNameProp || 'Mubarik Tuahir Ali';
+  const studioLogoUrl = studioSettings?.studioLogoUrl || studioSettings?.logoUrl || studioLogoUrlProp || '';
 
   const formatStage = (stage?: string) => {
     if (!stage) return 'Consultation';
@@ -40,22 +57,22 @@ export const InvoiceModal: React.FC<InvoiceModalProps> = ({
 
   const getWhatsAppMessageText = () => {
     return (
-      `*${displayStudioName.toUpperCase()} - OFFICIAL INVOICE #${invoiceNum}*\n` +
+      `*${displayStudioName.toUpperCase()} - OFFICIAL INVOICE #${invoiceNumber}*\n` +
       `------------------------------------------\n` +
       `👤 *Billed To:* ${client.name}\n` +
       `📞 *Phone:* ${client.phone || 'N/A'}\n` +
       `👗 *Garment Order:* ${client.garmentTag || 'Custom Order'}\n` +
       `✂️ *Runway Stage:* ${formatStage(client.runwayStage)}\n` +
-      `📅 *Date:* ${formattedDate}\n` +
+      `📅 *Date:* ${currentDate}\n` +
       `------------------------------------------\n` +
-      `💵 *Total Cost:* GHS ${client.totalCost?.toLocaleString()}\n` +
-      `✅ *Deposit Paid:* GHS ${client.depositPaid?.toLocaleString()}\n` +
-      `💰 *Balance Due:* GHS ${client.balanceDue?.toLocaleString()}\n` +
+      `💵 *Total Cost:* ${currency} ${totalCost.toLocaleString()}\n` +
+      `✅ *Deposit Paid:* ${currency} ${depositPaid.toLocaleString()}\n` +
+      `💰 *Balance Due:* ${currency} ${balanceDue.toLocaleString()}\n` +
       `------------------------------------------\n` +
       `📌 *Status:* ${isPaid ? 'PAID IN FULL ✓' : 'BALANCE OUTSTANDING ⏳'}\n\n` +
       `💳 *Mobile Money (MoMo) Payment Details:*\n` +
       `Number: ${momoNumber} (${momoHolderName})\n` +
-      `Reference: #${invoiceNum}\n\n` +
+      `Reference: #${invoiceNumber}\n\n` +
       `Thank you for choosing ${displayStudioName}! ✂️✨`
     );
   };
@@ -73,8 +90,52 @@ export const InvoiceModal: React.FC<InvoiceModalProps> = ({
     setTimeout(() => setCopiedNotice(false), 2500);
   };
 
-  const handleDownloadInvoice = () => {
-    window.print();
+  const handleDownloadInvoice = async () => {
+    try {
+      setIsExporting(true);
+      setDownloadNotice('Preparing invoice for download / sharing...');
+
+      const html = generateInvoiceHtml({
+        invoiceNumber,
+        date: currentDate,
+        client: {
+          name: client.name || 'Client',
+          email: client.email,
+          phone: client.phone,
+          garmentTag: client.garmentTag,
+          totalCost,
+          depositPaid,
+          balanceDue,
+          notes: client.notes
+        },
+        studioSettings: {
+          studioName: displayStudioName,
+          ownerName: studioSettings?.ownerName,
+          phone: studioSettings?.phone,
+          email: studioSettings?.email,
+          currency,
+          momoNumber,
+          momoName: momoHolderName,
+          studioLogoUrl
+        }
+      });
+
+      const res = await downloadOrShareDocument({
+        filename: `Invoice_${invoiceNumber}_${(client.name || 'Client').replace(/[^a-zA-Z0-9_-]/g, '_')}.html`,
+        title: `Invoice #${invoiceNumber} — ${client.name || 'Client'}`,
+        htmlContent: html,
+        text: `Official Invoice #${invoiceNumber} for ${client.name} (${currency} ${totalCost})`
+      });
+
+      setDownloadNotice(res.message || 'Invoice ready!');
+      setTimeout(() => setDownloadNotice(null), 4000);
+    } catch (err: any) {
+      console.error('Invoice download failed:', err);
+      setDownloadNotice('Unable to export invoice. Please try again.');
+      setTimeout(() => setDownloadNotice(null), 4000);
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   return (
@@ -82,13 +143,11 @@ export const InvoiceModal: React.FC<InvoiceModalProps> = ({
       onClick={onClose}
       className="fixed inset-0 z-[100] bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 overflow-y-auto animate-fade-in font-['Outfit'] select-none"
     >
-      
       {/* Invoice Modal Window */}
       <div
         onClick={(e) => e.stopPropagation()}
         className="w-full max-w-lg my-auto bg-white dark:bg-[#061E1B] rounded-[32px] p-4 xs:p-6 sm:p-7 space-y-4 sm:space-y-5 shadow-2xl border-2 border-[#DCA134] relative overflow-hidden print:p-0 print:border-none print:shadow-none print:bg-white text-slate-900 dark:text-slate-100"
       >
-        
         {/* Soft Ambient Glow Orbs (Hidden in Print) */}
         <div className="absolute -top-16 -right-16 w-56 h-56 bg-[#DCA134]/15 rounded-full blur-3xl pointer-events-none print:hidden" />
         <div className="absolute -bottom-16 -left-16 w-48 h-48 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none print:hidden" />
@@ -106,7 +165,7 @@ export const InvoiceModal: React.FC<InvoiceModalProps> = ({
           <X className="w-4 h-4 xs:w-5 xs:h-5 stroke-[2.5]" />
         </button>
 
-        {/* 1. Header Banner: Studio Branding & Invoice Specs (iPhone SE Responsive) */}
+        {/* 1. Header Banner: Studio Branding & Invoice Specs */}
         <div className="flex flex-col xs:flex-row items-start justify-between border-b-2 border-[#DCA134]/30 pb-3.5 pr-10 xs:pr-12 relative z-10 gap-3">
           <div className="flex items-center gap-2.5 min-w-0">
             {studioLogoUrl ? (
@@ -135,10 +194,10 @@ export const InvoiceModal: React.FC<InvoiceModalProps> = ({
             </span>
             <div className="text-right xs:mt-1">
               <p className="text-xs font-mono font-black text-slate-900 dark:text-amber-200">
-                #{invoiceNum}
+                #{invoiceNumber}
               </p>
               <p className="text-[10px] sm:text-[10.5px] font-bold text-slate-500 dark:text-slate-400">
-                Date: <span className="font-black text-slate-800 dark:text-slate-200">{formattedDate}</span>
+                Date: <span className="font-black text-slate-800 dark:text-slate-200">{currentDate}</span>
               </p>
             </div>
           </div>
@@ -184,13 +243,13 @@ export const InvoiceModal: React.FC<InvoiceModalProps> = ({
               {client.garmentTag || 'Custom Order'} (Tailoring, Materials & Fitting Assembly)
             </span>
             <span className="font-mono font-black text-[#0D3B36] dark:text-amber-300">
-              GHS {client.totalCost?.toLocaleString()}
+              {currency} {totalCost.toLocaleString()}
             </span>
           </div>
 
           <div className="flex items-center justify-between text-xs font-bold text-emerald-700 dark:text-emerald-400 border-t border-slate-100 dark:border-slate-800/60 pt-2">
             <span>Less Deposit / Advance Paid</span>
-            <span className="font-mono font-black">- GHS {client.depositPaid?.toLocaleString()}</span>
+            <span className="font-mono font-black">- {currency} {depositPaid.toLocaleString()}</span>
           </div>
         </div>
 
@@ -224,7 +283,7 @@ export const InvoiceModal: React.FC<InvoiceModalProps> = ({
               {isPaid ? 'TOTAL PAID' : 'BALANCE DUE'}
             </span>
             <div className="font-mono font-black text-xl sm:text-2xl mt-0.5 text-[#0D3B36] dark:text-amber-300">
-              GHS {(isPaid ? client.totalCost : client.balanceDue)?.toLocaleString()}
+              {currency} {(isPaid ? totalCost : balanceDue).toLocaleString()}
             </div>
           </div>
         </div>
@@ -239,7 +298,7 @@ export const InvoiceModal: React.FC<InvoiceModalProps> = ({
             Number: <strong className="font-mono text-emerald-600 dark:text-emerald-400 font-black">{momoNumber}</strong> <span className="text-slate-500 font-medium">({momoHolderName})</span>
           </p>
           <p className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">
-            Please quote invoice <strong className="font-mono text-slate-700 dark:text-slate-300">#{invoiceNum}</strong> as reference when making payment.
+            Please quote invoice <strong className="font-mono text-slate-700 dark:text-slate-300">#{invoiceNumber}</strong> as reference when making payment.
           </p>
         </div>
 
@@ -251,17 +310,26 @@ export const InvoiceModal: React.FC<InvoiceModalProps> = ({
           </div>
         )}
 
+        {/* Download Notice Banner */}
+        {downloadNotice && (
+          <div className="p-2.5 rounded-xl bg-amber-500/15 border border-amber-500/30 text-amber-900 dark:text-amber-200 text-xs font-bold flex items-center justify-center gap-2 animate-fade-in relative z-10">
+            <Sparkles className="w-4 h-4 text-[#DCA134]" />
+            <span>{downloadNotice}</span>
+          </div>
+        )}
+
         {/* 6. Action Buttons Grid (Hidden in Print) */}
         <div className="space-y-2 relative z-10 pt-1 print:hidden">
           <div className="grid grid-cols-2 gap-2.5">
             {/* Download / Print Invoice Button */}
             <button
               type="button"
+              disabled={isExporting}
               onClick={handleDownloadInvoice}
-              className="py-3 px-4 rounded-2xl bg-[#0D3B36] hover:bg-[#082824] text-[#DCA134] font-black text-xs flex items-center justify-center gap-2 border border-[#DCA134]/50 shadow-md transition-all hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
+              className="py-3 px-4 rounded-2xl bg-[#0D3B36] hover:bg-[#082824] text-[#DCA134] font-black text-xs flex items-center justify-center gap-2 border border-[#DCA134]/50 shadow-md transition-all hover:scale-[1.02] active:scale-[0.98] cursor-pointer disabled:opacity-60"
             >
-              <Download className="w-4 h-4 text-[#DCA134]" />
-              <span>Download Invoice (PDF)</span>
+              {isExporting ? <Loader2 className="w-4 h-4 animate-spin text-[#DCA134]" /> : <Download className="w-4 h-4 text-[#DCA134]" />}
+              <span>{isExporting ? 'Exporting...' : 'Download Invoice (PDF)'}</span>
             </button>
 
             {/* Share to WhatsApp Button */}
@@ -295,7 +363,6 @@ export const InvoiceModal: React.FC<InvoiceModalProps> = ({
             </button>
           </div>
         </div>
-
       </div>
     </div>
   );

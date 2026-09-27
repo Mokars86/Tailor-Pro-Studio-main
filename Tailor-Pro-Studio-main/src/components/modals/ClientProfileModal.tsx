@@ -61,6 +61,7 @@ export const ClientProfileModal: React.FC<ClientProfileModalProps> = ({
   const [editGarmentTag, setEditGarmentTag] = useState(client?.garmentTag || '');
   const [editTotalBilling, setEditTotalBilling] = useState<number>(client?.totalCost || 0);
   const [editPaidDeposit, setEditPaidDeposit] = useState<number>(client?.depositPaid || 0);
+  const [editFittingDate, setEditFittingDate] = useState(client?.fittingDate || '');
 
   if (!isOpen || !client) return null;
 
@@ -77,6 +78,7 @@ export const ClientProfileModal: React.FC<ClientProfileModalProps> = ({
     setEditGarmentTag(client.garmentTag || '');
     setEditTotalBilling(client.totalCost || 0);
     setEditPaidDeposit(client.depositPaid || 0);
+    setEditFittingDate(client.fittingDate || '');
     setIsEditModalOpen(true);
   };
 
@@ -91,6 +93,7 @@ export const ClientProfileModal: React.FC<ClientProfileModalProps> = ({
       initials: editName.split(' ').map((n) => n[0]).join('').toUpperCase() || 'CL',
       phone: editPhone,
       garmentTag: editGarmentTag,
+      fittingDate: editFittingDate || undefined,
       totalCost: updatedTotal,
       depositPaid: updatedDeposit,
       balanceDue: updatedBalance
@@ -292,6 +295,28 @@ export const ClientProfileModal: React.FC<ClientProfileModalProps> = ({
                   >
                     <MessageSquare className="w-4 h-4 fill-white text-white" />
                     <span>WhatsApp</span>
+                  </button>
+                </div>
+
+                <div className="p-3 bg-[#EBF5F0]/80 dark:bg-slate-800/80 rounded-2xl flex items-center justify-between border border-emerald-900/10 dark:border-slate-700">
+                  <div className="flex items-center gap-3 text-xs font-bold text-slate-800 dark:text-slate-200">
+                    <div className="w-9 h-9 rounded-xl bg-[#0D3B36] text-amber-300 flex items-center justify-center shrink-0">
+                      <Calendar className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <p className="text-[10px] text-slate-500 dark:text-slate-400 font-extrabold uppercase">Expected Fitting Date</p>
+                      <p className="text-sm font-black text-[#0D3B36] dark:text-amber-300">
+                        {client.fittingDate ? new Date(client.fittingDate).toLocaleDateString('en-US', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' }) : 'Pending Schedule'}
+                      </p>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={handleOpenEditModal}
+                    className="py-1.5 px-3 rounded-xl bg-white dark:bg-slate-700 hover:bg-slate-100 text-slate-700 dark:text-slate-200 font-bold text-xs border border-slate-200 dark:border-slate-600 transition-all cursor-pointer shadow-2xs"
+                  >
+                    Change Date
                   </button>
                 </div>
               </div>
@@ -663,6 +688,18 @@ export const ClientProfileModal: React.FC<ClientProfileModalProps> = ({
                   type="text"
                   value={editGarmentTag || ''}
                   onChange={(e) => setEditGarmentTag(e.target.value)}
+                  className="w-full p-3 rounded-xl bg-white dark:bg-slate-800 border border-slate-200/90 dark:border-slate-700 text-sm font-semibold text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-[#0D3B36] dark:focus:ring-amber-400"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 mb-1">
+                  Expected Fitting Date
+                </label>
+                <input
+                  type="date"
+                  value={editFittingDate || ''}
+                  onChange={(e) => setEditFittingDate(e.target.value)}
                   className="w-full p-3 rounded-xl bg-white dark:bg-slate-800 border border-slate-200/90 dark:border-slate-700 text-sm font-semibold text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-[#0D3B36] dark:focus:ring-amber-400"
                 />
               </div>
