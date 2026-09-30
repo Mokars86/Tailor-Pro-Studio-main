@@ -6,8 +6,7 @@ const ASSETS_TO_CACHE = [
   '/pwa-192x192.png',
   '/pwa-512x512.png',
   '/tailor_pro_logo.jpg',
-  '/mokars_tech_logo.png',
-  '/_redirects'
+  '/mokars_tech_logo.png'
 ];
 
 // Install Event: Cache app shell assets
@@ -80,6 +79,64 @@ self.addEventListener('fetch', (event) => {
           return caches.match('/index.html');
         }
       });
+    })
+  );
+});
+
+// Push Event: Handle background push messages
+self.addEventListener('push', (event) => {
+  let data = {
+    title: 'TailorPro Studio Alert',
+    body: 'New studio activity update.',
+    icon: '/pwa-192x192.png',
+    badge: '/favicon-32x32.png',
+    tag: 'tailorpro-alert'
+  };
+
+  if (event.data) {
+    try {
+      const payload = event.data.json();
+      data = {
+        title: payload.title || data.title,
+        body: payload.body || data.body,
+        icon: payload.icon || data.icon,
+        badge: payload.badge || data.badge,
+        tag: payload.tag || `tailorpro-${Date.now()}`,
+        data: payload.data || {}
+      };
+    } catch {
+      data.body = event.data.text();
+    }
+  }
+
+  const options = {
+    body: data.body,
+    icon: data.icon,
+    badge: data.badge,
+    tag: data.tag,
+    vibrate: [200, 100, 200],
+    data: data.data || {}
+  };
+
+  event.waitUntil(self.registration.showNotification(data.title, options));
+});
+
+// Notification Click Event: Focus app or open window
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+      // If a window client is already open, focus it
+      for (const client of clientList) {
+        if (client.url && 'focus' in client) {
+          return client.focus();
+        }
+      }
+      // Otherwise open a new window
+      if (self.clients.openWindow) {
+        return self.clients.openWindow('/');
+      }
     })
   );
 });

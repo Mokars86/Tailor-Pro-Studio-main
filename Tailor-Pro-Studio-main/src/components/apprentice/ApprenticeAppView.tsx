@@ -31,6 +31,8 @@ interface ApprenticeAppViewProps {
   onSwitchRoleToMaster: () => void;
   onLogout: () => void;
   onCompleteTask?: (taskId: string) => void;
+  unreadNotificationCount?: number;
+  onOpenNotificationCenter?: () => void;
 }
 
 export const ApprenticeAppView: React.FC<ApprenticeAppViewProps> = ({
@@ -51,7 +53,9 @@ export const ApprenticeAppView: React.FC<ApprenticeAppViewProps> = ({
   onOpenAddNewClient,
   onSwitchRoleToMaster,
   onLogout,
-  onCompleteTask
+  onCompleteTask,
+  unreadNotificationCount = 0,
+  onOpenNotificationCenter
 }) => {
   const [activeTab, setActiveTab] = useState<ApprenticeTab>('production');
 
@@ -88,6 +92,8 @@ export const ApprenticeAppView: React.FC<ApprenticeAppViewProps> = ({
         onOpenSettings={() => setIsSettingsOpen(true)}
         onOpenTakeTape={handleTriggerTakeTape}
         onSwitchRoleToMaster={onSwitchRoleToMaster}
+        unreadNotificationCount={unreadNotificationCount}
+        onOpenNotificationCenter={onOpenNotificationCenter}
       />
 
       {/* Main Dynamic View Area */}

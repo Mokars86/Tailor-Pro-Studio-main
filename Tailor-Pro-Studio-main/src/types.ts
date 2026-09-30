@@ -239,6 +239,28 @@ export interface GraduationCertificatePayment {
   paymentMethod?: 'MoMo' | 'Card' | 'License';
 }
 
+export type PushNotificationType =
+  | 'TASK_ASSIGNED'
+  | 'TASK_SUBMITTED'
+  | 'TASK_PASSED'
+  | 'MEASUREMENT_RECORDED'
+  | 'GARMENT_STAGE_UPDATED'
+  | 'APPRENTICE_LINKED'
+  | 'CERTIFICATE_UNLOCKED'
+  | 'GENERAL_ANNOUNCEMENT';
 
-
-
+export interface AppNotification {
+  id: string;
+  type: PushNotificationType;
+  title: string;
+  body: string;
+  timestamp: string;
+  read: boolean;
+  targetRole: 'all' | 'master' | 'apprentice';
+  targetUserId?: string;
+  targetUserName?: string;
+  senderName: string;
+  senderRole: 'Master' | 'Apprentice' | 'System';
+  actionUrl?: string;
+  metadata?: Record<string, any>;
+}

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Settings, Award, Sun, Moon, Palette, UserCircle2, Download, RefreshCw, Crown, Smartphone } from 'lucide-react';
+import { Settings, Award, Sun, Moon, Palette, UserCircle2, Download, RefreshCw, Crown, Smartphone, Bell } from 'lucide-react';
 import { StudioSettings } from '../types';
 import { usePWAInstall } from '../utils/usePWAInstall';
 
@@ -20,6 +20,8 @@ interface HeaderProps {
   theme?: 'light' | 'dark';
   onToggleTheme?: (newTheme: 'light' | 'dark') => void;
   supabaseStatus?: 'connected' | 'syncing' | 'offline';
+  unreadNotificationCount?: number;
+  onOpenNotificationCenter?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -33,7 +35,9 @@ export const Header: React.FC<HeaderProps> = ({
   onManualSync,
   theme = 'light',
   onToggleTheme,
-  supabaseStatus = 'connected'
+  supabaseStatus = 'connected',
+  unreadNotificationCount = 0,
+  onOpenNotificationCenter
 }) => {
   const { isInstalled } = usePWAInstall();
 
@@ -168,6 +172,23 @@ export const Header: React.FC<HeaderProps> = ({
             >
               <Award className={`w-3 h-3 sm:w-3.5 sm:h-3.5 shrink-0 ${subscriptionTier === 'FREE' ? 'text-slate-400' : 'text-[#DCA134]'}`} />
               <span className="hidden xs:inline">{subscriptionTier === 'FREE' ? 'Cert 🔒' : 'Cert 📜'}</span>
+            </button>
+          )}
+
+          {/* Studio Notifications Bell Button */}
+          {onOpenNotificationCenter && (
+            <button
+              type="button"
+              onClick={onOpenNotificationCenter}
+              className="relative p-1.5 sm:p-2.5 rounded-full bg-white/80 dark:bg-slate-800/90 hover:bg-white dark:hover:bg-slate-700 text-[#0D3B36] dark:text-amber-300 border border-white/90 dark:border-slate-700 transition-all shadow-2xs flex items-center justify-center cursor-pointer shrink-0"
+              title="Studio Push Notifications & Alerts"
+            >
+              <Bell className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#0D3B36] dark:text-amber-300" />
+              {unreadNotificationCount > 0 && (
+                <span className="absolute -top-1 -right-1 px-1.5 py-0.2 min-w-[18px] h-[18px] rounded-full bg-rose-500 text-white text-[9px] font-black flex items-center justify-center border-2 border-white dark:border-[#061E1B] shadow-sm animate-pulse">
+                  {unreadNotificationCount > 99 ? '99+' : unreadNotificationCount}
+                </span>
+              )}
             </button>
           )}
 

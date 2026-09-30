@@ -26,67 +26,100 @@ async function startServer() {
     });
   }
 
-  // API endpoint for Hands-Free Voice Dictation Parsing
+  // API endpoint for Hands-Free Voice Dictation & Audio Tape Parsing
   app.post("/api/parse-dictation", async (req, res) => {
     try {
-      const { transcript } = req.body;
-      if (!transcript) {
-        return res.status(400).json({ error: "Transcript is required" });
+      const { transcript, audioBase64, mimeType } = req.body;
+      if (!transcript && !audioBase64) {
+        return res.status(400).json({ error: "Either transcript or audioBase64 is required" });
       }
 
       if (!ai) {
-        return res.json({ measurements: {}, success: false, reason: "No GEMINI_API_KEY available" });
+        return res.json({ measurements: {}, transcript: transcript || "", success: false, reason: "No GEMINI_API_KEY available" });
       }
 
-      const prompt = `You are an expert tailoring assistant. Parse the following hands-free spoken dictation from a fitting session into standard garment measurement key-value pairs (numerical or decimal string, in inches).
-      Spoken dictation text: "${transcript}"
+      const prompt = `You are an expert tailoring assistant. Parse the spoken dictation from a garment fitting session into:
+1. transcript: A verbatim or cleanly punctuated text transcription of everything spoken.
+2. measurements: Standard garment measurement key-value pairs (numerical or decimal string, in inches).
 
-      Map terms to these specific keys:
-      - bust: bust, chest (if female), bustline
-      - chest: chest (if male), chestline
-      - shoulder: shoulder width, shoulder across
-      - underbust: underbust, under bust, shoulder to underbust
-      - breastLength: breast length, shoulder to bust point, apex
-      - neck: neck, neck circumference
-      - sleeveLength: sleeve length, sleeve, arm length
-      - roundSleeves: round sleeve, bicep, arm hole, sleeve width
-      - topLength: top length, shirt length, blouse length
-      - waist: waist, waistline, natural waist
-      - hips: hips, hip, hip line
-      - skirtLength: skirt length
-      - fullLength: full length, gown length, dress length, total length
-      - thigh: thigh, upper leg
-      - knee: knee, knee line
-      - ankle: ankle, leg opening
-      - inseam: inseam, trouser length, inside leg
+Map terms to these specific keys:
+- bust: bust, chest (if female), bustline
+- chest: chest (if male), chestline
+- shoulder: shoulder width, shoulder across
+- underbust: underbust, under bust, shoulder to underbust
+- breastLength: breast length, shoulder to bust point, apex
+- neck: neck, neck circumference
+- sleeveLength: sleeve length, sleeve, arm length
+- roundSleeves: round sleeve, bicep, arm hole, sleeve width
+- topLength: top length, shirt length, blouse length
+- waist: waist, waistline, natural waist
+- hips: hips, hip, hip line
+- skirtLength: skirt length
+- fullLength: full length, gown length, dress length, total length
+- thigh: thigh, upper leg
+- knee: knee, knee line
+- ankle: ankle, leg opening
+- inseam: inseam, trouser length, inside leg
 
-      Extract numeric measurements accurately (e.g. "36", "28.5", "14"). Return as string numbers.`;
+Extract numeric measurements accurately (e.g. "36", "28.5", "14"). Return as string numbers.`;
+
+      let contents: any;
+      if (audioBase64) {
+        let cleanBase64 = audioBase64;
+        if (cleanBase64.includes(";base64,")) {
+          cleanBase64 = cleanBase64.split(";base64,")[1];
+        }
+        let detectedMime = mimeType || "audio/webm";
+        if (detectedMime.includes(";")) {
+          detectedMime = detectedMime.split(";")[0];
+        }
+
+        contents = [
+          {
+            inlineData: {
+              mimeType: detectedMime,
+              data: cleanBase64
+            }
+          },
+          {
+            text: prompt
+          }
+        ];
+      } else {
+        contents = `${prompt}\n\nSpoken dictation text: "${transcript}"`;
+      }
 
       const response = await ai.models.generateContent({
-        model: "gemini-3.6-flash",
-        contents: prompt,
+        model: "gemini-2.5-flash",
+        contents: contents,
         config: {
           responseMimeType: "application/json",
           responseSchema: {
             type: Type.OBJECT,
             properties: {
-              bust: { type: Type.STRING },
-              chest: { type: Type.STRING },
-              shoulder: { type: Type.STRING },
-              underbust: { type: Type.STRING },
-              breastLength: { type: Type.STRING },
-              neck: { type: Type.STRING },
-              sleeveLength: { type: Type.STRING },
-              roundSleeves: { type: Type.STRING },
-              topLength: { type: Type.STRING },
-              waist: { type: Type.STRING },
-              hips: { type: Type.STRING },
-              skirtLength: { type: Type.STRING },
-              fullLength: { type: Type.STRING },
-              thigh: { type: Type.STRING },
-              knee: { type: Type.STRING },
-              ankle: { type: Type.STRING },
-              inseam: { type: Type.STRING }
+              transcript: { type: Type.STRING },
+              measurements: {
+                type: Type.OBJECT,
+                properties: {
+                  bust: { type: Type.STRING },
+                  chest: { type: Type.STRING },
+                  shoulder: { type: Type.STRING },
+                  underbust: { type: Type.STRING },
+                  breastLength: { type: Type.STRING },
+                  neck: { type: Type.STRING },
+                  sleeveLength: { type: Type.STRING },
+                  roundSleeves: { type: Type.STRING },
+                  topLength: { type: Type.STRING },
+                  waist: { type: Type.STRING },
+                  hips: { type: Type.STRING },
+                  skirtLength: { type: Type.STRING },
+                  fullLength: { type: Type.STRING },
+                  thigh: { type: Type.STRING },
+                  knee: { type: Type.STRING },
+                  ankle: { type: Type.STRING },
+                  inseam: { type: Type.STRING }
+                }
+              }
             }
           }
         }
@@ -94,13 +127,21 @@ async function startServer() {
 
       const parsed = JSON.parse(response.text || "{}");
       const cleanMeasurements: Record<string, string> = {};
-      Object.entries(parsed).forEach(([key, val]) => {
-        if (val && typeof val === 'string' && val.trim() !== '') {
-          cleanMeasurements[key] = val.trim();
-        }
-      });
+      if (parsed.measurements && typeof parsed.measurements === "object") {
+        Object.entries(parsed.measurements).forEach(([key, val]) => {
+          if (val && typeof val === 'string' && val.trim() !== '') {
+            cleanMeasurements[key] = val.trim();
+          }
+        });
+      }
 
-      return res.json({ measurements: cleanMeasurements, success: true });
+      const transcribedText = parsed.transcript || transcript || "";
+
+      return res.json({
+        transcript: transcribedText,
+        measurements: cleanMeasurements,
+        success: true
+      });
     } catch (err: any) {
       console.error("Error parsing dictation:", err);
       return res.status(500).json({ error: err.message || "Failed to parse dictation" });

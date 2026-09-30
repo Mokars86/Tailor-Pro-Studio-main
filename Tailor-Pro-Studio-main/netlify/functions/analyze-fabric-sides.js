@@ -1,6 +1,6 @@
-const { GoogleGenAI, Type } = require("@google/genai");
+import { GoogleGenAI, Type } from "@google/genai";
 
-exports.handler = async function(event, context) {
+export const handler = async function(event, context) {
   if (event.httpMethod !== "POST") {
     return {
       statusCode: 405,

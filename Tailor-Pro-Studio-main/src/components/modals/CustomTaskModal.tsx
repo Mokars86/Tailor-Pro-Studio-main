@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
-import { X, Sparkles, ClipboardList, ChevronDown, Check } from 'lucide-react';
-import { Apprentice } from '../../types';
+import { X, Sparkles, ClipboardList, ChevronDown, Check, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Apprentice, ApprenticeTask } from '../../types';
 
 interface CustomTaskModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSaveTask: (taskTitle: string | { title: string; assignedTo?: string; category?: string; masterNotes?: string }) => void;
   apprentices?: Apprentice[];
+  tasks?: ApprenticeTask[];
 }
 
 export interface StageTemplate {
@@ -221,14 +222,14 @@ export const STAGE_GROUPS = [
       {
         id: 'opt-cd-1',
         displayTitle: 'OPTIONAL COUTURE CORSETRY - TASK 1: UNDERBUST CORSET & RIGILENE BONING',
-        taskTitle: 'Underbust Corset & Rigilene Boning Channels',
+        taskTitle: 'Underbust Corset Rigilene Boning Channeling',
         skillUnit: 'Couture Corsetry',
         masterNotes: 'Channel and cap spiral steel/Rigilene boning for structured underbust and overbust corsets.'
       },
       {
         id: 'opt-cd-2',
         displayTitle: 'OPTIONAL COUTURE CORSETRY - TASK 2: DRESS FORM FABRIC DRAPING',
-        taskTitle: 'Dress Form Fabric Draping & Pinning',
+        taskTitle: 'Dress Form Fabric Draping & Cowl Molding',
         skillUnit: 'Fabric Draping',
         masterNotes: 'Drape calico directly on dress form mannequins to create fluid asymmetrical cowls and gowns.'
       }
@@ -259,7 +260,8 @@ export const CustomTaskModal: React.FC<CustomTaskModalProps> = ({
   isOpen,
   onClose,
   onSaveTask,
-  apprentices = []
+  apprentices = [],
+  tasks = []
 }) => {
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>('');
   const [selectedDisplayTitle, setSelectedDisplayTitle] = useState<string>('Custom Task or Select Stage Template...');
@@ -272,6 +274,38 @@ export const CustomTaskModal: React.FC<CustomTaskModalProps> = ({
   const [isStagePickerOpen, setIsStagePickerOpen] = useState(false);
 
   if (!isOpen) return null;
+
+  const targetApprenticeObj = apprentices.find((a) => a.id === assignedApprentice);
+
+  // Check if a stage template task has been passed by the selected apprentice
+  const checkTaskPassed = (template: StageTemplate) => {
+    if (!targetApprenticeObj || !tasks || tasks.length === 0) return false;
+
+    const apprenticeTasks = tasks.filter(
+      (t) =>
+        t.assignedTo === 'all' ||
+        t.assignedTo === targetApprenticeObj.id ||
+        (targetApprenticeObj.name && t.assignedTo?.toLowerCase() === targetApprenticeObj.name.toLowerCase())
+    );
+
+    const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, '');
+    const normT = norm(template.taskTitle);
+    const normD = norm(template.displayTitle);
+
+    return apprenticeTasks.some((t) => {
+      if (t.status !== 'passed') return false;
+      const tNorm = norm(t.title || '');
+      return tNorm === normT || tNorm === normD || tNorm.includes(normT) || normT.includes(tNorm);
+    });
+  };
+
+  const isCurrentTemplatePassed = selectedTemplateId ? checkTaskPassed({
+    id: selectedTemplateId,
+    displayTitle: selectedDisplayTitle,
+    taskTitle: title,
+    skillUnit,
+    masterNotes
+  }) : false;
 
   const handleSelectTemplate = (template: StageTemplate | null) => {
     if (!template) {
@@ -340,11 +374,30 @@ export const CustomTaskModal: React.FC<CustomTaskModalProps> = ({
               <button
                 type="button"
                 onClick={() => setIsStagePickerOpen(true)}
-                className="w-full px-4 py-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-700 text-sm font-semibold text-slate-800 dark:text-slate-200 flex items-center justify-between hover:border-slate-300 dark:hover:border-slate-600 transition-colors text-left shadow-2xs cursor-pointer"
+                className={`w-full px-4 py-3 rounded-2xl bg-white dark:bg-slate-900 border ${
+                  isCurrentTemplatePassed
+                    ? 'border-emerald-500 ring-2 ring-emerald-500/20'
+                    : 'border-slate-200/90 dark:border-slate-700'
+                } text-sm font-semibold text-slate-800 dark:text-slate-200 flex items-center justify-between hover:border-slate-300 dark:hover:border-slate-600 transition-colors text-left shadow-2xs cursor-pointer`}
               >
-                <span className="truncate pr-2">{selectedDisplayTitle}</span>
+                <div className="flex items-center gap-2 min-w-0 pr-2">
+                  {isCurrentTemplatePassed && (
+                    <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                  )}
+                  <span className="truncate">{selectedDisplayTitle}</span>
+                </div>
                 <ChevronDown className="w-4 h-4 text-slate-500 dark:text-slate-400 shrink-0" />
               </button>
+
+              {/* Passed Notice Callout */}
+              {isCurrentTemplatePassed && targetApprenticeObj && (
+                <div className="mt-2 p-2.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-400/60 text-emerald-900 dark:text-emerald-200 text-xs font-bold flex items-center gap-2 animate-fade-in">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <span>
+                    Note: <strong>{targetApprenticeObj.name}</strong> has already passed this duty ✓. Re-assigning will assign it for additional practice.
+                  </span>
+                </div>
+              )}
             </div>
 
             {/* Task Title / Duty */}
@@ -446,6 +499,23 @@ export const CustomTaskModal: React.FC<CustomTaskModalProps> = ({
         <div className="fixed inset-0 z-[60] bg-black/70 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 font-['Outfit'] animate-fade-in">
           <div className="w-full max-w-lg bg-white dark:bg-[#092825] rounded-[32px] max-h-[85vh] flex flex-col shadow-2xl border border-slate-200/90 dark:border-white/10 overflow-hidden text-slate-900 dark:text-slate-100">
             
+            {/* Header of Stage Picker */}
+            <div className="p-4 sm:p-5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between shrink-0">
+              <div className="flex items-center gap-2">
+                <ClipboardList className="w-5 h-5 text-[#DCA134]" />
+                <h3 className="font-extrabold text-base text-[#0D3B36] dark:text-amber-300">
+                  Select Stage Curriculum Duty
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsStagePickerOpen(false)}
+                className="p-1 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
             {/* Scrollable List of Stages */}
             <div className="overflow-y-auto p-4 sm:p-6 space-y-4">
               
@@ -487,6 +557,7 @@ export const CustomTaskModal: React.FC<CustomTaskModalProps> = ({
                   <div className="space-y-1">
                     {group.tasks.map((task) => {
                       const isSelected = selectedTemplateId === task.id;
+                      const isPassed = checkTaskPassed(task);
 
                       return (
                         <button
@@ -496,23 +567,44 @@ export const CustomTaskModal: React.FC<CustomTaskModalProps> = ({
                           className={`w-full py-3.5 px-4 rounded-2xl flex items-center justify-between gap-3 text-left transition-colors border-b border-slate-100 dark:border-slate-800 last:border-b-0 ${
                             isSelected
                               ? 'bg-slate-100 dark:bg-slate-800 font-extrabold text-slate-900 dark:text-white'
+                              : isPassed
+                              ? 'bg-emerald-50/70 dark:bg-emerald-950/30 hover:bg-emerald-100/60 dark:hover:bg-emerald-900/40'
                               : 'hover:bg-slate-50 dark:hover:bg-slate-800/60 font-bold text-slate-900 dark:text-slate-200'
                           }`}
                         >
-                          <span className="text-sm uppercase leading-snug tracking-tight text-slate-900 dark:text-slate-100 pr-2">
-                            {task.displayTitle}
-                          </span>
+                          <div className="flex items-center gap-2 pr-2">
+                            {isPassed && (
+                              <span className="px-2 py-0.5 rounded-md bg-emerald-600 text-white text-[9px] font-black uppercase shrink-0 flex items-center gap-0.5">
+                                <Check className="w-2.5 h-2.5 stroke-[3]" />
+                                <span>Passed</span>
+                              </span>
+                            )}
+                            <span
+                              className={`text-sm uppercase leading-snug tracking-tight ${
+                                isPassed
+                                  ? 'text-emerald-900 dark:text-emerald-200 font-bold'
+                                  : 'text-slate-900 dark:text-slate-100'
+                              }`}
+                            >
+                              {task.displayTitle}
+                            </span>
+                          </div>
 
                           {/* Radio Button */}
                           <div
                             className={`w-6 h-6 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors ${
                               isSelected
                                 ? 'border-[#0D3B36] dark:border-amber-400 bg-[#0D3B36] dark:bg-amber-400'
+                                : isPassed
+                                ? 'border-emerald-500 bg-emerald-100 dark:bg-emerald-900/50'
                                 : 'border-slate-400 dark:border-slate-600 bg-transparent'
                             }`}
                           >
                             {isSelected && (
                               <div className="w-2.5 h-2.5 rounded-full bg-white dark:bg-[#0D3B36]" />
+                            )}
+                            {!isSelected && isPassed && (
+                              <Check className="w-3 h-3 text-emerald-600 dark:text-emerald-300" />
                             )}
                           </div>
                         </button>

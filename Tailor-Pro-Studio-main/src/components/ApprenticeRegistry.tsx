@@ -58,6 +58,7 @@ export const ApprenticeRegistry: React.FC<ApprenticeRegistryProps> = ({
 }) => {
   const [curriculumNotice, setCurriculumNotice] = useState<string | null>(null);
   const [isCurriculumOpen, setIsCurriculumOpen] = useState(false);
+  const [selectedCurriculumApprenticeId, setSelectedCurriculumApprenticeId] = useState<string | undefined>(undefined);
   const [selectedCertApprentice, setSelectedCertApprentice] = useState<Apprentice | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [copiedPairCode, setCopiedPairCode] = useState(false);
@@ -390,9 +391,9 @@ export const ApprenticeRegistry: React.FC<ApprenticeRegistryProps> = ({
         </div>
       </div>
 
-      {/* Registry Mode Switcher Pills: Active Trainees vs Graduated Alumni History */}
-      <div className="flex items-center justify-between gap-2 bg-[#041916] p-1.5 rounded-2xl border border-amber-400/30 relative z-10">
-        <div className="inline-flex items-center gap-1">
+      {/* Registry Mode Switcher Pills: Active Trainees vs Graduated Alumni History & Skills Curriculum */}
+      <div className="flex flex-wrap items-center justify-between gap-2 bg-[#041916] p-1.5 rounded-2xl border border-amber-400/30 relative z-10">
+        <div className="inline-flex items-center gap-1 flex-wrap">
           <button
             type="button"
             onClick={() => setRegistryTab('active')}
@@ -419,6 +420,20 @@ export const ApprenticeRegistry: React.FC<ApprenticeRegistryProps> = ({
             <span>Graduated Alumni History 🎓 ({graduatedAlumni.length})</span>
           </button>
         </div>
+
+        {/* Master Skills Curriculum Button */}
+        <button
+          type="button"
+          onClick={() => {
+            setSelectedCurriculumApprenticeId(undefined);
+            setIsCurriculumOpen(true);
+          }}
+          className="px-3.5 py-1.5 rounded-xl bg-[#0D3B36] hover:bg-[#082824] text-amber-300 hover:text-white text-xs font-black flex items-center gap-1.5 border border-amber-400/40 shadow-xs transition-all active:scale-95 cursor-pointer ml-auto"
+          title="Open Master Apprentice Skills Curriculum Template"
+        >
+          <BookOpen className="w-3.5 h-3.5 text-[#DCA134]" />
+          <span>Skills Curriculum 📖</span>
+        </button>
       </div>
 
       {/* Main Apprentice List Grid */}
@@ -758,6 +773,20 @@ export const ApprenticeRegistry: React.FC<ApprenticeRegistryProps> = ({
                                 <span className="truncate">Graduate 🎓</span>
                               </button>
                             )}
+
+                            {/* Curriculum Button */}
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setSelectedCurriculumApprenticeId(apprentice.id);
+                                setIsCurriculumOpen(true);
+                              }}
+                              className="px-2.5 sm:px-3 py-1.5 rounded-xl bg-emerald-700/30 hover:bg-emerald-700/50 text-emerald-200 border border-emerald-500/40 text-[10px] sm:text-xs font-black flex items-center justify-center gap-1 transition-all active:scale-95 cursor-pointer truncate"
+                              title="Open Skills Curriculum for this apprentice"
+                            >
+                              <BookOpen className="w-3.5 h-3.5 text-emerald-300 shrink-0" />
+                              <span className="truncate">Curriculum 📖</span>
+                            </button>
 
                             {/* Assign Duty */}
                             <button
@@ -1172,6 +1201,21 @@ export const ApprenticeRegistry: React.FC<ApprenticeRegistryProps> = ({
                                 );
                               })()}
 
+                              {/* Curriculum Button */}
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setSelectedCurriculumApprenticeId(apprentice.id);
+                                  setIsAllApprenticesModalOpen(false);
+                                  setIsCurriculumOpen(true);
+                                }}
+                                className="px-2.5 sm:px-3 py-1.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 border border-emerald-300 dark:border-emerald-700/60 text-[11px] font-bold flex items-center justify-center gap-1 transition-all cursor-pointer truncate"
+                                title="Open Skills Curriculum for this apprentice"
+                              >
+                                <BookOpen className="w-3.5 h-3.5 shrink-0" />
+                                <span>Curriculum</span>
+                              </button>
+
                               {/* Assign Duty Button */}
                               <button
                                 type="button"
@@ -1355,8 +1399,13 @@ export const ApprenticeRegistry: React.FC<ApprenticeRegistryProps> = ({
       {/* Curriculum Template Selection Modal */}
       <CurriculumTemplateModal
         isOpen={isCurriculumOpen}
-        onClose={() => setIsCurriculumOpen(false)}
+        onClose={() => {
+          setIsCurriculumOpen(false);
+          setSelectedCurriculumApprenticeId(undefined);
+        }}
         apprentices={apprentices}
+        tasks={tasks}
+        initialApprenticeId={selectedCurriculumApprenticeId}
         onAssignTask={handleAssignTaskFromModal}
       />
 

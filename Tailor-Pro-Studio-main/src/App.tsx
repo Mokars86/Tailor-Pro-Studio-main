@@ -97,6 +97,25 @@ import {
   setWorkspaceActivated
 } from './services/licenseService';
 
+import { AppNotification } from './types';
+import {
+  initPushNotificationService,
+  subscribeToNotificationEvents,
+  getStoredNotifications,
+  markAllNotificationsAsRead,
+  clearAllNotifications,
+  notifyTaskAssigned,
+  notifyTaskSubmitted,
+  notifyTaskPassed,
+  notifyMeasurementRecorded,
+  notifyGarmentStageUpdated,
+  notifyApprenticeLinked,
+  notifyCertificateUnlocked
+} from './services/pushNotificationService';
+import { NotificationToastBanner } from './components/notifications/NotificationToastBanner';
+import { NotificationCenterModal } from './components/notifications/NotificationCenterModal';
+import { PushPermissionBanner } from './components/notifications/PushPermissionBanner';
+
 export default function App() {
   // Splash Screen State
   const [showSplash, setShowSplash] = useState<boolean>(true);
@@ -262,6 +281,31 @@ export default function App() {
   // Supabase Sync & Network Status
   const [supabaseStatus, setSupabaseStatus] = useState<'connected' | 'syncing' | 'offline'>('syncing');
   const [offlineNotice, setOfflineNotice] = useState<string | null>(null);
+
+  // Push Notifications State & History
+  const [notifications, setNotifications] = useState<AppNotification[]>(() => getStoredNotifications());
+  const [activeToastNotification, setActiveToastNotification] = useState<AppNotification | null>(null);
+  const [isNotificationCenterOpen, setIsNotificationCenterOpen] = useState<boolean>(false);
+
+  const unreadNotificationCount = notifications.filter((n) => !n.read).length;
+
+  // Initialize Realtime Push Notification listener across master and apprentice devices
+  useEffect(() => {
+    const role = userRole.startsWith('Apprentice') ? 'apprentice' : 'master';
+    const userName = activeUserFullName || (activeUserEmail ? activeUserEmail.split('@')[0] : '');
+
+    const cleanup = initPushNotificationService(role, userName);
+
+    const unsubscribeEvents = subscribeToNotificationEvents((incomingNotif) => {
+      setNotifications(getStoredNotifications());
+      setActiveToastNotification(incomingNotif);
+    });
+
+    return () => {
+      cleanup();
+      unsubscribeEvents();
+    };
+  }, [userRole, activeUserFullName, activeUserEmail]);
 
   // Offline Network & Background Auto-Sync Listener
   useEffect(() => {
@@ -893,6 +937,10 @@ export default function App() {
   };
 
   const handleUpdateMeasurements = (clientId: string, measurements: GarmentMeasurements) => {
+    const targetClient = clients.find((c) => c.id === clientId);
+    const clientName = targetClient?.name || 'Client';
+    const garmentTag = targetClient?.garmentTag || '';
+
     setClients((prev) =>
       prev.map((c) => {
         if (c.id === clientId) {
@@ -910,6 +958,18 @@ export default function App() {
     setFullMeasurementsClient((prev) =>
       prev && prev.id === clientId ? { ...prev, measurements } : prev
     );
+
+    // Push notification to Master when apprentice takes/updates client measurements
+    const rawAppName = activeUserFullName || (activeUserEmail ? activeUserEmail.split('@')[0] : 'Apprentice Trainee');
+    const appName = rawAppName.trim().charAt(0).toUpperCase() + rawAppName.trim().slice(1);
+    
+    notifyMeasurementRecorded({
+      clientName,
+      garmentTag,
+      apprenticeName: userRole.startsWith('Apprentice') ? appName : (studioSettings.ownerName ? `${studioSettings.ownerName} (Studio)` : 'Workshop Team'),
+      masterName: studioSettings.ownerName || 'Master Atelier',
+      clientId
+    });
   };
 
   const handleAdvanceRunwayStage = (clientId: string, newStage: RunwayStage) => {
@@ -924,6 +984,19 @@ export default function App() {
       if (target) {
         upsertClientToSupabase(target);
         queueOfflineAction('client', target);
+
+        // Push notification when apprentice advances garment runway stage
+        if (userRole.startsWith('Apprentice')) {
+          const rawAppName = activeUserFullName || (activeUserEmail ? activeUserEmail.split('@')[0] : 'Apprentice Trainee');
+          const appName = rawAppName.trim().charAt(0).toUpperCase() + rawAppName.trim().slice(1);
+          notifyGarmentStageUpdated({
+            clientName: target.name,
+            newStage,
+            apprenticeName: appName,
+            masterName: studioSettings.ownerName || 'Master Atelier',
+            clientId
+          });
+        }
       }
       try {
         localStorage.setItem('tailor_clients', JSON.stringify(updatedList));
@@ -970,13 +1043,22 @@ export default function App() {
     setApprentices((prev) =>
       prev.map((app) => {
         if (app.id === id) {
+          const nextLocked = !app.handshakeLocked;
           const updated: Apprentice = {
             ...app,
-            handshakeLocked: !app.handshakeLocked,
+            handshakeLocked: nextLocked,
             hasCert: true,
           };
           upsertApprenticeToSupabase(updated);
           queueOfflineAction('apprentice', updated);
+
+          if (!nextLocked) {
+            notifyCertificateUnlocked({
+              apprenticeName: app.name,
+              masterName: studioSettings.ownerName || 'Master Atelier'
+            });
+          }
+
           return updated;
         }
         return app;
@@ -1172,6 +1254,42 @@ export default function App() {
     });
     upsertApprenticeTaskToSupabase(newTask);
     queueOfflineAction('task', newTask);
+
+    // Push notification to Apprentice(s) on phone
+    notifyTaskAssigned({
+      taskTitle: title,
+      apprenticeName: assignedTo,
+      masterName: studioSettings.ownerName || 'Master Trainer',
+      category
+    });
+  };
+
+  const handleAssignCurriculumTask = (apprenticeName: string, taskTitle: string) => {
+    const newTask: ApprenticeTask = {
+      id: `curr_task_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+      title: taskTitle,
+      assignedTo: apprenticeName || 'all',
+      isCompleted: false,
+      status: 'in_progress',
+      category: 'Curriculum Skills Unit',
+      masterNotes: 'Master Atelier skills curriculum assignment.'
+    };
+
+    setApprenticeTasks((prev) => {
+      const updated = [newTask, ...prev];
+      localStorage.setItem('tailor_apprentice_tasks', JSON.stringify(updated));
+      return updated;
+    });
+    upsertApprenticeTaskToSupabase(newTask);
+    queueOfflineAction('task', newTask);
+
+    // Push notification to Apprentice on phone
+    notifyTaskAssigned({
+      taskTitle,
+      apprenticeName,
+      masterName: studioSettings.ownerName || 'Master Trainer',
+      category: 'Curriculum Skills Unit'
+    });
   };
 
   const handleCompleteTask = (taskId: string) => {
@@ -1193,11 +1311,24 @@ export default function App() {
       localStorage.setItem('tailor_apprentice_tasks', JSON.stringify(updated));
       return updated;
     });
+
+    const targetTask = apprenticeTasks.find((t) => t.id === taskId);
+    const rawAppName = activeUserFullName || (activeUserEmail ? activeUserEmail.split('@')[0] : 'Apprentice Trainee');
+    const appName = rawAppName.trim().charAt(0).toUpperCase() + rawAppName.trim().slice(1);
+
+    // Push notification to Master: Apprentice completed task and submitted for review
+    notifyTaskSubmitted({
+      taskTitle: targetTask?.title || 'Workshop Duty',
+      apprenticeName: appName,
+      masterName: studioSettings.ownerName || 'Master Trainer',
+      taskId
+    });
   };
 
   const handlePassTask = (taskId: string) => {
+    const targetTask = apprenticeTasks.find((t) => t.id === taskId);
+
     setApprenticeTasks((prev) => {
-      const targetTask = prev.find((t) => t.id === taskId);
       const updated = prev.map((t) => {
         if (t.id === taskId) {
           const u = {
@@ -1227,6 +1358,14 @@ export default function App() {
         });
       }
       return updated;
+    });
+
+    // Push notification to Apprentice: Master approved & passed the task!
+    notifyTaskPassed({
+      taskTitle: targetTask?.title || 'Workshop Duty',
+      apprenticeName: targetTask?.assignedTo || 'all',
+      masterName: studioSettings.ownerName || 'Master Trainer',
+      taskId
     });
   };
 
@@ -1272,6 +1411,13 @@ export default function App() {
     });
 
     upsertApprenticeToSupabase(linkedApprentice);
+
+    // Push notification to Master: New apprentice linked
+    notifyApprenticeLinked({
+      apprenticeName,
+      masterName: studioSettings.ownerName || 'Master Atelier',
+      workshopCode: newCode
+    });
   };
 
   const handleRefreshApprentices = async () => {
@@ -1648,7 +1794,34 @@ export default function App() {
           }
           onLogout={handlePromptLogout}
           onCompleteTask={handleCompleteTask}
+          unreadNotificationCount={unreadNotificationCount}
+          onOpenNotificationCenter={() => setIsNotificationCenterOpen(true)}
         />
+
+        {/* Floating Realtime Push Notification Banner */}
+        <NotificationToastBanner
+          notification={activeToastNotification}
+          onClose={() => setActiveToastNotification(null)}
+          onClickNotification={() => {
+            setIsNotificationCenterOpen(true);
+          }}
+        />
+
+        {/* Push Notification History & Controls Modal */}
+        <NotificationCenterModal
+          isOpen={isNotificationCenterOpen}
+          onClose={() => setIsNotificationCenterOpen(false)}
+          notifications={notifications}
+          onMarkAllRead={() => setNotifications(markAllNotificationsAsRead())}
+          onClearAll={() => setNotifications(clearAllNotifications())}
+          currentUserRole={userRole}
+          onSelectNotification={(notif) => {
+            setNotifications((prev) => prev.map((n) => n.id === notif.id ? { ...n, read: true } : n));
+          }}
+        />
+
+        {/* Push Permission Prompt Banner */}
+        <PushPermissionBanner />
 
         {/* Global Modals for Apprentice Actions */}
         <AddClientModal
@@ -1732,6 +1905,8 @@ export default function App() {
         theme={theme}
         onToggleTheme={handleToggleTheme}
         supabaseStatus={supabaseStatus}
+        unreadNotificationCount={unreadNotificationCount}
+        onOpenNotificationCenter={() => setIsNotificationCenterOpen(true)}
       />
 
       {/* Main Container */}
@@ -1780,6 +1955,7 @@ export default function App() {
               masterTrainer={studioSettings.ownerName}
               onRefreshApprentices={handleRefreshApprentices}
               onOpenCustomTaskModal={() => setIsCustomTaskOpen(true)}
+              onAssignCurriculumTask={handleAssignCurriculumTask}
               onToggleHandshake={handleToggleApprenticeHandshake}
               onPassTask={handlePassTask}
               onUnlinkApprentice={handleUnlinkApprentice}
@@ -2138,6 +2314,7 @@ export default function App() {
         onClose={() => setIsCustomTaskOpen(false)}
         onSaveTask={handleSaveTask}
         apprentices={apprentices}
+        tasks={apprenticeTasks}
       />
 
       {isMasterCertOpen && (
@@ -2163,6 +2340,31 @@ export default function App() {
         isOpen={isInstallAppOpen}
         onClose={() => setIsInstallAppOpen(false)}
       />
+
+      {/* Floating Realtime Push Notification Banner */}
+      <NotificationToastBanner
+        notification={activeToastNotification}
+        onClose={() => setActiveToastNotification(null)}
+        onClickNotification={() => {
+          setIsNotificationCenterOpen(true);
+        }}
+      />
+
+      {/* Push Notification History & Controls Modal */}
+      <NotificationCenterModal
+        isOpen={isNotificationCenterOpen}
+        onClose={() => setIsNotificationCenterOpen(false)}
+        notifications={notifications}
+        onMarkAllRead={() => setNotifications(markAllNotificationsAsRead())}
+        onClearAll={() => setNotifications(clearAllNotifications())}
+        currentUserRole={userRole}
+        onSelectNotification={(notif) => {
+          setNotifications((prev) => prev.map((n) => n.id === notif.id ? { ...n, read: true } : n));
+        }}
+      />
+
+      {/* Push Permission Prompt Banner */}
+      <PushPermissionBanner />
     </div>
   );
 }

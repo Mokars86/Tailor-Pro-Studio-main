@@ -1,5 +1,5 @@
 import React from 'react';
-import { Scissors, Moon, Sun, Settings, Ruler, ShieldCheck, UserCircle2 } from 'lucide-react';
+import { Scissors, Moon, Sun, Settings, Ruler, ShieldCheck, UserCircle2, Bell } from 'lucide-react';
 import { Client } from '../../types';
 
 interface ApprenticeHeaderProps {
@@ -13,6 +13,8 @@ interface ApprenticeHeaderProps {
   onOpenSettings: () => void;
   onOpenTakeTape: () => void;
   onSwitchRoleToMaster?: () => void;
+  unreadNotificationCount?: number;
+  onOpenNotificationCenter?: () => void;
 }
 
 export const ApprenticeHeader: React.FC<ApprenticeHeaderProps> = ({
@@ -25,7 +27,9 @@ export const ApprenticeHeader: React.FC<ApprenticeHeaderProps> = ({
   onToggleTheme,
   onOpenSettings,
   onOpenTakeTape,
-  onSwitchRoleToMaster
+  onSwitchRoleToMaster,
+  unreadNotificationCount = 0,
+  onOpenNotificationCenter
 }) => {
   const displayBrandName = studioName && studioName !== 'My Atelier Studio' ? studioName : 'MOKARS STITCHES STUDIO';
 
@@ -56,8 +60,25 @@ export const ApprenticeHeader: React.FC<ApprenticeHeaderProps> = ({
             </div>
           </div>
 
-          {/* Right Action Controls: Theme & Settings */}
+          {/* Right Action Controls: Notification Bell, Theme & Settings */}
           <div className="flex items-center gap-1.5 shrink-0">
+            {onOpenNotificationCenter && (
+              <button
+                type="button"
+                onClick={onOpenNotificationCenter}
+                className="relative px-2.5 py-1.5 rounded-xl bg-white hover:bg-slate-50 text-[#0D3B36] border border-slate-200 text-xs font-bold flex items-center gap-1 shadow-2xs transition-colors cursor-pointer"
+                title="Studio Alerts & Notifications"
+              >
+                <Bell className="w-3.5 h-3.5 text-[#0D3B36]" />
+                <span className="hidden xs:inline">Alerts</span>
+                {unreadNotificationCount > 0 && (
+                  <span className="px-1.5 py-0.2 min-w-[16px] h-[16px] rounded-full bg-rose-500 text-white text-[9px] font-black flex items-center justify-center animate-pulse">
+                    {unreadNotificationCount > 99 ? '99+' : unreadNotificationCount}
+                  </span>
+                )}
+              </button>
+            )}
+
             <button
               onClick={onToggleTheme}
               className="px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-[#0D3B36] border border-slate-200 text-xs font-bold flex items-center gap-1 transition-colors"

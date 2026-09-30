@@ -12,7 +12,9 @@ import {
   Ruler,
   Wand2,
   Plus,
-  Trash2
+  Trash2,
+  AlertCircle,
+  Loader2
 } from 'lucide-react';
 import { Client, GarmentMeasurements } from '../../types';
 import {
@@ -47,6 +49,26 @@ const PRESET_DICTATIONS = [
   }
 ];
 
+// Helper to determine best supported audio mime type for the current device/browser
+function getSupportedMimeType(): string {
+  if (typeof window === 'undefined' || typeof MediaRecorder === 'undefined') return '';
+  const types = [
+    'audio/webm;codecs=opus',
+    'audio/webm',
+    'audio/mp4',
+    'audio/aac',
+    'audio/ogg;codecs=opus',
+    'audio/ogg',
+    'audio/wav'
+  ];
+  for (const t of types) {
+    if (MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(t)) {
+      return t;
+    }
+  }
+  return '';
+}
+
 export const VoiceMeasurementAssistantModal: React.FC<VoiceMeasurementAssistantModalProps> = ({
   isOpen,
   onClose,
@@ -59,21 +81,24 @@ export const VoiceMeasurementAssistantModal: React.FC<VoiceMeasurementAssistantM
   const [parsedValues, setParsedValues] = useState<Record<string, string>>({});
   const [isAiProcessing, setIsAiProcessing] = useState<boolean>(false);
   const [feedbackMessage, setFeedbackMessage] = useState<string | null>(null);
-  const [speechSupported, setSpeechSupported] = useState<boolean>(true);
+  const [permissionError, setPermissionError] = useState<string | null>(null);
   const [audioConfirmationEnabled, setAudioConfirmationEnabled] = useState<boolean>(true);
 
   // Audio Recording (MediaRecorder) State
   const [audioBlobUrl, setAudioBlobUrl] = useState<string | null>(null);
+  const [recordedAudioBlob, setRecordedAudioBlob] = useState<Blob | null>(null);
   const [recordingDuration, setRecordingDuration] = useState<number>(0);
   const [isPlayingAudio, setIsPlayingAudio] = useState<boolean>(false);
 
   const recognitionRef = useRef<any>(null);
+  const isListeningRef = useRef<boolean>(false);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const mediaStreamRef = useRef<MediaStream | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const timerIntervalRef = useRef<any>(null);
   const audioPlayerRef = useRef<HTMLAudioElement | null>(null);
 
-  // Initialize Web Speech Recognition
+  // Initialize Web Speech Recognition if supported on device
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
@@ -109,27 +134,31 @@ export const VoiceMeasurementAssistantModal: React.FC<VoiceMeasurementAssistantM
         };
 
         recognition.onerror = (event: any) => {
-          console.warn('Speech recognition warning/error:', event.error);
+          console.warn('Speech recognition status:', event.error);
           if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
-            setSpeechSupported(false);
-            setIsListening(false);
+            setPermissionError('Microphone permission blocked. Please allow mic access in settings.');
           }
         };
 
         recognition.onend = () => {
-          setIsListening(false);
+          // If the user hasn't explicitly stopped listening, keep listening (prevents mobile silence timeouts)
+          if (isListeningRef.current) {
+            try {
+              recognition.start();
+            } catch {
+              // Ignore if already starting or active
+            }
+          }
         };
 
         recognitionRef.current = recognition;
       } catch (err) {
-        console.warn('SpeechRecognition initialization failed:', err);
-        setSpeechSupported(false);
+        console.warn('SpeechRecognition initialization note:', err);
       }
-    } else {
-      setSpeechSupported(false);
     }
 
     return () => {
+      isListeningRef.current = false;
       if (recognitionRef.current) {
         try {
           recognitionRef.current.stop();
@@ -138,6 +167,9 @@ export const VoiceMeasurementAssistantModal: React.FC<VoiceMeasurementAssistantM
         }
       }
       if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
+      if (mediaStreamRef.current) {
+        mediaStreamRef.current.getTracks().forEach((track) => track.stop());
+      }
     };
   }, []);
 
@@ -157,61 +189,115 @@ export const VoiceMeasurementAssistantModal: React.FC<VoiceMeasurementAssistantM
 
   if (!isOpen) return null;
 
+  // Convert Blob to Base64 helper
+  const blobToBase64 = (blob: Blob): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const res = reader.result as string;
+        resolve(res);
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+  };
+
   // Start Voice & Tape Recording
   const handleStartListening = async () => {
-    try {
-      setFeedbackMessage('Listening live... speak your measurements naturally.');
-      setIsListening(true);
-      setRecordingDuration(0);
+    setPermissionError(null);
+    setFeedbackMessage('Listening live... speak your measurements naturally.');
+    setIsListening(true);
+    isListeningRef.current = true;
+    setRecordingDuration(0);
 
-      // Start Web Speech Recognition if available
-      if (recognitionRef.current) {
-        try {
-          recognitionRef.current.start();
-        } catch (err) {
-          console.warn('Recognition start exception:', err);
-        }
+    // Start Web Speech Recognition if available
+    if (recognitionRef.current) {
+      try {
+        recognitionRef.current.start();
+      } catch (err) {
+        console.warn('Recognition start exception:', err);
       }
+    }
 
-      // Start MediaRecorder audio stream capture
-      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+    // Start MediaRecorder audio stream capture
+    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          audio: {
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true
+          }
+        });
+        mediaStreamRef.current = stream;
+
+        const supportedMime = getSupportedMimeType();
+        const options = supportedMime ? { mimeType: supportedMime } : undefined;
+        let mediaRecorder: MediaRecorder;
         try {
-          const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-          const mediaRecorder = new MediaRecorder(stream);
-          audioChunksRef.current = [];
+          mediaRecorder = options ? new MediaRecorder(stream, options) : new MediaRecorder(stream);
+        } catch {
+          mediaRecorder = new MediaRecorder(stream);
+        }
 
-          mediaRecorder.ondataavailable = (e) => {
-            if (e.data && e.data.size > 0) {
-              audioChunksRef.current.push(e.data);
-            }
-          };
+        audioChunksRef.current = [];
 
-          mediaRecorder.onstop = () => {
-            const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+        mediaRecorder.ondataavailable = (e) => {
+          if (e.data && e.data.size > 0) {
+            audioChunksRef.current.push(e.data);
+          }
+        };
+
+        mediaRecorder.onstop = async () => {
+          const finalMime = mediaRecorder.mimeType || supportedMime || 'audio/webm';
+          const audioBlob = new Blob(audioChunksRef.current, { type: finalMime });
+          setRecordedAudioBlob(audioBlob);
+
+          if (audioBlob.size > 0) {
             const url = URL.createObjectURL(audioBlob);
             setAudioBlobUrl(url);
+
+            // Automatically send the recorded voice tape to AI if no live transcript was received
+            await processRecordedAudio(audioBlob);
+          }
+
+          if (stream) {
             stream.getTracks().forEach((track) => track.stop());
-          };
+          }
+        };
 
-          mediaRecorder.start();
-          mediaRecorderRef.current = mediaRecorder;
+        mediaRecorder.start(500); // 500ms chunks for smooth recording
+        mediaRecorderRef.current = mediaRecorder;
 
-          // Start Timer
-          timerIntervalRef.current = setInterval(() => {
-            setRecordingDuration((prev) => prev + 1);
-          }, 1000);
-        } catch (err) {
-          console.warn('Microphone stream access error:', err);
-        }
+        // Start Timer
+        if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
+        timerIntervalRef.current = setInterval(() => {
+          setRecordingDuration((prev) => prev + 1);
+        }, 1000);
+      } catch (err: any) {
+        console.warn('Microphone access error:', err);
+        const isDenied =
+          err.name === 'NotAllowedError' ||
+          err.name === 'PermissionDeniedError' ||
+          err.name === 'SecurityError';
+        setPermissionError(
+          isDenied
+            ? 'Microphone permission denied. Please enable microphone access in your browser or device settings.'
+            : 'Could not access device microphone. You can still type dictation or use presets.'
+        );
+        setIsListening(false);
+        isListeningRef.current = false;
       }
-    } catch (err) {
-      console.warn('Could not start listening:', err);
-      setIsListening(false);
+    } else {
+      setPermissionError('Audio recording is not supported in this browser environment. You can type dictation directly.');
     }
   };
 
   // Stop Listening & Finalize Recording
   const handleStopListening = () => {
+    isListeningRef.current = false;
+    setIsListening(false);
+
     if (recognitionRef.current) {
       try {
         recognitionRef.current.stop();
@@ -232,16 +318,84 @@ export const VoiceMeasurementAssistantModal: React.FC<VoiceMeasurementAssistantM
       clearInterval(timerIntervalRef.current);
     }
 
-    setIsListening(false);
-
-    // Run quick local extraction pass
-    if (transcript) {
+    // Run quick local extraction pass if transcript exists
+    if (transcript.trim()) {
       const extracted = extractMeasurementsFromTranscript(transcript);
       const count = Object.keys(extracted).length;
       if (count > 0) {
         setParsedValues((prev) => ({ ...prev, ...extracted }));
         setFeedbackMessage(`Extracted ${count} measurement${count > 1 ? 's' : ''} from voice dictation.`);
       }
+    }
+  };
+
+  // Process Recorded Audio Tape via Gemini Multimodal Audio
+  const processRecordedAudio = async (audioBlob: Blob) => {
+    if (!audioBlob || audioBlob.size === 0) return;
+
+    setIsAiProcessing(true);
+    setFeedbackMessage('Analyzing audio tape with Gemini AI...');
+
+    try {
+      const base64Data = await blobToBase64(audioBlob);
+
+      const res = await fetch('/api/parse-dictation', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          audioBase64: base64Data,
+          mimeType: audioBlob.type || 'audio/webm',
+          transcript: transcript || undefined
+        })
+      });
+
+      const data = await res.json();
+
+      if (data.success) {
+        if (data.transcript && !transcript) {
+          setTranscript(data.transcript);
+        }
+
+        if (data.measurements && Object.keys(data.measurements).length > 0) {
+          const merged = { ...parsedValues, ...data.measurements };
+          setParsedValues(merged);
+          const count = Object.keys(data.measurements).length;
+          setFeedbackMessage(`AI extracted ${count} measurement${count > 1 ? 's' : ''} from voice note!`);
+
+          if (audioConfirmationEnabled && 'speechSynthesis' in window) {
+            try {
+              const spokenText = `Extracted ${count} measurements: ${Object.entries(data.measurements)
+                .map(([k, v]) => `${k} ${v} inches`)
+                .join(', ')}`;
+              const utterance = new SpeechSynthesisUtterance(spokenText);
+              utterance.rate = 1.0;
+              window.speechSynthesis.speak(utterance);
+            } catch {
+              // speech synthesis failure ignore
+            }
+          }
+        } else if (transcript.trim()) {
+          const localExtracted = extractMeasurementsFromTranscript(transcript);
+          setParsedValues((prev) => ({ ...prev, ...localExtracted }));
+          setFeedbackMessage(`Extracted measurements via Smart Tape engine.`);
+        }
+      } else {
+        // Fallback to local regex engine
+        if (transcript.trim()) {
+          const localExtracted = extractMeasurementsFromTranscript(transcript);
+          setParsedValues((prev) => ({ ...prev, ...localExtracted }));
+          setFeedbackMessage(`Extracted measurements via Smart Tape engine.`);
+        }
+      }
+    } catch (err) {
+      console.warn('AI Audio Parse network fallback:', err);
+      if (transcript.trim()) {
+        const localExtracted = extractMeasurementsFromTranscript(transcript);
+        setParsedValues((prev) => ({ ...prev, ...localExtracted }));
+        setFeedbackMessage(`Extracted measurements via Smart Tape engine.`);
+      }
+    } finally {
+      setIsAiProcessing(false);
     }
   };
 
@@ -254,6 +408,12 @@ export const VoiceMeasurementAssistantModal: React.FC<VoiceMeasurementAssistantM
 
   const runAiParsing = async (textToParse: string) => {
     const text = textToParse || transcript;
+
+    if (!text.trim() && recordedAudioBlob) {
+      await processRecordedAudio(recordedAudioBlob);
+      return;
+    }
+
     if (!text.trim()) return;
 
     setIsAiProcessing(true);
@@ -274,12 +434,16 @@ export const VoiceMeasurementAssistantModal: React.FC<VoiceMeasurementAssistantM
         setFeedbackMessage(`AI extracted ${count} measurement${count > 1 ? 's' : ''}!`);
 
         if (audioConfirmationEnabled && 'speechSynthesis' in window) {
-          const spokenText = `Extracted ${count} measurements. ${Object.entries(data.measurements)
-            .map(([k, v]) => `${k} ${v} inches`)
-            .join(', ')}`;
-          const utterance = new SpeechSynthesisUtterance(spokenText);
-          utterance.rate = 1.0;
-          window.speechSynthesis.speak(utterance);
+          try {
+            const spokenText = `Extracted ${count} measurements: ${Object.entries(data.measurements)
+              .map(([k, v]) => `${k} ${v} inches`)
+              .join(', ')}`;
+            const utterance = new SpeechSynthesisUtterance(spokenText);
+            utterance.rate = 1.0;
+            window.speechSynthesis.speak(utterance);
+          } catch {
+            // speech synthesis failure ignore
+          }
         }
       } else {
         // Fallback to local regex engine
@@ -306,10 +470,14 @@ export const VoiceMeasurementAssistantModal: React.FC<VoiceMeasurementAssistantM
     onApplyMeasurements(parsedValues);
 
     if (audioConfirmationEnabled && 'speechSynthesis' in window) {
-      const utterance = new SpeechSynthesisUtterance(
-        `Saved measurements for ${client.name} to digital spec sheet.`
-      );
-      window.speechSynthesis.speak(utterance);
+      try {
+        const utterance = new SpeechSynthesisUtterance(
+          `Saved measurements for ${client.name} to digital spec sheet.`
+        );
+        window.speechSynthesis.speak(utterance);
+      } catch {
+        // ignore
+      }
     }
 
     onClose();
@@ -320,7 +488,9 @@ export const VoiceMeasurementAssistantModal: React.FC<VoiceMeasurementAssistantM
     setParsedValues({});
     setFeedbackMessage(null);
     setAudioBlobUrl(null);
+    setRecordedAudioBlob(null);
     setRecordingDuration(0);
+    setPermissionError(null);
     if (audioPlayerRef.current) {
       audioPlayerRef.current.pause();
     }
@@ -385,6 +555,19 @@ export const VoiceMeasurementAssistantModal: React.FC<VoiceMeasurementAssistantM
         </div>
 
         <div className="p-4 sm:p-6 space-y-4 max-h-[78vh] overflow-y-auto">
+
+          {/* Permission Error Banner */}
+          {permissionError && (
+            <div className="p-3.5 rounded-2xl bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-800/60 text-rose-900 dark:text-rose-200 flex items-start gap-2.5 animate-fade-in">
+              <AlertCircle className="w-5 h-5 text-rose-600 flex-shrink-0 mt-0.5" />
+              <div className="text-xs">
+                <p className="font-extrabold">{permissionError}</p>
+                <p className="mt-1 text-rose-700 dark:text-rose-300">
+                  Tip: Ensure microphone permission is granted in Android App permissions or browser address bar lock icon.
+                </p>
+              </div>
+            </div>
+          )}
 
           {/* Active Dictation Control & Waveform Section */}
           <div className="p-5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/80 flex flex-col items-center justify-center space-y-4 text-center">
@@ -475,8 +658,16 @@ export const VoiceMeasurementAssistantModal: React.FC<VoiceMeasurementAssistantM
               </div>
             )}
 
+            {/* AI Loading State */}
+            {isAiProcessing && (
+              <div className="flex items-center gap-2 text-xs font-extrabold text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 px-3 py-1.5 rounded-full border border-amber-300/40">
+                <Loader2 className="w-4 h-4 animate-spin text-amber-500" />
+                <span>Processing fitting audio note with Gemini AI...</span>
+              </div>
+            )}
+
             {/* Feedback Message */}
-            {feedbackMessage && (
+            {!isAiProcessing && feedbackMessage && (
               <div className="px-3.5 py-1.5 rounded-full bg-emerald-500/10 text-emerald-800 dark:text-emerald-300 text-xs font-bold border border-emerald-300/60 flex items-center gap-2">
                 <Sparkles className="w-3.5 h-3.5 text-amber-500" />
                 <span>{feedbackMessage}</span>
@@ -533,7 +724,7 @@ export const VoiceMeasurementAssistantModal: React.FC<VoiceMeasurementAssistantM
                 <button
                   type="button"
                   onClick={() => runAiParsing(transcript)}
-                  disabled={!transcript.trim() || isAiProcessing}
+                  disabled={(!transcript.trim() && !recordedAudioBlob) || isAiProcessing}
                   className="text-xs font-extrabold text-[#0D3B36] dark:text-amber-300 hover:underline flex items-center gap-1 disabled:opacity-50 cursor-pointer"
                 >
                   <Sparkles className="w-3.5 h-3.5 text-amber-500" />
@@ -559,7 +750,7 @@ export const VoiceMeasurementAssistantModal: React.FC<VoiceMeasurementAssistantM
                 const extracted = extractMeasurementsFromTranscript(newText);
                 setParsedValues((prev) => ({ ...prev, ...extracted }));
               }}
-              placeholder="Dictate live into the mic or type e.g. 'Bust 36, Waist 28, Hips 40, Shoulder to Underbust 14, Sleeve 23'..."
+              placeholder="Dictate live into the mic, record audio tape, or type e.g. 'Bust 36, Waist 28, Hips 40, Shoulder to Underbust 14, Sleeve 23'..."
               className="w-full p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700 text-xs font-medium text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-[#0D3B36] dark:focus:ring-amber-400 resize-none font-mono"
             />
           </div>
