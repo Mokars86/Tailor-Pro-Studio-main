@@ -1,5 +1,6 @@
 import { AppNotification, PushNotificationType } from '../types';
 import { supabase } from '../lib/supabase';
+import { storageService } from './storageService';
 
 const NOTIFICATIONS_STORAGE_KEY = 'tailor_push_notifications_history';
 const NOTIFICATIONS_SOUND_KEY = 'tailor_notification_sound_enabled';
@@ -28,7 +29,7 @@ function getAudioContext(): AudioContext | null {
  */
 export function playNotificationChime() {
   try {
-    const isSoundEnabled = localStorage.getItem(NOTIFICATIONS_SOUND_KEY) !== 'false';
+    const isSoundEnabled = storageService.getItemSync<string>(NOTIFICATIONS_SOUND_KEY, 'true') !== 'false';
     if (!isSoundEnabled) return;
 
     const ctx = getAudioContext();
@@ -175,29 +176,27 @@ export async function showNativeSystemNotification(
 }
 
 /**
- * Retrieve saved notification history from localStorage
+ * Retrieve saved notification history from storage
  */
 export function getStoredNotifications(): AppNotification[] {
   if (typeof window === 'undefined') return [];
   try {
-    const saved = localStorage.getItem(NOTIFICATIONS_STORAGE_KEY);
-    if (!saved) return [];
-    const parsed = JSON.parse(saved);
-    return Array.isArray(parsed) ? parsed : [];
+    const saved = storageService.getItemSync<AppNotification[]>(NOTIFICATIONS_STORAGE_KEY, []);
+    return Array.isArray(saved) ? saved : [];
   } catch {
     return [];
   }
 }
 
 /**
- * Save notification list to localStorage
+ * Save notification list to storage
  */
 export function saveNotificationsToStorage(notifications: AppNotification[]) {
   if (typeof window === 'undefined') return;
   try {
     // Limit to latest 100 notifications to prevent unbounded growth
     const trimmed = notifications.slice(0, 100);
-    localStorage.setItem(NOTIFICATIONS_STORAGE_KEY, JSON.stringify(trimmed));
+    storageService.setItem(NOTIFICATIONS_STORAGE_KEY, trimmed);
   } catch (err) {
     console.warn('[Push Notification] Failed to persist notifications:', err);
   }
@@ -236,12 +235,12 @@ export function clearAllNotifications(): AppNotification[] {
  */
 export function setNotificationSoundEnabled(enabled: boolean) {
   if (typeof window === 'undefined') return;
-  localStorage.setItem(NOTIFICATIONS_SOUND_KEY, enabled ? 'true' : 'false');
+  storageService.setItem(NOTIFICATIONS_SOUND_KEY, enabled ? 'true' : 'false');
 }
 
 export function isNotificationSoundEnabled(): boolean {
   if (typeof window === 'undefined') return true;
-  return localStorage.getItem(NOTIFICATIONS_SOUND_KEY) !== 'false';
+  return storageService.getItemSync<string>(NOTIFICATIONS_SOUND_KEY, 'true') !== 'false';
 }
 
 // Local BroadcastChannel instance for cross-tab communication

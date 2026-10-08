@@ -1,13 +1,20 @@
 import React, { useState } from 'react';
-import { X, DollarSign, CheckCircle2, CreditCard, Send, ShieldCheck } from 'lucide-react';
+import { X, CheckCircle2, ShieldCheck } from 'lucide-react';
 import { UnpaidDeposit } from '../../types';
+import { parseCleanNumber } from '../../utils/numeric';
 
 interface CollectDepositModalProps {
   isOpen: boolean;
   onClose: () => void;
   deposit?: UnpaidDeposit | null;
   unpaidDepositsList: UnpaidDeposit[];
-  onProcessCollection: (depositId: string, paymentMethod: string) => void;
+  onProcessCollection: (
+    depositId: string,
+    amountCollected: number,
+    paymentMethod: string,
+    notes?: string,
+    sendReceiptSMS?: boolean
+  ) => void;
 }
 
 export const CollectDepositModal: React.FC<CollectDepositModalProps> = ({
@@ -20,13 +27,15 @@ export const CollectDepositModal: React.FC<CollectDepositModalProps> = ({
   const [selectedDepositId, setSelectedDepositId] = useState<string>(
     deposit ? deposit.id : unpaidDepositsList[0]?.id || ''
   );
-  const [paymentMethod, setPaymentMethod] = useState<string>('Card');
+  const [paymentMethod, setPaymentMethod] = useState<string>('Cash');
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
   const [isSuccess, setIsSuccess] = useState<boolean>(false);
 
   if (!isOpen) return null;
 
   const currentDep = deposit || unpaidDepositsList.find((d) => d.id === selectedDepositId);
+  const rawAmount = currentDep ? (currentDep.amount ?? 0) : 0;
+  const amountToCollect = parseCleanNumber(rawAmount);
 
   const handleProcess = () => {
     if (!currentDep) return;
@@ -37,11 +46,19 @@ export const CollectDepositModal: React.FC<CollectDepositModalProps> = ({
       setIsSuccess(true);
 
       setTimeout(() => {
-        onProcessCollection(currentDep.id, paymentMethod);
+        onProcessCollection(currentDep.id, amountToCollect, paymentMethod, '', true);
         setIsSuccess(false);
         onClose();
       }, 1200);
     }, 800);
+  };
+
+  const getServiceName = (dep: any) => {
+    return dep.garmentTag || dep.garmentType || dep.serviceName || 'Custom Order';
+  };
+
+  const getDueDate = (dep: any) => {
+    return dep.dueDate || dep.date || dep.sessionDate || 'Today';
   };
 
   return (
@@ -77,7 +94,7 @@ export const CollectDepositModal: React.FC<CollectDepositModalProps> = ({
               Deposit Collected Successfully!
             </h4>
             <p className="text-xs text-slate-500">
-              GH₵ {currentDep?.amount} received via {paymentMethod}. Receipt sent to client.
+              GH₵ {amountToCollect.toLocaleString()} received via {paymentMethod}. Receipt sent to client.
             </p>
           </div>
         ) : (
@@ -93,7 +110,7 @@ export const CollectDepositModal: React.FC<CollectDepositModalProps> = ({
                 >
                   {unpaidDepositsList.map((dep) => (
                     <option key={dep.id} value={dep.id}>
-                      {dep.clientName} - GH₵ {dep.amount} ({dep.serviceName})
+                      {dep.clientName} - GH₵ {parseCleanNumber(dep.amount).toLocaleString()} ({getServiceName(dep)})
                     </option>
                   ))}
                 </select>
@@ -109,16 +126,16 @@ export const CollectDepositModal: React.FC<CollectDepositModalProps> = ({
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-slate-500 font-medium">Service:</span>
-                    <span className="text-slate-700 font-semibold">{currentDep.serviceName}</span>
+                    <span className="text-slate-700 font-semibold">{getServiceName(currentDep)}</span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-slate-500 font-medium">Session Date:</span>
-                    <span className="text-slate-700 font-semibold">{currentDep.sessionDate}</span>
+                    <span className="text-slate-700 font-semibold">{getDueDate(currentDep)}</span>
                   </div>
                   <div className="flex items-center justify-between pt-2 border-t border-slate-200">
                     <span className="text-slate-700 font-bold text-sm">Deposit Amount:</span>
                     <strong className="font-['Outfit'] font-extrabold text-xl text-emerald-800">
-                      GH₵ {currentDep.amount}
+                      GH₵ {amountToCollect.toLocaleString()}
                     </strong>
                   </div>
                 </div>
@@ -126,12 +143,12 @@ export const CollectDepositModal: React.FC<CollectDepositModalProps> = ({
                 <div>
                   <label className="block font-bold text-slate-700 mb-1">Payment Method</label>
                   <div className="grid grid-cols-2 gap-2">
-                    {['Card', 'Apple Pay', 'Cash', 'Bank Transfer'].map((m) => (
+                    {['Cash', 'MoMo', 'Card', 'Bank Transfer'].map((m) => (
                       <button
                         key={m}
                         type="button"
                         onClick={() => setPaymentMethod(m)}
-                        className={`p-2.5 rounded-xl font-bold text-xs border transition-all text-center ${
+                        className={`p-2.5 rounded-xl font-bold text-xs border transition-all text-center cursor-pointer ${
                           paymentMethod === m
                             ? 'bg-[#0E3832] text-white border-[#0E3832] shadow-2xs'
                             : 'bg-white/80 text-slate-700 border-slate-300 hover:bg-white'
@@ -152,7 +169,7 @@ export const CollectDepositModal: React.FC<CollectDepositModalProps> = ({
                   <button
                     type="button"
                     onClick={onClose}
-                    className="px-4 py-2.5 rounded-full bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold text-xs transition-all"
+                    className="px-4 py-2.5 rounded-full bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold text-xs transition-all cursor-pointer"
                   >
                     Cancel
                   </button>
@@ -162,7 +179,7 @@ export const CollectDepositModal: React.FC<CollectDepositModalProps> = ({
                     onClick={handleProcess}
                     className="px-6 py-2.5 rounded-full bg-[#DCA134] hover:bg-[#c9902b] text-slate-950 font-bold text-xs gold-shadow transition-all hover:scale-105 flex items-center gap-1.5 cursor-pointer"
                   >
-                    {isProcessing ? 'Processing Payment...' : `Clear GH₵ ${currentDep.amount} Deposit`}
+                    {isProcessing ? 'Processing Payment...' : `Clear GH₵ ${amountToCollect.toLocaleString()} Deposit`}
                   </button>
                 </div>
               </>

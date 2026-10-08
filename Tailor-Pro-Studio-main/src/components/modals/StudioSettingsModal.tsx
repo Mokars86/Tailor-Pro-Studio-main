@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { X, Sun, Moon, QrCode, Copy, Printer, LogOut, Check, Upload, ShieldCheck, Download, Cloud, UserX, UserCircle2, Share2, Clipboard, ClipboardCheck, FileText, CreditCard, BadgeCheck, AlertTriangle, Trash2 } from 'lucide-react';
+import { X, Sun, Moon, QrCode, Copy, Printer, LogOut, Check, Upload, ShieldCheck, Download, Cloud, UserX, UserCircle2, Share2, Clipboard, ClipboardCheck, FileText, CreditCard, BadgeCheck, AlertTriangle, Trash2, Globe } from 'lucide-react';
 import { StudioSettings, Apprentice } from '../../types';
 import { generateMasterWorkshopCode } from '../../utils/workshopCode';
 import { exportAtelierDataBackup, restoreAtelierDataBackup, restoreAtelierDataFromText, copyBackupToClipboard, clearAllAtelierData } from '../../utils/dataBackup';
 import { downloadOrShareDocument, generateWorkshopPosterHtml } from '../../utils/mobileDocumentDownloader';
 import { TailorProMembershipCardModal } from './TailorProMembershipCardModal';
+import { useTranslation, SUPPORTED_LANGUAGES, SupportedLanguage } from '../../i18n/useTranslation';
 
 interface StudioSettingsModalProps {
   settings: StudioSettings;
@@ -31,6 +32,7 @@ export const StudioSettingsModal: React.FC<StudioSettingsModalProps> = ({
   onDeleteAccount,
   userRole
 }) => {
+  const { language, setLanguage, t } = useTranslation();
   const [showMembershipCardModal, setShowMembershipCardModal] = useState<boolean>(false);
   const [form, setForm] = useState<StudioSettings>(() => ({
     studioName: settings?.studioName || 'MOKARS STITCHES STUDIO',
@@ -112,6 +114,36 @@ export const StudioSettingsModal: React.FC<StudioSettingsModalProps> = ({
 
         <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5 text-xs">
           
+          {/* Language Selection Grid */}
+          <div className="space-y-1.5 p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700">
+            <div className="flex items-center justify-between">
+              <label className="text-[11px] font-extrabold uppercase tracking-wider text-[#0D3B36] dark:text-amber-300 flex items-center gap-1.5">
+                <Globe className="w-4 h-4 text-[#DCA134]" />
+                <span>APP LANGUAGE / KASA / LANGUE / اللغة</span>
+              </label>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1">
+              {SUPPORTED_LANGUAGES.map((langItem) => {
+                const isSelected = language === langItem.code;
+                return (
+                  <button
+                    key={langItem.code}
+                    type="button"
+                    onClick={() => setLanguage(langItem.code)}
+                    className={`p-2 sm:p-2.5 rounded-xl flex flex-col items-center justify-center text-center gap-1 border transition-all cursor-pointer ${
+                      isSelected
+                        ? 'bg-[#0D3B36] dark:bg-amber-400 text-amber-300 dark:text-[#061E1B] border-[#DCA134] border-2 shadow-xs font-black'
+                        : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-700 hover:border-slate-300'
+                    }`}
+                  >
+                    <span className="text-lg leading-none">{langItem.flag}</span>
+                    <span className="text-xs font-bold truncate max-w-full">{langItem.nativeName}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
           {/* App Theme Selector */}
           <div className="space-y-1.5">
             <label className="text-[11px] font-extrabold uppercase tracking-wider text-[#0D3B36]/70 dark:text-amber-300/80">

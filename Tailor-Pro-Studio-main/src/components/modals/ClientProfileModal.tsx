@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import { Client, StudioSettings } from '../../types';
 import { FullMeasurementsModal } from './FullMeasurementsModal';
+import { parseCleanNumber, sanitizeClient } from '../../utils/numeric';
 
 interface ClientProfileModalProps {
   isOpen: boolean;
@@ -33,6 +34,7 @@ interface ClientProfileModalProps {
   onOpenMeasurements?: (client: Client) => void;
   onOpenSpecSheet?: (client: Client) => void;
   onOpenInvoice?: (client: Client) => void;
+  onOpenReorder?: (client: Client) => void;
   onUpdateNotes?: (clientId: string, newNotes: string) => void;
 }
 
@@ -47,6 +49,7 @@ export const ClientProfileModal: React.FC<ClientProfileModalProps> = ({
   onOpenMeasurements,
   onOpenSpecSheet,
   onOpenInvoice,
+  onOpenReorder,
   onUpdateNotes
 }) => {
   const [activeTab, setActiveTab] = useState<'details' | 'orders' | 'notes'>('details');
@@ -76,18 +79,18 @@ export const ClientProfileModal: React.FC<ClientProfileModalProps> = ({
     setEditName(client.name || '');
     setEditPhone(client.phone || '');
     setEditGarmentTag(client.garmentTag || '');
-    setEditTotalBilling(client.totalCost || 0);
-    setEditPaidDeposit(client.depositPaid || 0);
+    setEditTotalBilling(parseCleanNumber(client.totalCost));
+    setEditPaidDeposit(parseCleanNumber(client.depositPaid));
     setEditFittingDate(client.fittingDate || '');
     setIsEditModalOpen(true);
   };
 
   const handleSaveClientDetails = () => {
-    const updatedTotal = Number(editTotalBilling) || 0;
-    const updatedDeposit = Number(editPaidDeposit) || 0;
+    const updatedTotal = parseCleanNumber(editTotalBilling);
+    const updatedDeposit = parseCleanNumber(editPaidDeposit);
     const updatedBalance = Math.max(0, updatedTotal - updatedDeposit);
 
-    const updatedClient: Client = {
+    const updatedClient: Client = sanitizeClient({
       ...client,
       name: editName,
       initials: editName.split(' ').map((n) => n[0]).join('').toUpperCase() || 'CL',
@@ -97,7 +100,7 @@ export const ClientProfileModal: React.FC<ClientProfileModalProps> = ({
       totalCost: updatedTotal,
       depositPaid: updatedDeposit,
       balanceDue: updatedBalance
-    };
+    });
 
     if (onUpdateClient) {
       onUpdateClient(updatedClient);
@@ -147,8 +150,20 @@ export const ClientProfileModal: React.FC<ClientProfileModalProps> = ({
             <span>Close Profile</span>
           </button>
 
-          {/* Top Right Action Buttons (Edit & Delete & Close X) */}
-          <div className="flex items-center gap-2">
+          {/* Top Right Action Buttons (Re-order & Edit & Delete & Close X) */}
+          <div className="flex items-center gap-1.5 sm:gap-2">
+            {onOpenReorder && (
+              <button
+                type="button"
+                onClick={() => onOpenReorder(client)}
+                className="px-3 py-1.5 rounded-full bg-[#DCA134] hover:bg-amber-400 text-slate-950 font-['Outfit'] font-black text-xs flex items-center gap-1.5 shadow-md transition-all active:scale-95 cursor-pointer"
+                title="Start New Garment Order / Re-order"
+              >
+                <Scissors className="w-3.5 h-3.5 stroke-[3]" />
+                <span>New Order</span>
+              </button>
+            )}
+
             <button
               type="button"
               onClick={handleOpenEditModal}
@@ -424,7 +439,7 @@ export const ClientProfileModal: React.FC<ClientProfileModalProps> = ({
                       TOTAL BILLING
                     </span>
                     <span className="font-['Outfit'] font-black text-sm sm:text-base text-[#0D3B36] dark:text-amber-300 block mt-1">
-                      GH₵ {client.totalCost}
+                      GH₵ {parseCleanNumber(client.totalCost).toLocaleString()}
                     </span>
                   </div>
 
@@ -433,7 +448,7 @@ export const ClientProfileModal: React.FC<ClientProfileModalProps> = ({
                       DEPOSIT PAID
                     </span>
                     <span className="font-['Outfit'] font-black text-sm sm:text-base text-emerald-600 dark:text-emerald-400 block mt-1">
-                      GH₵ {client.depositPaid}
+                      GH₵ {parseCleanNumber(client.depositPaid).toLocaleString()}
                     </span>
                   </div>
 
@@ -442,7 +457,7 @@ export const ClientProfileModal: React.FC<ClientProfileModalProps> = ({
                       BALANCE DUE
                     </span>
                     <span className="font-['Outfit'] font-black text-sm sm:text-base text-[#E11D48] dark:text-rose-400 block mt-1">
-                      GH₵ {client.balanceDue}
+                      GH₵ {parseCleanNumber(client.balanceDue).toLocaleString()}
                     </span>
                   </div>
                 </div>
@@ -472,84 +487,86 @@ export const ClientProfileModal: React.FC<ClientProfileModalProps> = ({
           {/* TAB 2: ORDERS */}
           {activeTab === 'orders' && (
             <div className="space-y-4 animate-fade-in">
-              {/* CURRENT ORDER SECTION */}
+              {/* CURRENT ACTIVE ORDER */}
               <div className="bg-white/90 dark:bg-[#092825]/90 backdrop-blur-md rounded-[28px] p-4 sm:p-5 border border-white dark:border-white/10 shadow-xs space-y-3">
-                <h3 className="text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
-                  <Scissors className="w-3.5 h-3.5 text-[#0D3B36] dark:text-amber-300" />
-                  <span>CURRENT ACTIVE ORDER</span>
-                </h3>
+                <div className="flex items-center justify-between">
+                  <h3 className="text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                    <Scissors className="w-3.5 h-3.5 text-[#0D3B36] dark:text-amber-300" />
+                    <span>CURRENT ACTIVE ORDER</span>
+                  </h3>
+                  {onOpenReorder && (
+                    <button
+                      type="button"
+                      onClick={() => onOpenReorder(client)}
+                      className="px-3 py-1 rounded-full bg-[#DCA134] text-slate-950 font-black text-[10px] flex items-center gap-1 shadow-xs hover:bg-amber-400 cursor-pointer"
+                    >
+                      <Scissors className="w-3 h-3" />
+                      <span>Start New Re-Order</span>
+                    </button>
+                  )}
+                </div>
 
-                <div className="p-4 bg-gradient-to-r from-[#EBF5F0] to-[#E2F0EA] dark:from-slate-800 dark:to-slate-800/80 rounded-2xl border border-emerald-900/10 dark:border-slate-700 flex items-center justify-between gap-3">
+                <div className="p-4 bg-gradient-to-r from-[#EBF5F0] to-[#E2F0EA] dark:from-slate-800 dark:to-slate-800/80 rounded-2xl border border-emerald-900/10 dark:border-slate-700 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                   <div className="flex items-center gap-3.5">
                     <div className="w-12 h-12 rounded-2xl bg-[#0D3B36] dark:bg-amber-400 text-white dark:text-[#0D3B36] flex items-center justify-center shrink-0 shadow-md">
                       <Scissors className="w-6 h-6 text-white dark:text-[#0D3B36]" />
                     </div>
                     <div>
                       <h4 className="font-extrabold text-sm sm:text-base text-slate-900 dark:text-slate-100 uppercase">
-                        {client.garmentTag || 'VLISCO ATELIER'}
+                        {client.garmentTag || 'Custom Order'}
                       </h4>
                       <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 mt-0.5">
-                        Production Stage: <span className="font-bold text-[#0D3B36] dark:text-amber-300">{client.runwayStage || 'Cutting Phase'}</span>
+                        Runway Stage: <span className="font-bold text-[#0D3B36] dark:text-amber-300">{client.runwayStage || 'CONSULT'}</span> • Billing: GHS {parseCleanNumber(client.totalCost).toLocaleString()}
                       </p>
                     </div>
                   </div>
 
-                  <span className="px-4 py-2 rounded-full bg-amber-400/20 text-amber-800 dark:text-amber-300 border border-amber-400/40 text-xs font-black uppercase tracking-wider shrink-0">
+                  <span className="px-4 py-2 rounded-full bg-amber-400/20 text-amber-800 dark:text-amber-300 border border-amber-400/40 text-xs font-black uppercase tracking-wider shrink-0 text-center">
                     {client.runwayStage || 'Cutting'}
                   </span>
                 </div>
               </div>
 
-              {/* ORDER HISTORY SECTION */}
+              {/* PREVIOUS ORDER LOGS */}
               <div className="bg-white/90 dark:bg-[#092825]/90 backdrop-blur-md rounded-[28px] p-4 sm:p-5 border border-white dark:border-white/10 shadow-xs space-y-3">
                 <h3 className="text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
                   <Clock className="w-3.5 h-3.5 text-[#0D3B36] dark:text-amber-300" />
-                  <span>PREVIOUS ORDER LOGS</span>
+                  <span>PREVIOUS ORDER LOGS ({client.orderHistory?.length || 0})</span>
                 </h3>
 
-                <div className="space-y-2.5">
-                  {/* History Item 2 */}
-                  <div className="p-3.5 bg-[#EBF5F0]/60 dark:bg-slate-800/80 rounded-2xl border border-slate-200/60 dark:border-slate-700 flex items-center justify-between gap-3">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-700 flex items-center justify-center text-slate-700 dark:text-amber-300 shrink-0 shadow-2xs">
-                        <Scissors className="w-4 h-4 text-[#0D3B36] dark:text-amber-300" />
-                      </div>
-                      <div>
-                        <h4 className="font-extrabold text-xs sm:text-sm text-slate-900 dark:text-slate-100 uppercase">
-                          {client.garmentTag || 'VLISCO'} — Session #2
-                        </h4>
-                        <p className="text-[11px] font-bold text-slate-500 dark:text-slate-400 mt-0.5">
-                          Recorded: {client.timestamp || '10/08/2026 08:31'}
-                        </p>
-                      </div>
-                    </div>
+                {(client.orderHistory && client.orderHistory.length > 0) ? (
+                  <div className="space-y-2.5">
+                    {client.orderHistory.map((order, idx) => (
+                      <div
+                        key={order.id || idx}
+                        className="p-3.5 bg-[#EBF5F0]/60 dark:bg-slate-800/80 rounded-2xl border border-slate-200/60 dark:border-slate-700 flex items-center justify-between gap-3"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-700 flex items-center justify-center text-slate-700 dark:text-amber-300 shrink-0 shadow-2xs font-bold text-xs">
+                            #{client.orderHistory!.length - idx}
+                          </div>
+                          <div>
+                            <h4 className="font-extrabold text-xs sm:text-sm text-slate-900 dark:text-slate-100 uppercase">
+                              {order.garmentTag}
+                            </h4>
+                            <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 mt-0.5">
+                              Completed: {order.completionDate || order.orderDate} • GHS {parseCleanNumber(order.totalCost).toLocaleString()}
+                            </p>
+                          </div>
+                        </div>
 
-                    <span className="px-3 py-1 rounded-full bg-[#D1F4E2] dark:bg-emerald-950/80 text-[#0D6348] dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700 text-[11px] font-black shrink-0">
-                      Completed
-                    </span>
+                        <span className="px-3 py-1 rounded-full bg-[#D1F4E2] dark:bg-emerald-950/80 text-[#0D6348] dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700 text-[11px] font-black shrink-0">
+                          {order.status === 'completed' ? 'Completed ✓' : 'Delivered'}
+                        </span>
+                      </div>
+                    ))}
                   </div>
-
-                  {/* History Item 1 */}
-                  <div className="p-3.5 bg-[#EBF5F0]/60 dark:bg-slate-800/80 rounded-2xl border border-slate-200/60 dark:border-slate-700 flex items-center justify-between gap-3">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-700 flex items-center justify-center text-slate-700 dark:text-amber-300 shrink-0 shadow-2xs">
-                        <Scissors className="w-4 h-4 text-[#0D3B36] dark:text-amber-300" />
-                      </div>
-                      <div>
-                        <h4 className="font-extrabold text-xs sm:text-sm text-slate-900 dark:text-slate-100 uppercase">
-                          {client.garmentTag || 'VLISCO'} — Session #1
-                        </h4>
-                        <p className="text-[11px] font-bold text-slate-500 dark:text-slate-400 mt-0.5">
-                          Recorded: 10/08/2026 08:28
-                        </p>
-                      </div>
-                    </div>
-
-                    <span className="px-3 py-1 rounded-full bg-[#D1F4E2] dark:bg-emerald-950/80 text-[#0D6348] dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700 text-[11px] font-black shrink-0">
-                      Completed
-                    </span>
+                ) : (
+                  <div className="p-6 text-center text-xs text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-900/40 rounded-2xl border border-dashed border-slate-200 dark:border-slate-800">
+                    <p className="font-bold text-slate-700 dark:text-slate-300">No prior completed orders yet.</p>
+                    <p className="text-[11px] mt-1 text-slate-400">When you start a new re-order for this client, their prior garment logs will be archived here automatically.</p>
                   </div>
-                </div>
+                )}
               </div>
             </div>
           )}

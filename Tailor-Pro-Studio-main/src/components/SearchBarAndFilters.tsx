@@ -1,5 +1,6 @@
 import React from 'react';
 import { Search, Filter, SlidersHorizontal, X } from 'lucide-react';
+import { useTranslation } from '../i18n/useTranslation';
 
 interface SearchBarAndFiltersProps {
   searchQuery: string;
@@ -22,11 +23,13 @@ export const SearchBarAndFilters: React.FC<SearchBarAndFiltersProps> = ({
   artistsList,
   totalResultsCount
 }) => {
+  const { t } = useTranslation();
+
   const filterChips = [
-    { id: 'all', label: 'All Clients' },
-    { id: 'VIP', label: 'VIP Members' },
-    { id: 'Pending Deposit', label: 'Pending Deposit' },
-    { id: 'Active', label: 'Active Sessions' }
+    { id: 'all', label: t('all') },
+    { id: 'VIP', label: t('vip') },
+    { id: 'Pending Deposit', label: t('pendingDeposit') },
+    { id: 'Active', label: t('active') }
   ];
 
   return (
@@ -39,7 +42,7 @@ export const SearchBarAndFilters: React.FC<SearchBarAndFiltersProps> = ({
             type="text"
             value={searchQuery}
             onChange={(e) => onSearchChange(e.target.value)}
-            placeholder="Search directory by client name, email, style, or artist..."
+            placeholder={t('searchPlaceholder')}
             className="w-full bg-transparent border-none text-slate-800 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 font-medium text-sm focus:outline-none"
           />
           {searchQuery && (

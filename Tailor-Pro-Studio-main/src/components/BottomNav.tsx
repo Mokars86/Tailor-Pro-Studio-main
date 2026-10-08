@@ -1,6 +1,7 @@
 import React from 'react';
 import { Users, Calendar, PieChart, Package, Plus, Sparkles, KeyRound, Settings, UserCircle2 } from 'lucide-react';
 import { TabType } from '../types';
+import { useTranslation } from '../i18n/useTranslation';
 
 interface BottomNavProps {
   activeTab: TabType;
@@ -23,11 +24,13 @@ export const BottomNav: React.FC<BottomNavProps> = ({
   pairCode,
   studioLogoUrl
 }) => {
+  const { t } = useTranslation();
+
   const tabs = [
-    { id: 'clients' as TabType, label: 'Clients', icon: Users, badge: 'Directory' },
-    { id: 'runway' as TabType, label: 'Runway', icon: Calendar, badge: 'Stage' },
-    { id: 'ledger' as TabType, label: 'Ledger', icon: PieChart, badge: 'Financials' },
-    { id: 'inventory' as TabType, label: 'Inventory', icon: Package, badge: 'Materials' }
+    { id: 'clients' as TabType, label: t('clients'), icon: Users, badge: t('directory') },
+    { id: 'runway' as TabType, label: t('runway'), icon: Calendar, badge: t('stage') },
+    { id: 'ledger' as TabType, label: t('ledger'), icon: PieChart, badge: t('financials') },
+    { id: 'inventory' as TabType, label: t('inventory'), icon: Package, badge: t('materials') }
   ];
 
   return (
@@ -91,17 +94,17 @@ export const BottomNav: React.FC<BottomNavProps> = ({
       {/* 2. DESKTOP SIDEBAR NAVIGATION TAB (Visible on desktop screens >= md) */}
       <aside className="hidden md:flex flex-col fixed top-0 left-0 bottom-0 w-64 bg-[#EBF5F0] dark:bg-[#061E1B] text-[#0D3B36] dark:text-white border-r-2 border-[#0D3B36]/15 dark:border-white/20 z-50 p-4 font-['Outfit'] shadow-2xl overflow-y-auto transition-colors duration-200">
         {/* Brand Header & Atelier Badge */}
-        <div className="flex items-center gap-3 pb-5 border-b border-[#0D3B36]/15 dark:border-white/10 pt-2">
-          <div className="w-12 h-12 rounded-2xl bg-[#061E1B] border-2 border-[#DCA134] overflow-hidden shadow-md flex items-center justify-center shrink-0">
+        <div className="flex items-center gap-3.5 pb-5 border-b border-[#0D3B36]/15 dark:border-white/10 pt-2">
+          <div className="w-13 h-13 sm:w-14 sm:h-14 rounded-2xl bg-[#061E1B] border-2 border-[#DCA134] overflow-hidden shadow-md flex items-center justify-center shrink-0 ring-2 ring-[#DCA134]/20 hover:scale-105 transition-transform duration-200">
             <img src={studioLogoUrl || '/tailor_pro_logo.jpg'} alt="Studio Brand Logo" className="w-full h-full object-cover" />
           </div>
           <div className="min-w-0 flex-1">
-            <h2 className="font-black text-sm uppercase tracking-tight text-[#0D3B36] dark:text-white truncate">
+            <h2 className="font-black text-sm sm:text-base uppercase tracking-tight text-[#0D3B36] dark:text-white truncate">
               {studioName}
             </h2>
-            <div className="flex items-center gap-1 mt-0.5">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-              <p className="text-[10px] text-emerald-800 dark:text-amber-300/90 font-black uppercase tracking-wider truncate">
+            <div className="flex items-center gap-1.5 mt-0.5">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+              <p className="text-[10px] text-emerald-800 dark:text-amber-300 font-black uppercase tracking-wider truncate">
                 {ownerName ? ownerName : 'Master Atelier'}
               </p>
             </div>
@@ -115,7 +118,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
             className="w-full py-3.5 px-4 rounded-2xl bg-[#0D3B36] dark:bg-gradient-to-r dark:from-[#DCA134] dark:to-amber-500 hover:bg-[#082824] dark:hover:from-amber-400 dark:hover:to-amber-600 text-amber-300 dark:text-[#061E1B] font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg hover:shadow-xl hover:scale-[1.02] active:scale-95 transition-all cursor-pointer border border-[#DCA134]/40"
           >
             <Plus className="w-4 h-4 stroke-[3] text-amber-300 dark:text-[#061E1B]" />
-            <span>+ Quick Add Client</span>
+            <span>{t('quickAdd')}</span>
           </button>
         </div>
 

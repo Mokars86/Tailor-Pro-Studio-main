@@ -23,16 +23,19 @@ export const ApprenticeProductionTab: React.FC<ApprenticeProductionTabProps> = (
   const [showAllActiveGarments, setShowAllActiveGarments] = useState(false);
 
   // Filter active production garments
-  const activeGarments = clients.filter(
+  const safeClients = (clients || []).filter(Boolean);
+  const safeTasks = (tasks || []).filter(Boolean);
+
+  const activeGarments = safeClients.filter(
     (c) => c.runwayStage === 'CUTTING' || c.runwayStage === 'SEWING' || c.runwayStage === 'CONSULT'
   );
 
   const visibleActiveGarments = showAllActiveGarments ? activeGarments : activeGarments.slice(0, 3);
 
   // Compute stage counts
-  const toCutCount = clients.filter((c) => c.runwayStage === 'CUTTING').length;
-  const sewingCount = clients.filter((c) => c.runwayStage === 'SEWING').length;
-  const doneCount = clients.filter((c) => c.runwayStage === 'FITTING' || c.runwayStage === 'COMPLETED' || c.runwayStage === 'DELIVERED').length;
+  const toCutCount = safeClients.filter((c) => c.runwayStage === 'CUTTING').length;
+  const sewingCount = safeClients.filter((c) => c.runwayStage === 'SEWING').length;
+  const doneCount = safeClients.filter((c) => c.runwayStage === 'FITTING' || c.runwayStage === 'COMPLETED' || c.runwayStage === 'DELIVERED').length;
 
   return (
     <div className="space-y-6 font-['Outfit'] select-none">

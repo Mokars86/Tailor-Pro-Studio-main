@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { Play, CheckCircle2, Scissors, Archive, RotateCcw, Sparkles, Layers, ArrowRight, Check } from 'lucide-react';
+import { Play, CheckCircle2, Scissors, Archive, RotateCcw, Sparkles, Layers, ArrowRight, Check, GripVertical } from 'lucide-react';
 import { Client, RunwayStage } from '../types';
 
 interface RunwayViewProps {
@@ -15,6 +15,8 @@ export const RunwayView: React.FC<RunwayViewProps> = ({
   const [viewMode, setViewMode] = useState<'ACTIVE' | 'ARCHIVE'>('ACTIVE');
   const [toastNotice, setToastNotice] = useState<string | null>(null);
   const [selectedMobileStage, setSelectedMobileStage] = useState<'ALL' | RunwayStage>('ALL');
+  const [draggingClientId, setDraggingClientId] = useState<string | null>(null);
+  const [dragOverStage, setDragOverStage] = useState<RunwayStage | null>(null);
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
 
   const stageSequence: RunwayStage[] = ['CONSULT', 'CUTTING', 'SEWING', 'FITTING', 'COMPLETED', 'DELIVERED'];
@@ -48,20 +50,17 @@ export const RunwayView: React.FC<RunwayViewProps> = ({
 
     if (nextStage === 'DELIVERED') {
       setToastNotice(`Garment for "${client.name || 'Client'}" marked Delivered & Archived to Atelier Records 🛍️`);
-      // If user was on a specific stage filter on mobile, keep view clean
       if (selectedMobileStage !== 'ALL') {
         setSelectedMobileStage('ALL');
       }
     } else {
       const nextLabel = stageLabels[nextStage] || nextStage;
-      setToastNotice(`"${client.name || 'Client'}" advanced to ${nextLabel} stage ✂️`);
+      setToastNotice(`"${client.name || 'Client'}" moved to ${nextLabel} stage ✂️`);
 
-      // If user is filtering by stage on phone, automatically switch to new stage tab so screen never looks empty
       if (selectedMobileStage !== 'ALL') {
         setSelectedMobileStage(nextStage);
       }
 
-      // Smoothly scroll the container to the destination column
       setTimeout(() => {
         const targetEl = document.getElementById(`runway-column-${nextStage}`);
         if (targetEl) {
@@ -71,6 +70,53 @@ export const RunwayView: React.FC<RunwayViewProps> = ({
     }
 
     setTimeout(() => setToastNotice(null), 4500);
+  };
+
+  const handleDropOnStage = (clientId: string, targetStage: RunwayStage) => {
+    const client = safeClients.find((c) => c.id === clientId);
+    if (!client || client.runwayStage === targetStage) {
+      setDraggingClientId(null);
+      setDragOverStage(null);
+      return;
+    }
+    handleAdvanceAndNotice(client, targetStage);
+    setDraggingClientId(null);
+    setDragOverStage(null);
+  };
+
+  // Touch drag support for mobile
+  const touchStartPos = useRef<{ x: number; y: number } | null>(null);
+  const touchDragClientId = useRef<string | null>(null);
+
+  const handleCardTouchStart = (e: React.TouchEvent, clientId: string) => {
+    touchStartPos.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+    touchDragClientId.current = clientId;
+  };
+
+  const handleCardTouchMove = (e: React.TouchEvent) => {
+    if (!touchStartPos.current || !touchDragClientId.current) return;
+    const currentX = e.touches[0].clientX;
+    const currentY = e.touches[0].clientY;
+
+    // Detect column element under finger
+    const element = document.elementFromPoint(currentX, currentY);
+    const columnEl = element?.closest('[data-runway-stage]') as HTMLElement | null;
+    if (columnEl) {
+      const stage = columnEl.dataset.runwayStage as RunwayStage;
+      if (stage && dragOverStage !== stage) {
+        setDragOverStage(stage);
+      }
+    }
+  };
+
+  const handleCardTouchEnd = () => {
+    if (touchDragClientId.current && dragOverStage) {
+      handleDropOnStage(touchDragClientId.current, dragOverStage);
+    }
+    touchStartPos.current = null;
+    touchDragClientId.current = null;
+    setDragOverStage(null);
+    setDraggingClientId(null);
   };
 
   // Compute stage progress percentage
@@ -114,7 +160,7 @@ export const RunwayView: React.FC<RunwayViewProps> = ({
           </h1>
           <p className="text-xs text-slate-500 dark:text-slate-400 font-medium mt-1">
             {viewMode === 'ACTIVE'
-              ? 'Active work-in-progress pipeline. Completed orders automatically archive upon delivery.'
+              ? 'Drag & drop garment cards between stages or use quick advancement controls.'
               : 'Archive of past delivered atelier garments. Data & measurements remain 100% saved.'}
           </p>
         </div>
@@ -152,7 +198,7 @@ export const RunwayView: React.FC<RunwayViewProps> = ({
       {/* MODE 1: ACTIVE RUNWAY PIPELINE COLUMNS */}
       {viewMode === 'ACTIVE' ? (
         <div className="space-y-3">
-          {/* Stage Filter Selector Pills (Highly helpful for Mobile phones) */}
+          {/* Stage Filter Selector Pills */}
           <div className="flex items-center gap-1.5 overflow-x-auto pb-1 custom-scrollbar pt-0.5">
             <button
               type="button"
@@ -201,7 +247,7 @@ export const RunwayView: React.FC<RunwayViewProps> = ({
             })}
           </div>
 
-          {/* Runway Pipeline Horizontal Scroll Grid */}
+          {/* Runway Pipeline Horizontal Drag & Drop Grid */}
           <div
             ref={scrollContainerRef}
             className="flex gap-3.5 sm:gap-5 overflow-x-auto pb-6 pt-1 snap-x custom-scrollbar items-start min-h-[480px]"
@@ -211,13 +257,33 @@ export const RunwayView: React.FC<RunwayViewProps> = ({
               .map(({ stage, label, shortLabel, stepNumber }) => {
                 const stageClients = activeClients.filter((c) => (c.runwayStage || 'CONSULT') === stage);
                 const isCompletedStage = stage === 'COMPLETED';
+                const isTargetHovered = dragOverStage === stage;
 
                 return (
                   <div
                     key={stage}
                     id={`runway-column-${stage}`}
-                    className={`w-[85vw] max-w-[300px] sm:w-[310px] shrink-0 snap-start bg-white dark:bg-[#092825] rounded-[28px] p-3.5 sm:p-5 border border-slate-200/90 dark:border-white/10 shadow-2xs space-y-3.5 ${
-                      isCompletedStage ? 'border-emerald-300/80 dark:border-emerald-500/30' : ''
+                    data-runway-stage={stage}
+                    onDragOver={(e) => {
+                      e.preventDefault();
+                      if (dragOverStage !== stage) setDragOverStage(stage);
+                    }}
+                    onDragLeave={() => {
+                      if (dragOverStage === stage) setDragOverStage(null);
+                    }}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      const droppedId = e.dataTransfer.getData('text/plain') || draggingClientId;
+                      if (droppedId) {
+                        handleDropOnStage(droppedId, stage);
+                      }
+                    }}
+                    className={`w-[85vw] max-w-[300px] sm:w-[310px] shrink-0 snap-start bg-white dark:bg-[#092825] rounded-[28px] p-3.5 sm:p-5 border transition-all space-y-3.5 ${
+                      isTargetHovered
+                        ? 'border-amber-400 ring-2 ring-amber-400/50 bg-amber-50/40 dark:bg-amber-950/20 scale-[1.01]'
+                        : isCompletedStage
+                        ? 'border-emerald-300/80 dark:border-emerald-500/30'
+                        : 'border-slate-200/90 dark:border-white/10 shadow-2xs'
                     }`}
                   >
                     {/* Column Header */}
@@ -239,19 +305,27 @@ export const RunwayView: React.FC<RunwayViewProps> = ({
                       </span>
                     </div>
 
-                    {/* Column Garment Cards or Empty State */}
+                    {/* Column Garment Cards or Empty Drop Zone */}
                     {stageClients.length === 0 ? (
-                      <div className="w-full py-10 px-4 border-2 border-dashed border-slate-200/90 dark:border-slate-800 rounded-[22px] flex flex-col items-center justify-center text-center space-y-2">
+                      <div
+                        className={`w-full py-10 px-4 border-2 border-dashed rounded-[22px] flex flex-col items-center justify-center text-center space-y-2 transition-all ${
+                          isTargetHovered
+                            ? 'border-amber-400 bg-amber-100/30 dark:bg-amber-900/20'
+                            : 'border-slate-200/90 dark:border-slate-800'
+                        }`}
+                      >
                         <div className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-400">
                           <Scissors className="w-4 h-4" />
                         </div>
                         <p className="text-xs font-bold text-slate-600 dark:text-slate-400">
-                          No garments in {shortLabel}
+                          {isTargetHovered ? 'Drop Garment Here ✂️' : `No garments in ${shortLabel}`}
                         </p>
                         <p className="text-[11px] text-slate-400 dark:text-slate-500">
-                          {stage === 'CONSULT'
+                          {isTargetHovered
+                            ? 'Release to assign to this stage'
+                            : stage === 'CONSULT'
                             ? 'New client orders start here.'
-                            : 'Advance garments from previous stage.'}
+                            : 'Drag garments from other columns.'}
                         </p>
                       </div>
                     ) : (
@@ -268,12 +342,29 @@ export const RunwayView: React.FC<RunwayViewProps> = ({
                           const clientName = client.name || 'Client Order';
                           const garmentTag = client.garmentTag || 'Custom Bespoke Garment';
                           const initials = client.initials || (client.name ? client.name.trim().substring(0, 2).toUpperCase() : 'CO');
+                          const isBeingDragged = draggingClientId === client.id;
 
                           return (
                             <div
                               key={client.id}
-                              className={`bg-[#ECF3F1] dark:bg-[#0F3B36] rounded-[22px] p-3.5 sm:p-4 border border-slate-200/80 dark:border-slate-700 space-y-3 shadow-2xs ${
-                                isCompletedStage ? 'bg-emerald-50/80 dark:bg-emerald-950/30 border-emerald-300 dark:border-emerald-500/40' : ''
+                              draggable={true}
+                              onDragStart={(e) => {
+                                e.dataTransfer.setData('text/plain', client.id);
+                                setDraggingClientId(client.id);
+                              }}
+                              onDragEnd={() => {
+                                setDraggingClientId(null);
+                                setDragOverStage(null);
+                              }}
+                              onTouchStart={(e) => handleCardTouchStart(e, client.id)}
+                              onTouchMove={handleCardTouchMove}
+                              onTouchEnd={handleCardTouchEnd}
+                              className={`bg-[#ECF3F1] dark:bg-[#0F3B36] rounded-[22px] p-3.5 sm:p-4 border space-y-3 shadow-2xs cursor-grab active:cursor-grabbing transition-all ${
+                                isBeingDragged
+                                  ? 'opacity-40 scale-95 border-dashed border-amber-400'
+                                  : isCompletedStage
+                                  ? 'bg-emerald-50/80 dark:bg-emerald-950/30 border-emerald-300 dark:border-emerald-500/40 hover:border-emerald-400'
+                                  : 'border-slate-200/80 dark:border-slate-700 hover:border-amber-400/60'
                               }`}
                             >
                               {/* Garment / Client Info */}
@@ -291,11 +382,9 @@ export const RunwayView: React.FC<RunwayViewProps> = ({
                                     </p>
                                   </div>
                                 </div>
-                                {client.phone && (
-                                  <span className="text-[10px] text-slate-500 dark:text-slate-400 font-mono font-medium shrink-0">
-                                    {client.phone}
-                                  </span>
-                                )}
+                                <div className="flex items-center gap-1 shrink-0 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+                                  <GripVertical className="w-4 h-4 cursor-grab" title="Drag to move stage" />
+                                </div>
                               </div>
 
                               {/* Visual Progress Stepper Bar */}
@@ -350,12 +439,6 @@ export const RunwayView: React.FC<RunwayViewProps> = ({
                                     </button>
                                   )}
                                 </div>
-
-                                {isCompletedStage && (
-                                  <span className="px-2 py-0.5 rounded-xl bg-emerald-100 dark:bg-emerald-900/60 text-emerald-800 dark:text-emerald-300 text-[10px] font-black border border-emerald-300 dark:border-emerald-700">
-                                    Ready ✅
-                                  </span>
-                                )}
                               </div>
                             </div>
                           );
@@ -368,92 +451,62 @@ export const RunwayView: React.FC<RunwayViewProps> = ({
           </div>
         </div>
       ) : (
-        /* MODE 2: DELIVERED GARMENTS ARCHIVE CATALOG */
-        <div className="space-y-4">
-          <div className="p-3.5 sm:p-4 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-700 text-xs font-semibold text-emerald-900 dark:text-emerald-200 flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2 min-w-0">
-              <Sparkles className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
-              <span className="leading-relaxed">
-                Delivered orders are archived here automatically. Client measurements & financial records remain preserved in Customer Directory & Ledger.
-              </span>
+        /* MODE 2: DELIVERED & ARCHIVED ATELIER RECORDS */
+        <div className="space-y-4 animate-fade-in">
+          <div className="flex items-center justify-between bg-emerald-50 dark:bg-emerald-950/30 p-4 rounded-2xl border border-emerald-200 dark:border-emerald-800 text-xs font-bold text-emerald-800 dark:text-emerald-300">
+            <div className="flex items-center gap-2">
+              <Archive className="w-4 h-4" />
+              <span>Delivered Atelier Garments ({deliveredClients.length} Archived Orders)</span>
             </div>
-            <span className="font-extrabold bg-white dark:bg-slate-900 px-3 py-1 rounded-xl border border-emerald-300 dark:border-emerald-700 shrink-0">
-              {deliveredClients.length} Delivered
-            </span>
           </div>
 
           {deliveredClients.length === 0 ? (
-            <div className="p-10 text-center space-y-2 bg-white dark:bg-[#092825] rounded-3xl border border-slate-200 dark:border-white/10">
-              <Archive className="w-10 h-10 text-slate-300 dark:text-slate-600 mx-auto" />
-              <h3 className="font-bold text-sm text-slate-700 dark:text-slate-200">
-                No Delivered Garments Archived Yet
-              </h3>
+            <div className="py-16 text-center border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-3xl space-y-2">
+              <Archive className="w-8 h-8 mx-auto text-slate-400" />
+              <p className="text-sm font-bold text-slate-600 dark:text-slate-300">
+                No garments in delivered archive yet
+              </p>
               <p className="text-xs text-slate-400">
-                Garments moved to the "Delivered & Archive" stage will automatically appear here.
+                When an active order is marked delivered, it will appear here permanently.
               </p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
-              {deliveredClients.map((client) => {
-                const clientName = client.name || 'Valued Client';
-                const garmentTag = client.garmentTag || 'Bespoke Garment';
-                const initials = client.initials || (client.name ? client.name.trim().substring(0, 2).toUpperCase() : 'CL');
-                const balanceDue = client.balanceDue ?? 0;
-
-                return (
-                  <div
-                    key={client.id}
-                    className="bg-white dark:bg-[#092825] rounded-2xl p-4 border border-slate-200 dark:border-white/10 space-y-3 shadow-2xs hover:border-emerald-300 dark:hover:border-emerald-500/50 transition-all"
-                  >
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-2.5 min-w-0">
-                        <div className="w-9 h-9 rounded-xl bg-[#0D3B36] dark:bg-[#12423D] text-white font-black text-xs flex items-center justify-center border border-white/20 shrink-0">
-                          {initials}
-                        </div>
-                        <div className="min-w-0">
-                          <h4 className="font-bold text-sm text-slate-900 dark:text-slate-100 truncate">
-                            {clientName}
-                          </h4>
-                          <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 block truncate">
-                            {garmentTag}
-                          </span>
-                        </div>
-                      </div>
-
-                      <span className="px-2.5 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-300 text-[10px] font-black border border-emerald-300 dark:border-emerald-700 shrink-0">
-                        Delivered 🛍️
-                      </span>
-                    </div>
-
-                    <div className="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-800 text-xs font-semibold">
-                      <span className="text-slate-500 dark:text-slate-400">
-                        Balance: <strong className="text-[#DCA134]">GH₵ {balanceDue.toLocaleString('en-US')}</strong>
-                      </span>
-
-                      {/* Re-open / Return to Consult Button */}
-                      <button
-                        type="button"
-                        onClick={() => {
-                          onAdvanceStage(client.id, 'CONSULT');
-                          setViewMode('ACTIVE');
-                          setToastNotice(`New Order started for "${clientName}"! Moved back to Consult column.`);
-                          setTimeout(() => setToastNotice(null), 4000);
-                        }}
-                        className="px-2.5 py-1 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-[11px] font-bold border border-slate-200 dark:border-slate-700 flex items-center gap-1 cursor-pointer transition-all active:scale-95"
-                        title="Re-open Consultation for a new garment order"
-                      >
-                        <RotateCcw className="w-3 h-3 text-[#0D3B36] dark:text-amber-300" />
-                        <span>New Order</span>
-                      </button>
-                    </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3.5">
+              {deliveredClients.map((client) => (
+                <div
+                  key={client.id}
+                  className="glass-card p-4 rounded-2xl border border-slate-200 dark:border-slate-700 space-y-2.5"
+                >
+                  <div className="flex items-center justify-between">
+                    <h4 className="font-bold text-sm text-slate-900 dark:text-slate-100 truncate">
+                      {client.name}
+                    </h4>
+                    <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-900 text-emerald-700 dark:text-emerald-300">
+                      Delivered ✓
+                    </span>
                   </div>
-                );
-              })}
+                  <p className="text-xs text-slate-500 font-medium">
+                    Garment: {client.garmentTag}
+                  </p>
+                  <div className="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-800 text-xs">
+                    <span className="font-black text-[#0D3B36] dark:text-white">
+                      GH₵{client.totalCost}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => handleAdvanceAndNotice(client, 'COMPLETED')}
+                      className="text-[11px] font-bold text-amber-600 dark:text-amber-400 hover:underline flex items-center gap-1 cursor-pointer"
+                    >
+                      <RotateCcw className="w-3 h-3" />
+                      <span>Restore to Runway</span>
+                    </button>
+                  </div>
+                </div>
+              ))}
             </div>
           )}
         </div>
       )}
-
     </div>
   );
 };

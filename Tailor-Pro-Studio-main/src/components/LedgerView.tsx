@@ -30,6 +30,8 @@ import {
 } from 'lucide-react';
 import { Client, LedgerTransaction, RunwayStage } from '../types';
 import { downloadOrShareDocument } from '../utils/mobileDocumentDownloader';
+import { storageService } from '../services/storageService';
+import { parseCleanNumber, sanitizeClient, sanitizeTransaction } from '../utils/numeric';
 
 interface LedgerViewProps {
   transactions: LedgerTransaction[];
@@ -64,25 +66,20 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
 
   // Persisted set of explicitly archived client IDs from active ledger
   const [archivedClientIds, setArchivedClientIds] = useState<string[]>(() => {
-    try {
-      const saved = localStorage.getItem('tailor_archived_ledger_clients');
-      return saved ? JSON.parse(saved) : [];
-    } catch {
-      return [];
-    }
+    return storageService.getItemSync<string[]>('tailor_archived_ledger_clients', []);
   });
 
   const archiveClient = (clientId: string, clientName: string) => {
     const next = [...archivedClientIds, clientId];
     setArchivedClientIds(next);
-    localStorage.setItem('tailor_archived_ledger_clients', JSON.stringify(next));
+    storageService.setItem('tailor_archived_ledger_clients', next);
     showNotification(`Archived ${clientName} from active ledger.`);
   };
 
   const unarchiveClient = (clientId: string, clientName: string) => {
     const next = archivedClientIds.filter((id) => id !== clientId);
     setArchivedClientIds(next);
-    localStorage.setItem('tailor_archived_ledger_clients', JSON.stringify(next));
+    storageService.setItem('tailor_archived_ledger_clients', next);
     showNotification(`Restored ${clientName} to active ledger.`);
   };
 
@@ -90,7 +87,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
     const paidIds = displayClients.filter((c) => c.balanceDue === 0).map((c) => c.id);
     const next = Array.from(new Set([...archivedClientIds, ...paidIds]));
     setArchivedClientIds(next);
-    localStorage.setItem('tailor_archived_ledger_clients', JSON.stringify(next));
+    storageService.setItem('tailor_archived_ledger_clients', next);
     showNotification(`Archived ${paidIds.length} fully paid account(s) from active ledger.`);
   };
 
@@ -101,29 +98,31 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
     }, 2500);
   };
 
-  // Real user clients list
-  const displayClients: Client[] = clients;
+  // Real user clients list with strict numeric sanitization
+  const displayClients: Client[] = clients.map(sanitizeClient);
 
   // Revenue Dashboard Stats
-  const totalSales = displayClients.reduce((sum, c) => sum + (c.totalCost || 0), 0);
-  const totalReceived = displayClients.reduce((sum, c) => sum + (c.depositPaid || 0), 0);
-  const totalBalanceDue = displayClients.reduce((sum, c) => sum + (c.balanceDue || 0), 0);
-  const collectionRate = totalSales > 0 ? Math.round((totalReceived / totalSales) * 100) : 0;
+  const totalSales = displayClients.reduce((sum, c) => sum + (parseCleanNumber(c.totalCost) || 0), 0);
+  const totalReceived = displayClients.reduce((sum, c) => sum + (parseCleanNumber(c.depositPaid) || 0), 0);
+  const totalBalanceDue = displayClients.reduce((sum, c) => sum + (parseCleanNumber(c.balanceDue) || 0), 0);
+  const rawRate = totalSales > 0 ? Math.round((totalReceived / totalSales) * 100) : 0;
+  const collectionRate = isNaN(rawRate) ? 0 : Math.min(100, Math.max(0, rawRate));
   
   const completedJobs = displayClients.filter((c) => c.runwayStage === 'DELIVERED').length;
   const totalJobs = displayClients.length;
 
   // Combine explicit transactions with automatic consultation deposits & full settlement receipts
-  const allCashflowTransactions: LedgerTransaction[] = [...transactions];
+  const allCashflowTransactions: LedgerTransaction[] = transactions.map(sanitizeTransaction);
 
   displayClients.forEach((c) => {
-    if (c.depositPaid > 0) {
+    const depositPaid = parseCleanNumber(c.depositPaid);
+    if (depositPaid > 0) {
       // Check how much revenue/deposit has already been logged in transactions for this client
-      const loggedAmountForClient = transactions
+      const loggedAmountForClient = allCashflowTransactions
         .filter((t) => t.clientOrVendor && t.clientOrVendor.toLowerCase() === c.name.toLowerCase() && t.status === 'cleared')
-        .reduce((sum, t) => sum + (t.amount || 0), 0);
+        .reduce((sum, t) => sum + (parseCleanNumber(t.amount) || 0), 0);
 
-      const unrecordedAmount = c.depositPaid - loggedAmountForClient;
+      const unrecordedAmount = depositPaid - loggedAmountForClient;
       if (unrecordedAmount > 0) {
         allCashflowTransactions.push({
           id: `auto-dep-${c.id}`,
@@ -1030,7 +1029,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                             TOTAL COST
                           </span>
                           <span className="font-black text-xs sm:text-sm text-slate-900 dark:text-slate-100 truncate block mt-0.5">
-                            GHS {client.totalCost}
+                            GHS {parseCleanNumber(client.totalCost).toLocaleString()}
                           </span>
                         </div>
 
@@ -1039,7 +1038,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                             PAID DEPOSIT
                           </span>
                           <span className="font-black text-xs sm:text-sm text-emerald-700 dark:text-emerald-300 truncate block mt-0.5">
-                            GHS {client.depositPaid}
+                            GHS {parseCleanNumber(client.depositPaid).toLocaleString()}
                           </span>
                         </div>
 
@@ -1052,7 +1051,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                             {isPaidInFull ? 'STATUS' : 'BALANCE DUE'}
                           </span>
                           <span className="font-black text-xs sm:text-sm truncate block mt-0.5">
-                            {isPaidInFull ? 'PAID IN FULL' : `GHS ${client.balanceDue}`}
+                            {isPaidInFull ? 'PAID IN FULL' : `GHS ${parseCleanNumber(client.balanceDue).toLocaleString()}`}
                           </span>
                         </div>
                       </div>
@@ -1084,9 +1083,9 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                               `*MOKARS STITCHES STUDIO - OFFICIAL INVOICE #${invoiceNum}*\n\n` +
                               `👤 Billed To: ${client.name}\n` +
                               `👗 Order: ${client.garmentTag || 'Custom Order'}\n\n` +
-                              `💵 Total Cost: GHS ${client.totalCost}\n` +
-                              `✅ Deposit Paid: GHS ${client.depositPaid}\n` +
-                              `💰 Balance Due: GHS ${client.balanceDue}\n\n` +
+                              `💵 Total Cost: GHS ${parseCleanNumber(client.totalCost).toLocaleString()}\n` +
+                              `✅ Deposit Paid: GHS ${parseCleanNumber(client.depositPaid).toLocaleString()}\n` +
+                              `💰 Balance Due: GHS ${parseCleanNumber(client.balanceDue).toLocaleString()}\n\n` +
                               `💳 MoMo Payment Details:\n` +
                               `Number: 0546920418 (Mubarik Tuahir Ali)\n` +
                               `Reference: #${invoiceNum}`

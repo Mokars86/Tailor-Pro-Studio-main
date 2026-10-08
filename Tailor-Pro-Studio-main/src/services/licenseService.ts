@@ -1,5 +1,6 @@
 import { LicenseRecord, UserAccountRecord, LicenseDuration } from '../types';
 import { fetchUserAccountsFromSupabase, upsertUserAccountToSupabase } from './supabaseService';
+import { storageService } from './storageService';
 
 const STORAGE_KEY_LICENSES = 'tailor_license_keys';
 const STORAGE_KEY_USERS = 'tailor_user_accounts';
@@ -21,37 +22,19 @@ const INITIAL_USER_ACCOUNTS: UserAccountRecord[] = [
 ];
 
 export function getLicenseKeys(): LicenseRecord[] {
-  try {
-    const saved = localStorage.getItem(STORAGE_KEY_LICENSES);
-    if (saved) {
-      const parsed: LicenseRecord[] = JSON.parse(saved);
-      return parsed.map((item) => ({
-        ...item,
-        duration: item.duration || '1_year'
-      }));
-    }
-  } catch (err) {
-    console.error('Failed to parse license keys from storage:', err);
-  }
-  localStorage.setItem(STORAGE_KEY_LICENSES, JSON.stringify([]));
-  return [];
+  const parsed = storageService.getItemSync<LicenseRecord[]>(STORAGE_KEY_LICENSES, []);
+  return parsed.map((item) => ({
+    ...item,
+    duration: item.duration || '1_year'
+  }));
 }
 
 export function saveLicenseKeys(keys: LicenseRecord[]) {
-  localStorage.setItem(STORAGE_KEY_LICENSES, JSON.stringify(keys));
+  storageService.setItem(STORAGE_KEY_LICENSES, keys);
 }
 
 export function getUserAccountRecords(): UserAccountRecord[] {
-  try {
-    const saved = localStorage.getItem(STORAGE_KEY_USERS);
-    if (saved) {
-      return JSON.parse(saved);
-    }
-  } catch (err) {
-    console.error('Failed to parse user accounts from storage:', err);
-  }
-  localStorage.setItem(STORAGE_KEY_USERS, JSON.stringify(INITIAL_USER_ACCOUNTS));
-  return INITIAL_USER_ACCOUNTS;
+  return storageService.getItemSync<UserAccountRecord[]>(STORAGE_KEY_USERS, INITIAL_USER_ACCOUNTS);
 }
 
 const STORAGE_KEY_WORKSPACE_ACTIVATED = 'tailor_workspace_activated';
@@ -63,18 +46,18 @@ export function isWorkspaceActivated(): boolean {
 
 export function setWorkspaceActivated(activated: boolean, licenseKey?: string): void {
   if (activated) {
-    localStorage.setItem(STORAGE_KEY_WORKSPACE_ACTIVATED, 'true');
+    storageService.setItem(STORAGE_KEY_WORKSPACE_ACTIVATED, 'true');
     if (licenseKey) {
-      localStorage.setItem(STORAGE_KEY_ACTIVATED_LICENSE, licenseKey.trim().toUpperCase());
+      storageService.setItem(STORAGE_KEY_ACTIVATED_LICENSE, licenseKey.trim().toUpperCase());
     }
   } else {
-    localStorage.removeItem(STORAGE_KEY_WORKSPACE_ACTIVATED);
-    localStorage.removeItem(STORAGE_KEY_ACTIVATED_LICENSE);
+    storageService.removeItem(STORAGE_KEY_WORKSPACE_ACTIVATED);
+    storageService.removeItem(STORAGE_KEY_ACTIVATED_LICENSE);
   }
 }
 
 export function saveUserAccountRecords(users: UserAccountRecord[]) {
-  localStorage.setItem(STORAGE_KEY_USERS, JSON.stringify(users));
+  storageService.setItem(STORAGE_KEY_USERS, users);
 }
 
 export function registerUserAccount(data: {
@@ -117,7 +100,7 @@ export function registerUserAccount(data: {
     fullName: data.fullName,
     studioName: data.studioName,
     role: data.role,
-    licenseKey: providedKey || localStorage.getItem(STORAGE_KEY_ACTIVATED_LICENSE) || undefined,
+    licenseKey: providedKey || storageService.getItemSync<string>(STORAGE_KEY_ACTIVATED_LICENSE, '') || undefined,
     status: 'approved',
     registeredAt: new Date().toISOString()
   };
@@ -321,10 +304,10 @@ export function clearAllLicenses(): void {
 const STORAGE_KEY_ADMIN_PIN = 'tailor_admin_security_pin';
 
 export function getAdminPin(): string {
-  return localStorage.getItem(STORAGE_KEY_ADMIN_PIN) || '8888';
+  return storageService.getItemSync<string>(STORAGE_KEY_ADMIN_PIN, '8888');
 }
 
 export function updateAdminPin(newPin: string): void {
-  localStorage.setItem(STORAGE_KEY_ADMIN_PIN, newPin.trim());
+  storageService.setItem(STORAGE_KEY_ADMIN_PIN, newPin.trim());
 }
 

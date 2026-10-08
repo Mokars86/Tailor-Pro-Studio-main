@@ -9,6 +9,8 @@ import {
   upsertStudioSettingsToSupabase
 } from './supabaseService';
 
+import { storageService } from './storageService';
+
 export interface QueuedSyncItem {
   id: string;
   type: 'client' | 'apprentice' | 'task' | 'deposit' | 'session' | 'transaction' | 'inventory' | 'settings';
@@ -19,14 +21,12 @@ export interface QueuedSyncItem {
 const QUEUE_STORAGE_KEY = 'tailor_offline_sync_queue';
 
 /**
- * Get all queued offline items from localStorage
+ * Get all queued offline items from storage
  */
 export function getOfflineQueue(): QueuedSyncItem[] {
   try {
-    const saved = localStorage.getItem(QUEUE_STORAGE_KEY);
-    if (!saved) return [];
-    const parsed = JSON.parse(saved);
-    return Array.isArray(parsed) ? parsed : [];
+    const queue = storageService.getItemSync<QueuedSyncItem[]>(QUEUE_STORAGE_KEY, []);
+    return Array.isArray(queue) ? queue : [];
   } catch (e) {
     console.error('[Offline Sync] Failed to parse queue:', e);
     return [];
@@ -55,7 +55,7 @@ export function queueOfflineAction(type: QueuedSyncItem['type'], payload: any) {
     queue.push(newItem);
   }
 
-  localStorage.setItem(QUEUE_STORAGE_KEY, JSON.stringify(queue));
+  storageService.setItemImmediate(QUEUE_STORAGE_KEY, queue);
   console.log(`[Offline Sync] Queued ${type} (${id}) for later sync. Total queued: ${queue.length}`);
 }
 
@@ -121,7 +121,7 @@ export async function flushOfflineQueue(): Promise<{ syncedCount: number; errors
     }
   }
 
-  localStorage.setItem(QUEUE_STORAGE_KEY, JSON.stringify(remainingQueue));
+  storageService.setItemImmediate(QUEUE_STORAGE_KEY, remainingQueue);
   console.log(`[Offline Sync] Flush complete. Synced: ${syncedCount}, Remaining in queue: ${remainingQueue.length}`);
   return { syncedCount, errorsCount };
 }

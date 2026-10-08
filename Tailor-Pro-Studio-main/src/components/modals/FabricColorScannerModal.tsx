@@ -22,6 +22,7 @@ import {
   AlertCircle
 } from 'lucide-react';
 import { FabricSideInspectionResult, SavedFabricSideInspection } from '../../types';
+import { storageService } from '../../services/storageService';
 
 export interface FabricAnalysisResult {
   fabricType: string;
@@ -481,12 +482,12 @@ export const FabricColorScannerModal: React.FC<FabricColorScannerModalProps> = (
 
   // Saved Matches & Inspections State
   const [savedMatches, setSavedMatches] = useState<SavedFabricMatch[]>(() => {
-    const saved = localStorage.getItem('tailor_saved_fabric_matches');
-    return saved ? JSON.parse(saved) : [];
+    const saved = storageService.getItemSync<SavedFabricMatch[]>('tailor_saved_fabric_matches', []);
+    return Array.isArray(saved) ? saved : [];
   });
   const [savedSideInspections, setSavedSideInspections] = useState<SavedFabricSideInspection[]>(() => {
-    const saved = localStorage.getItem('tailor_saved_fabric_side_inspections');
-    return saved ? JSON.parse(saved) : [];
+    const saved = storageService.getItemSync<SavedFabricSideInspection[]>('tailor_saved_fabric_side_inspections', []);
+    return Array.isArray(saved) ? saved : [];
   });
   const [saveNotice, setSaveNotice] = useState<string | null>(null);
 
@@ -757,7 +758,7 @@ export const FabricColorScannerModal: React.FC<FabricColorScannerModalProps> = (
 
     const updated = [newMatch, ...savedMatches.filter((m) => m.id !== matchId)];
     setSavedMatches(updated);
-    localStorage.setItem('tailor_saved_fabric_matches', JSON.stringify(updated));
+    storageService.setItem('tailor_saved_fabric_matches', updated);
 
     setSaveNotice('Color match saved successfully!');
     setTimeout(() => setSaveNotice(null), 2500);
@@ -777,7 +778,7 @@ export const FabricColorScannerModal: React.FC<FabricColorScannerModalProps> = (
 
     const updated = [newInspection, ...savedSideInspections.filter((s) => s.id !== id)];
     setSavedSideInspections(updated);
-    localStorage.setItem('tailor_saved_fabric_side_inspections', JSON.stringify(updated));
+    storageService.setItem('tailor_saved_fabric_side_inspections', updated);
 
     setSaveNotice('Fabric Face & Back inspection report saved!');
     setTimeout(() => setSaveNotice(null), 2500);
@@ -787,14 +788,14 @@ export const FabricColorScannerModal: React.FC<FabricColorScannerModalProps> = (
     if (e) e.stopPropagation();
     const updated = savedMatches.filter((m) => m.id !== id);
     setSavedMatches(updated);
-    localStorage.setItem('tailor_saved_fabric_matches', JSON.stringify(updated));
+    storageService.setItem('tailor_saved_fabric_matches', updated);
   };
 
   const handleDeleteSavedInspection = (id: string, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
     const updated = savedSideInspections.filter((s) => s.id !== id);
     setSavedSideInspections(updated);
-    localStorage.setItem('tailor_saved_fabric_side_inspections', JSON.stringify(updated));
+    storageService.setItem('tailor_saved_fabric_side_inspections', updated);
   };
 
   if (!isOpen) return null;

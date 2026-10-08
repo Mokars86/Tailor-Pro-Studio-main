@@ -13,6 +13,7 @@ import {
   getAdminPin,
   updateAdminPin
 } from '../../services/licenseService';
+import { storageService } from '../../services/storageService';
 
 interface SuperAdminPortalProps {
   isOpen: boolean;
@@ -198,8 +199,8 @@ export const SuperAdminPortal: React.FC<SuperAdminPortalProps> = ({ isOpen, onCl
     setIsGeneratingBatch(true);
     const newKeys: string[] = [];
 
-    const savedKeysRaw = localStorage.getItem('tailor_workshop_keys');
-    let savedKeys: Array<{ code: string; status: string; generatedAt: string; batchName: string }> = savedKeysRaw ? JSON.parse(savedKeysRaw) : [];
+    const savedKeys: Array<{ code: string; status: string; generatedAt: string; batchName: string }> =
+      storageService.getItemSync('tailor_workshop_keys', []);
 
     for (let i = 0; i < batchCount; i++) {
       const randomPart = Math.floor(1000 + Math.random() * 9000);
@@ -214,7 +215,7 @@ export const SuperAdminPortal: React.FC<SuperAdminPortalProps> = ({ isOpen, onCl
       });
     }
 
-    localStorage.setItem('tailor_workshop_keys', JSON.stringify(savedKeys));
+    storageService.setItem('tailor_workshop_keys', savedKeys);
     setIsGeneratingBatch(false);
     setGeneratedBatchKeys(newKeys);
     refreshData();

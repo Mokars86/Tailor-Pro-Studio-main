@@ -46,6 +46,22 @@ export interface SpecSheetGarment {
   yardsNeeded?: number;
 }
 
+export interface ClientOrder {
+  id: string;
+  orderNumber: string;
+  garmentTag: string;
+  orderDate: string;
+  completionDate?: string;
+  totalCost: number;
+  depositPaid: number;
+  balanceDue: number;
+  runwayStage: RunwayStage;
+  status: 'active' | 'completed' | 'delivered' | 'archived';
+  notes?: string;
+  fittingDate?: string;
+  assignedDesigner?: string;
+}
+
 export interface Client {
   id: string;
   name: string;
@@ -65,6 +81,7 @@ export interface Client {
   assignedDesigner?: string;
   fittingDate?: string;
   tags?: string[];
+  orderHistory?: ClientOrder[];
 }
 
 export type ApprenticeTaskStatus = 'in_progress' | 'review_pending' | 'passed';

@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase';
+export { supabase };
 import {
   Client,
   Apprentice,

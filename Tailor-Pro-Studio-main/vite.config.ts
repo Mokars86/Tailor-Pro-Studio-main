@@ -20,5 +20,33 @@ export default defineConfig(() => {
         ignored: ['**/*.apk', '**/public/*.apk', '**/android/**', '**/dist/**']
       },
     },
+    build: {
+      chunkSizeWarningLimit: 600,
+      rollupOptions: {
+        output: {
+          manualChunks(id) {
+            if (id.includes('node_modules')) {
+              if (
+                id.includes('node_modules/react/') ||
+                id.includes('node_modules/react-dom/') ||
+                id.includes('node_modules/scheduler/') ||
+                id.includes('node_modules/zustand/')
+              ) {
+                return 'vendor-framework';
+              }
+              if (id.includes('@supabase')) {
+                return 'vendor-supabase';
+              }
+              if (id.includes('lucide-react')) {
+                return 'vendor-lucide';
+              }
+              if (id.includes('@capacitor')) {
+                return 'vendor-capacitor';
+              }
+            }
+          }
+        }
+      }
+    }
   };
 });

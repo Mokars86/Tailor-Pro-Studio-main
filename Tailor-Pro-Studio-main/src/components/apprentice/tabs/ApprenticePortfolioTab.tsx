@@ -54,11 +54,14 @@ export const ApprenticePortfolioTab: React.FC<ApprenticePortfolioTabProps> = ({
   };
 
   // Dynamic Competencies & Technical Proficiency calculated from real data ONLY
-  const cuttingClientsCount = clients.filter((c) => ['CUTTING', 'SEWING', 'FITTING', 'COMPLETED', 'DELIVERED'].includes(c.runwayStage)).length;
-  const sewingClientsCount = clients.filter((c) => ['SEWING', 'FITTING', 'COMPLETED', 'DELIVERED'].includes(c.runwayStage)).length;
-  const fittingClientsCount = clients.filter((c) => ['FITTING', 'COMPLETED', 'DELIVERED'].includes(c.runwayStage)).length;
-  const measuredClientsCount = clients.filter((c) => c.measurements && Object.keys(c.measurements).length > 0).length;
-  const completedTasksCount = tasks.filter((t) => t.isCompleted).length;
+  const safeClients = (clients || []).filter(Boolean);
+  const safeTasks = (tasks || []).filter(Boolean);
+
+  const cuttingClientsCount = safeClients.filter((c) => ['CUTTING', 'SEWING', 'FITTING', 'COMPLETED', 'DELIVERED'].includes(c.runwayStage)).length;
+  const sewingClientsCount = safeClients.filter((c) => ['SEWING', 'FITTING', 'COMPLETED', 'DELIVERED'].includes(c.runwayStage)).length;
+  const fittingClientsCount = safeClients.filter((c) => ['FITTING', 'COMPLETED', 'DELIVERED'].includes(c.runwayStage)).length;
+  const measuredClientsCount = safeClients.filter((c) => c.measurements && Object.keys(c.measurements).length > 0).length;
+  const completedTasksCount = safeTasks.filter((t) => t.isCompleted).length;
 
   const competencies = [
     {
@@ -89,26 +92,26 @@ export const ApprenticePortfolioTab: React.FC<ApprenticePortfolioTabProps> = ({
   ];
 
   // Executed duties combining real master tasks & active client projects for CV
-  const taskDuties = tasks.map((t) => ({
+  const taskDuties = safeTasks.map((t) => ({
     id: t.id,
-    tag: `MASTER TASK · ${t.title}`,
+    tag: `MASTER TASK · ${t.title || 'Workshop Duty'}`,
     stage: t.status === 'passed' ? 'Passed ✓' : t.status === 'review_pending' || t.isCompleted ? 'Review Pending 🕒' : 'In Progress ⏳',
     notes: t.masterNotes || `Assigned task logged on ${t.completedAt || 'Workshop Log'}`
   }));
 
-  const clientDuties = clients.map((c) => ({
+  const clientDuties = safeClients.map((c) => ({
     id: c.id,
     tag: `${c.garmentTag || 'Custom Garment'} · ${c.initials || (c.name ? c.name.substring(0, 2).toUpperCase() : 'AT')}`,
-    stage: c.runwayStage === 'CUTTING' ? 'Cutting & Pattern Drafting' : c.runwayStage === 'SEWING' ? 'Garment Sewing & Assembly' : `${c.runwayStage} Fitting Completed`,
+    stage: c.runwayStage === 'CUTTING' ? 'Cutting & Pattern Drafting' : c.runwayStage === 'SEWING' ? 'Garment Sewing & Assembly' : `${c.runwayStage || 'Active'} Fitting Completed`,
     notes: c.notes || 'Client consultation & precision measurements recorded.'
   }));
 
   const executedDuties = [...taskDuties, ...clientDuties];
 
-  const galleryItems = clients.map((c) => ({
+  const galleryItems = safeClients.map((c) => ({
     title: c.garmentTag || 'Custom Garment',
     initials: c.initials || (c.name ? c.name.substring(0, 2).toUpperCase() : 'AT'),
-    notes: c.notes || `Production stage: ${c.runwayStage}`
+    notes: c.notes || `Production stage: ${c.runwayStage || 'Active'}`
   }));
 
   const handlePrintCV = async () => {

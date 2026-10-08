@@ -2,6 +2,7 @@ import React from 'react';
 import { Settings, Award, Sun, Moon, Palette, UserCircle2, Download, RefreshCw, Crown, Smartphone, Bell } from 'lucide-react';
 import { StudioSettings } from '../types';
 import { usePWAInstall } from '../utils/usePWAInstall';
+import { useTranslation } from '../i18n/useTranslation';
 
 interface HeaderProps {
   studioSettings: StudioSettings;
@@ -40,14 +41,15 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenNotificationCenter
 }) => {
   const { isInstalled } = usePWAInstall();
+  const { t } = useTranslation();
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-40 lg:pl-64 pt-[max(12px,calc(env(safe-area-inset-top,0px)+10px))] sm:pt-3 pb-1 sm:pb-2 px-1.5 sm:px-6 bg-[#EBF5F0]/95 dark:bg-[#061E1B]/95 backdrop-blur-md border-b border-[#0D3B36]/10 dark:border-white/10 shadow-xs transition-all duration-200">
-      <div className="max-w-7xl mx-auto glass-card rounded-xl sm:rounded-3xl p-1.5 xs:p-2 sm:p-3 flex flex-col md:flex-row items-center justify-between gap-1.5 md:gap-3">
+    <header className="fixed top-0 left-0 right-0 z-40 lg:pl-64 pt-[max(10px,calc(env(safe-area-inset-top,0px)+8px))] sm:pt-2.5 pb-1 sm:pb-2 px-1.5 sm:px-6 bg-[#EBF5F0]/95 dark:bg-[#061E1B]/95 backdrop-blur-md border-b border-[#0D3B36]/10 dark:border-white/10 shadow-xs transition-all duration-200">
+      <div className="max-w-7xl mx-auto glass-card rounded-xl sm:rounded-3xl p-2 sm:p-3 md:p-3.5 flex flex-col md:flex-row items-center justify-between gap-2 md:gap-4">
         {/* Left: Branding & Studio Title */}
-        <div className="flex items-center justify-between w-full md:w-auto gap-2 md:gap-3 min-w-0">
-          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-            <div className="w-7 h-7 sm:w-10 md:w-12 sm:h-10 md:h-12 rounded-lg sm:rounded-2xl bg-[#061E1B] border-2 border-[#DCA134] overflow-hidden shadow-md shrink-0 flex items-center justify-center">
+        <div className="flex items-center justify-between w-full md:w-auto gap-2.5 md:gap-3.5 min-w-0">
+          <div className="flex items-center gap-2.5 sm:gap-3.5 min-w-0">
+            <div className="w-10 h-10 xs:w-11 xs:h-11 sm:w-13 sm:h-13 md:w-14 md:h-14 lg:w-16 lg:h-16 rounded-xl sm:rounded-2xl bg-[#061E1B] border-2 border-[#DCA134] overflow-hidden shadow-md shrink-0 flex items-center justify-center ring-2 ring-[#DCA134]/20 hover:scale-105 transition-transform duration-200">
               <img
                 src={studioSettings.logoUrl || '/tailor_pro_logo.jpg'}
                 alt="Studio Brand Logo"
@@ -55,11 +57,12 @@ export const Header: React.FC<HeaderProps> = ({
               />
             </div>
             <div className="flex flex-col min-w-0">
-              <h1 className="font-['Outfit'] font-black text-xs sm:text-base md:text-lg lg:text-xl text-[#0D3B36] dark:text-[#DCA134] tracking-tight uppercase leading-snug truncate max-w-[180px] xs:max-w-[240px] sm:max-w-[320px] md:max-w-[260px] lg:max-w-none">
+              <h1 className="font-['Outfit'] font-black text-sm xs:text-base sm:text-lg md:text-xl lg:text-2xl text-[#0D3B36] dark:text-[#DCA134] tracking-tight uppercase leading-tight truncate max-w-[200px] xs:max-w-[280px] sm:max-w-[360px] md:max-w-[420px] lg:max-w-none">
                 {studioSettings.studioName || 'MOKARS STITCHES STUDIO'}
               </h1>
-              <p className="text-[9px] sm:text-[11px] text-slate-500 dark:text-slate-400 font-bold block leading-none mt-0.5 truncate">
-                {studioSettings.ownerName ? `Master: ${studioSettings.ownerName}` : 'Master Atelier Platform'}
+              <p className="text-[10px] xs:text-[11px] sm:text-xs md:text-sm text-slate-600 dark:text-slate-300 font-bold flex items-center gap-1.5 leading-tight mt-0.5 truncate">
+                <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
+                <span className="truncate">{studioSettings.ownerName ? `Master: ${studioSettings.ownerName}` : 'Master Atelier Platform'}</span>
               </p>
             </div>
           </div>
@@ -136,6 +139,7 @@ export const Header: React.FC<HeaderProps> = ({
               <span className="hidden md:inline">{supabaseStatus === 'connected' ? 'Supabase Live' : supabaseStatus === 'syncing' ? 'Syncing...' : 'Local Cache'}</span>
             </button>
           </div>
+
 
           {/* Single Theme Toggle Button */}
           {onToggleTheme && (

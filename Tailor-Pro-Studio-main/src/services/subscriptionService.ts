@@ -1,4 +1,5 @@
 import { StudioSubscription, GraduationCertificatePayment, SubscriptionTier } from '../types';
+import { storageService } from './storageService';
 
 const STORAGE_KEY_SUBSCRIPTION = 'tailor_studio_subscription';
 const STORAGE_KEY_GRADUATION_PAYMENTS = 'tailor_graduation_payments';
@@ -13,19 +14,18 @@ export const DEFAULT_FREE_SUBSCRIPTION: StudioSubscription = {
 
 export function getStudioSubscription(): StudioSubscription {
   try {
-    const saved = localStorage.getItem(STORAGE_KEY_SUBSCRIPTION);
+    const saved = storageService.getItemSync<StudioSubscription | null>(STORAGE_KEY_SUBSCRIPTION, null);
     if (saved) {
-      const parsed: StudioSubscription = JSON.parse(saved);
       // Check expiration if expiresAt is set
-      if (parsed.expiresAt && new Date(parsed.expiresAt) < new Date()) {
+      if (saved.expiresAt && new Date(saved.expiresAt) < new Date()) {
         return {
-          ...parsed,
+          ...saved,
           status: 'EXPIRED',
           tier: 'FREE',
           clientProfileLimit: 5
         };
       }
-      return parsed;
+      return saved;
     }
   } catch (err) {
     console.error('Failed to parse subscription from storage:', err);
@@ -35,7 +35,7 @@ export function getStudioSubscription(): StudioSubscription {
 
 export function saveStudioSubscription(subscription: StudioSubscription): void {
   try {
-    localStorage.setItem(STORAGE_KEY_SUBSCRIPTION, JSON.stringify(subscription));
+    storageService.setItem(STORAGE_KEY_SUBSCRIPTION, subscription);
   } catch (err) {
     console.error('Failed to save studio subscription:', err);
   }
@@ -148,8 +148,7 @@ export function redeemWorkshopKey(key: string): { success: boolean; subscription
     return { success: false, message: 'Invalid key format. Please enter a valid workshop voucher key.' };
   }
 
-  const savedKeysRaw = localStorage.getItem(STORAGE_KEY_WORKSHOP_KEYS);
-  let savedKeys: Array<{ code: string; status: string; usedAt?: string }> = savedKeysRaw ? JSON.parse(savedKeysRaw) : [];
+  const savedKeys = storageService.getItemSync<Array<{ code: string; status: string; usedAt?: string }>>(STORAGE_KEY_WORKSHOP_KEYS, []);
 
   const isPreApproved = cleanKey.startsWith('TPS-') || cleanKey.startsWith('MOKARS-') || cleanKey.includes('WORKSHOP');
   const foundKey = savedKeys.find((k) => k.code.toUpperCase() === cleanKey);
@@ -165,7 +164,7 @@ export function redeemWorkshopKey(key: string): { success: boolean; subscription
   if (foundKey) {
     foundKey.status = 'used';
     foundKey.usedAt = new Date().toISOString();
-    localStorage.setItem(STORAGE_KEY_WORKSHOP_KEYS, JSON.stringify(savedKeys));
+    storageService.setItem(STORAGE_KEY_WORKSHOP_KEYS, savedKeys);
   }
 
   const expires = new Date();
@@ -190,10 +189,8 @@ export function redeemWorkshopKey(key: string): { success: boolean; subscription
 
 export function getGraduationPayments(): Record<string, GraduationCertificatePayment> {
   try {
-    const saved = localStorage.getItem(STORAGE_KEY_GRADUATION_PAYMENTS);
-    if (saved) {
-      return JSON.parse(saved);
-    }
+    const saved = storageService.getItemSync<Record<string, GraduationCertificatePayment>>(STORAGE_KEY_GRADUATION_PAYMENTS, {});
+    return saved && typeof saved === 'object' ? saved : {};
   } catch (err) {
     console.error('Failed to read graduation payments:', err);
   }
@@ -226,6 +223,6 @@ export function recordGraduationPayment(
   };
 
   payments[apprenticeId] = record;
-  localStorage.setItem(STORAGE_KEY_GRADUATION_PAYMENTS, JSON.stringify(payments));
+  storageService.setItem(STORAGE_KEY_GRADUATION_PAYMENTS, payments);
   return record;
 }

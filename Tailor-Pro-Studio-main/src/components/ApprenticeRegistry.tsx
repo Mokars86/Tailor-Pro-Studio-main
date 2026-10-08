@@ -6,6 +6,7 @@ import { ApprenticeCertificateModal } from './modals/ApprenticeCertificateModal'
 import { generateMasterWorkshopCode } from '../utils/workshopCode';
 import { getGraduationPayment, canLinkApprentice } from '../services/subscriptionService';
 import { downloadOrShareDocument } from '../utils/mobileDocumentDownloader';
+import { storageService } from '../services/storageService';
 
 export interface GraduatedAlumniRecord {
   id: string;
@@ -72,12 +73,7 @@ export const ApprenticeRegistry: React.FC<ApprenticeRegistryProps> = ({
 
   // Persisted list of Graduated Alumni
   const [graduatedAlumni, setGraduatedAlumni] = useState<GraduatedAlumniRecord[]>(() => {
-    try {
-      const saved = localStorage.getItem('tailor_graduated_alumni_history');
-      return saved ? JSON.parse(saved) : [];
-    } catch {
-      return [];
-    }
+    return storageService.getItemSync<GraduatedAlumniRecord[]>('tailor_graduated_alumni_history', []);
   });
 
   // Auto-sync active graduated apprentices into permanent alumni history
@@ -120,7 +116,7 @@ export const ApprenticeRegistry: React.FC<ApprenticeRegistryProps> = ({
 
     if (updated) {
       setGraduatedAlumni(currentAlumni);
-      localStorage.setItem('tailor_graduated_alumni_history', JSON.stringify(currentAlumni));
+      storageService.setItem('tailor_graduated_alumni_history', currentAlumni);
     }
   }, [apprentices, tasks, masterTrainer]);
 
@@ -148,7 +144,7 @@ export const ApprenticeRegistry: React.FC<ApprenticeRegistryProps> = ({
 
     const next = [...graduatedAlumni.filter((a) => a.id !== apprentice.id), newRecord];
     setGraduatedAlumni(next);
-    localStorage.setItem('tailor_graduated_alumni_history', JSON.stringify(next));
+    storageService.setItem('tailor_graduated_alumni_history', next);
 
     if (onUnlinkApprentice) {
       onUnlinkApprentice(apprentice.id);

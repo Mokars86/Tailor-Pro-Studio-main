@@ -29,31 +29,33 @@ export interface ExportBackupResult {
   filename?: string;
 }
 
+import { storageService } from '../services/storageService';
+
 /**
  * Helper to get all current atelier data as a structured object and JSON string.
  */
 export function generateAtelierDataBackupJson(): { backupData: BackupDataFormat; jsonString: string; filename: string } {
-  const clients = localStorage.getItem('tailor_clients') || '[]';
-  const settings = localStorage.getItem('tailor_studio_settings') || '{}';
-  const apprentices = localStorage.getItem('tailor_apprentices') || '[]';
-  const deposits = localStorage.getItem('tailor_deposits') || '[]';
-  const sessions = localStorage.getItem('tailor_sessions') || '[]';
-  const transactions = localStorage.getItem('tailor_transactions') || '[]';
-  const inventory = localStorage.getItem('tailor_inventory') || '[]';
-  const tasks = localStorage.getItem('tailor_apprentice_tasks') || '[]';
+  const clients = storageService.getItemSync<any[]>('tailor_clients', []);
+  const settings = storageService.getItemSync<any>('tailor_studio_settings', {});
+  const apprentices = storageService.getItemSync<any[]>('tailor_apprentices', []);
+  const deposits = storageService.getItemSync<any[]>('tailor_deposits', []);
+  const sessions = storageService.getItemSync<any[]>('tailor_sessions', []);
+  const transactions = storageService.getItemSync<any[]>('tailor_transactions', []);
+  const inventory = storageService.getItemSync<any[]>('tailor_inventory', []);
+  const tasks = storageService.getItemSync<any[]>('tailor_apprentice_tasks', []);
 
   const backupData: BackupDataFormat = {
     app: 'Tailor Pro Studio',
     version: '1.0.0',
     exportedAt: new Date().toISOString(),
-    clients: JSON.parse(clients),
-    settings: JSON.parse(settings),
-    apprentices: JSON.parse(apprentices),
-    deposits: JSON.parse(deposits),
-    sessions: JSON.parse(sessions),
-    transactions: JSON.parse(transactions),
-    inventory: JSON.parse(inventory),
-    tasks: JSON.parse(tasks)
+    clients,
+    settings,
+    apprentices,
+    deposits,
+    sessions,
+    transactions,
+    inventory,
+    tasks
   };
 
   const jsonString = JSON.stringify(backupData, null, 2);
@@ -305,35 +307,35 @@ export function restoreAtelierDataFromText(jsonContent: string): boolean {
     let restoredItems = 0;
 
     if (data.clients && Array.isArray(data.clients)) {
-      localStorage.setItem('tailor_clients', JSON.stringify(data.clients));
+      storageService.setItemImmediate('tailor_clients', data.clients);
       restoredItems++;
     }
     if (data.settings && typeof data.settings === 'object') {
-      localStorage.setItem('tailor_studio_settings', JSON.stringify(data.settings));
+      storageService.setItemImmediate('tailor_studio_settings', data.settings);
       restoredItems++;
     }
     if (data.apprentices && Array.isArray(data.apprentices)) {
-      localStorage.setItem('tailor_apprentices', JSON.stringify(data.apprentices));
+      storageService.setItemImmediate('tailor_apprentices', data.apprentices);
       restoredItems++;
     }
     if (data.deposits && Array.isArray(data.deposits)) {
-      localStorage.setItem('tailor_deposits', JSON.stringify(data.deposits));
+      storageService.setItemImmediate('tailor_deposits', data.deposits);
       restoredItems++;
     }
     if (data.sessions && Array.isArray(data.sessions)) {
-      localStorage.setItem('tailor_sessions', JSON.stringify(data.sessions));
+      storageService.setItemImmediate('tailor_sessions', data.sessions);
       restoredItems++;
     }
     if (data.transactions && Array.isArray(data.transactions)) {
-      localStorage.setItem('tailor_transactions', JSON.stringify(data.transactions));
+      storageService.setItemImmediate('tailor_transactions', data.transactions);
       restoredItems++;
     }
     if (data.inventory && Array.isArray(data.inventory)) {
-      localStorage.setItem('tailor_inventory', JSON.stringify(data.inventory));
+      storageService.setItemImmediate('tailor_inventory', data.inventory);
       restoredItems++;
     }
     if (data.tasks && Array.isArray(data.tasks)) {
-      localStorage.setItem('tailor_apprentice_tasks', JSON.stringify(data.tasks));
+      storageService.setItemImmediate('tailor_apprentice_tasks', data.tasks);
       restoredItems++;
     }
 
@@ -368,15 +370,5 @@ export function restoreAtelierDataBackup(file: File): Promise<boolean> {
  * Wipe all local stored atelier data to start completely fresh.
  */
 export function clearAllAtelierData(): void {
-  const keysToClear = [
-    'tailor_clients',
-    'tailor_apprentices',
-    'tailor_deposits',
-    'tailor_sessions',
-    'tailor_transactions',
-    'tailor_inventory',
-    'tailor_apprentice_tasks',
-    'tailor_studio_settings'
-  ];
-  keysToClear.forEach((key) => localStorage.removeItem(key));
+  storageService.clearAll();
 }

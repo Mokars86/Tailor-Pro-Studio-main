@@ -60,9 +60,10 @@ export const ApprenticeAppView: React.FC<ApprenticeAppViewProps> = ({
   const [activeTab, setActiveTab] = useState<ApprenticeTab>('production');
 
   // Find active linked apprentice record or fall back
+  const safeAppList = (apprentices || []).filter(Boolean);
   const activeApprenticeRecord = (apprenticeName && apprenticeName !== 'Apprentice Trainee')
-    ? apprentices.find((a) => a.name.toLowerCase() === apprenticeName.toLowerCase()) || apprentices.find((a) => a.isLinked) || apprentices[0]
-    : apprentices.find((a) => a.isLinked) || apprentices[0];
+    ? safeAppList.find((a) => a?.name?.toLowerCase() === apprenticeName.toLowerCase()) || safeAppList.find((a) => a?.isLinked) || safeAppList[0]
+    : safeAppList.find((a) => a?.isLinked) || safeAppList[0];
   const resolvedApprenticeName = (apprenticeName && apprenticeName !== 'Apprentice Trainee')
     ? apprenticeName
     : (activeApprenticeRecord?.name && !activeApprenticeRecord.name.includes('@') ? activeApprenticeRecord.name : 'Apprentice Trainee');

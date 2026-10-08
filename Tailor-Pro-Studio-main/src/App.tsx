@@ -1,313 +1,207 @@
-import React, { useState, useEffect } from 'react';
-import { App as CapacitorApp } from '@capacitor/app';
-import { TabType, Client, Apprentice, UnpaidDeposit, RunwaySession, LedgerTransaction, InventoryItem, ShopStats, StudioSettings, UserRole, RunwayStage, GarmentMeasurements, ApprenticeTask, ApprenticeTaskStatus, StudioSubscription } from './types';
-import {
-  initialClients,
-  initialApprentices,
-  initialUnpaidDeposits,
-  initialRunwaySessions,
-  initialLedgerTransactions,
-  initialInventoryItems,
-  initialStats,
-  defaultStudioSettings
-} from './data/mockData';
-import { generateMasterWorkshopCode, validateWorkshopCode } from './utils/workshopCode';
-import {
-  fetchClientsFromSupabase,
-  upsertClientToSupabase,
-  deleteClientFromSupabase,
-  fetchApprenticesFromSupabase,
-  upsertApprenticeToSupabase,
-  deleteApprenticeFromSupabase,
-  fetchApprenticeTasksFromSupabase,
-  upsertApprenticeTaskToSupabase,
-  fetchUnpaidDepositsFromSupabase,
-  upsertUnpaidDepositToSupabase,
-  deleteUnpaidDepositFromSupabase,
-  fetchRunwaySessionsFromSupabase,
-  upsertRunwaySessionToSupabase,
-  fetchLedgerTransactionsFromSupabase,
-  upsertLedgerTransactionToSupabase,
-  fetchInventoryItemsFromSupabase,
-  upsertInventoryItemToSupabase,
-  fetchStudioSettingsFromSupabase,
-  upsertStudioSettingsToSupabase,
-  seedInitialSupabaseData,
-  signUpSupabaseUser,
-  signInSupabaseUser,
-  fetchUserAccountsFromSupabase
-} from './services/supabaseService';
-import {
-  subscribeNetworkStatus,
-  queueOfflineAction,
-  flushOfflineQueue
-} from './services/offlineSyncService';
-import { supabase } from './lib/supabase';
-
-
+import React, { useState, useEffect, useMemo, Suspense, useCallback, useRef } from 'react';
 import { Header } from './components/Header';
 import { MetricCards } from './components/MetricCards';
-import { ApprenticeRegistry } from './components/ApprenticeRegistry';
 import { SearchBarAndFilters } from './components/SearchBarAndFilters';
 import { CustomerDirectory } from './components/CustomerDirectory';
 import { BottomNav } from './components/BottomNav';
-import { RunwayView } from './components/RunwayView';
-import { LedgerView } from './components/LedgerView';
-import { InventoryView } from './components/InventoryView';
-
 import { SignInView } from './components/auth/SignInView';
-import { RegisterStudioView } from './components/auth/RegisterStudioView';
-
-import { AddClientModal } from './components/modals/AddClientModal';
-import { CollectDepositModal } from './components/modals/CollectDepositModal';
-import { AddApprenticeModal } from './components/modals/AddApprenticeModal';
-import { BookSessionModal } from './components/modals/BookSessionModal';
-import { LogTransactionModal } from './components/modals/LogTransactionModal';
-
-import { CustomerTrackingModal } from './components/modals/CustomerTrackingModal';
-import { StudioSettingsModal } from './components/modals/StudioSettingsModal';
-import { GarmentMeasurementsModal } from './components/modals/GarmentMeasurementsModal';
-import { SpecSheetModal } from './components/modals/SpecSheetModal';
-import { AddMaterialModal } from './components/modals/AddMaterialModal';
-import { CustomTaskModal } from './components/modals/CustomTaskModal';
-import { InvoiceModal } from './components/modals/InvoiceModal';
-import { ClientProfileModal } from './components/modals/ClientProfileModal';
-import { ApprenticeCertificateModal } from './components/modals/ApprenticeCertificateModal';
-import { MasterCertificateModal } from './components/modals/MasterCertificateModal';
-import { ApprenticeMasterGraduationModal } from './components/modals/ApprenticeMasterGraduationModal';
-import { FullMeasurementsModal } from './components/modals/FullMeasurementsModal';
-import { FabricColorScannerModal } from './components/modals/FabricColorScannerModal';
-import { LogoutConfirmationModal } from './components/modals/LogoutConfirmationModal';
-import { InstallAppModal } from './components/modals/InstallAppModal';
-import { PWAInstallBanner } from './components/PWAInstallBanner';
-import { SubscriptionPlansModal } from './components/modals/SubscriptionPlansModal';
-import { GraduationPaymentModal } from './components/modals/GraduationPaymentModal';
-import { getStudioSubscription, canAddClientProfile, canLinkApprentice, canAddMaterial } from './services/subscriptionService';
-
-import { ApprenticeAppView } from './components/apprentice/ApprenticeAppView';
 import { SplashScreen } from './components/SplashScreen';
-import { SuperAdminPortal } from './components/admin/SuperAdminPortal';
-import { LicenseKeyVerificationModal } from './components/auth/LicenseKeyVerificationModal';
+import { App as CapacitorApp } from '@capacitor/app';
+import {
+  ViewFallback,
+  ScreenFallback,
+  LazyRunwayView as RunwayView,
+  LazyLedgerView as LedgerView,
+  LazyInventoryView as InventoryView,
+  LazyApprenticeRegistry as ApprenticeRegistry,
+  LazyApprenticeAppView as ApprenticeAppView,
+  LazyRegisterStudioView as RegisterStudioView,
+  prefetchLazyChunks
+} from './components/LazyLoad';
+import { ModalRoot } from './components/modals/ModalRoot';
+import {
+  Client,
+  GarmentMeasurements,
+  RunwayStage,
+  UserRole,
+  Apprentice,
+  UnpaidDeposit
+} from './types';
 import {
   getUserAccountRecords,
   saveUserAccountRecords,
   registerUserAccount,
-  isWorkspaceActivated,
-  syncUserAccountsFromSupabase,
-  setWorkspaceActivated
+  setWorkspaceActivated,
+  syncUserAccountsFromSupabase
 } from './services/licenseService';
-
-import { AppNotification } from './types';
+import {
+  upsertClientToSupabase,
+  upsertApprenticeToSupabase,
+  deleteUnpaidDepositFromSupabase,
+  deleteClientFromSupabase,
+  signUpSupabaseUser,
+  supabase,
+  deleteApprenticeFromSupabase
+} from './services/supabaseService';
+import {
+  subscribeNetworkStatus,
+  flushOfflineQueue,
+  queueOfflineAction
+} from './services/offlineSyncService';
 import {
   initPushNotificationService,
   subscribeToNotificationEvents,
   getStoredNotifications,
-  markAllNotificationsAsRead,
-  clearAllNotifications,
-  notifyTaskAssigned,
-  notifyTaskSubmitted,
-  notifyTaskPassed,
-  notifyMeasurementRecorded,
   notifyGarmentStageUpdated,
-  notifyApprenticeLinked,
-  notifyCertificateUnlocked
+  notifyMeasurementRecorded,
+  notifyApprenticeLinked
 } from './services/pushNotificationService';
+import { canAddClientProfile, canAddMaterial } from './services/subscriptionService';
+import { generateMasterWorkshopCode } from './utils/workshopCode';
+import { parseCleanNumber, sanitizeClient, sanitizeTransaction } from './utils/numeric';
 import { NotificationToastBanner } from './components/notifications/NotificationToastBanner';
-import { NotificationCenterModal } from './components/notifications/NotificationCenterModal';
 import { PushPermissionBanner } from './components/notifications/PushPermissionBanner';
+import { PWAInstallBanner } from './components/PWAInstallBanner';
+import { PullToRefreshIndicator } from './components/common/PullToRefreshIndicator';
+import { UndoDeleteToast } from './components/common/UndoDeleteToast';
+import { usePullToRefresh } from './hooks/usePullToRefresh';
+import { useDataStore, useModalStore, useUIStore } from './stores';
 
-export default function App() {
-  // Splash Screen State
+export function App() {
   const [showSplash, setShowSplash] = useState<boolean>(true);
+  const [deletedClientBuffer, setDeletedClientBuffer] = useState<Client | null>(null);
+  const deleteTimeoutRef = useRef<any>(null);
 
-  // Authentication & View Screen State (Starts at 'signin' login screen after splash screen)
-  const [authScreen, setAuthScreen] = useState<'signin' | 'register' | 'app'>('signin');
-  const [userRole, setUserRole] = useState<UserRole>('Master (Studio Owner & Financial Control)');
+  // Data Store
+  const clients = useDataStore((s) => s.clients);
+  const setClients = useDataStore((s) => s.setClients);
+  const apprentices = useDataStore((s) => s.apprentices);
+  const setApprentices = useDataStore((s) => s.setApprentices);
+  const unpaidDeposits = useDataStore((s) => s.unpaidDeposits);
+  const setUnpaidDeposits = useDataStore((s) => s.setUnpaidDeposits);
+  const transactions = useDataStore((s) => s.transactions);
+  const setTransactions = useDataStore((s) => s.setTransactions);
+  const inventory = useDataStore((s) => s.inventory);
+  const setInventory = useDataStore((s) => s.setInventory);
+  const apprenticeTasks = useDataStore((s) => s.apprenticeTasks);
+  const setApprenticeTasks = useDataStore((s) => s.setApprenticeTasks);
+  const studioSettings = useDataStore((s) => s.studioSettings);
+  const setStudioSettings = useDataStore((s) => s.setStudioSettings);
+  const studioSub = useDataStore((s) => s.studioSub);
+  const supabaseStatus = useDataStore((s) => s.supabaseStatus);
+  const setSupabaseStatus = useDataStore((s) => s.setSupabaseStatus);
+  const offlineNotice = useDataStore((s) => s.offlineNotice);
+  const setOfflineNotice = useDataStore((s) => s.setOfflineNotice);
+  const performFullCloudSync = useDataStore((s) => s.performFullCloudSync);
+  const hydrateFromStorage = useDataStore((s) => s.hydrateFromStorage);
+  const getStats = useDataStore((s) => s.getStats);
 
-  // Admin & License Verification State
-  const [isAdminPortalOpen, setIsAdminPortalOpen] = useState<boolean>(false);
-  const [isLicensePromptOpen, setIsLicensePromptOpen] = useState<boolean>(false);
-  const [isGraduationPromptOpen, setIsGraduationPromptOpen] = useState<boolean>(false);
-  const [activeUserEmail, setActiveUserEmail] = useState<string>('');
-  const [activeUserFullName, setActiveUserFullName] = useState<string>('');
+  // UI Store
+  const activeTab = useUIStore((s) => s.activeTab);
+  const setActiveTab = useUIStore((s) => s.setActiveTab);
+  const searchQuery = useUIStore((s) => s.searchQuery);
+  const setSearchQuery = useUIStore((s) => s.setSearchQuery);
+  const selectedFilter = useUIStore((s) => s.selectedFilter);
+  const setSelectedFilter = useUIStore((s) => s.setSelectedFilter);
+  const selectedArtistFilter = useUIStore((s) => s.selectedArtistFilter);
+  const setSelectedArtistFilter = useUIStore((s) => s.setSelectedArtistFilter);
+  const notifications = useUIStore((s) => s.notifications);
+  const setNotifications = useUIStore((s) => s.setNotifications);
+  const activeToastNotification = useUIStore((s) => s.activeToastNotification);
+  const setActiveToastNotification = useUIStore((s) => s.setActiveToastNotification);
+  const unreadNotificationCount = useUIStore((s) => s.getUnreadNotificationCount());
+  const authScreen = useUIStore((s) => s.authScreen);
+  const setAuthScreen = useUIStore((s) => s.setAuthScreen);
+  const userRole = useUIStore((s) => s.userRole);
+  const setUserRole = useUIStore((s) => s.setUserRole);
+  const activeUserEmail = useUIStore((s) => s.activeUserEmail);
+  const setActiveUserEmail = useUIStore((s) => s.setActiveUserEmail);
+  const activeUserFullName = useUIStore((s) => s.activeUserFullName);
+  const setActiveUserFullName = useUIStore((s) => s.setActiveUserFullName);
+  const theme = useUIStore((s) => s.theme);
+  const toggleTheme = useUIStore((s) => s.toggleTheme);
 
-  // Navigation tab state
-  const [activeTab, setActiveTab] = useState<TabType>('clients');
+  // Modal Store Actions
+  const {
+    openAddClient,
+    openCollectDeposit,
+    openBookSession,
+    openFabricScanner,
+    setStudioSettingsOpen,
+    setAddApprenticeOpen,
+    setLogTransactionOpen,
+    setCustomerTrackerOpen,
+    setMeasurementClient,
+    setFullMeasurementsClient,
+    setInvoiceClient,
+    setProfileClient,
+    setAddMaterialOpen,
+    setCustomTaskOpen,
+    setMasterCertOpen,
+    setLogoutConfirmOpen,
+    setInstallAppOpen,
+    setSubscriptionModalOpen,
+    setGraduationPaymentApprentice,
+    setAdminPortalOpen,
+    setLicensePromptOpen,
+    setGraduationPromptOpen,
+    setNotificationCenterOpen,
+    closeActiveModalOrReturn
+  } = useModalStore();
 
-  const isMockId = (id?: string) =>
-    ['cli-1', 'cli-2', 'cli-3', 'cli-4', 'app-1', 'app_raeesa_mubarick', 'app_raeesa_mohammed', 'dep-1', 'dep-2', 'tx-1', 'tx-2', 'inv-1', 'inv-2', 'inv-3', 'run-1', 'run-2'].includes(id || '');
+  const stats = useMemo(() => getStats(), [clients, transactions, unpaidDeposits, getStats]);
 
-  // Studio Settings State
-  const [studioSettings, setStudioSettings] = useState<StudioSettings>(() => {
-    try {
-      const saved = localStorage.getItem('tailor_studio_settings');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (parsed && typeof parsed === 'object') {
-          const settings: StudioSettings = { ...defaultStudioSettings, ...parsed };
-          if (!settings.pairCode || !validateWorkshopCode(settings.pairCode).isValid) {
-            settings.pairCode = generateMasterWorkshopCode(settings.studioName || 'MOKARS STITCHES STUDIO');
-            localStorage.setItem('tailor_studio_settings', JSON.stringify(settings));
-          }
-          return settings;
-        }
+  // Derived list of studio tailors & designers
+  const artistsList = useMemo(() => {
+    const owner = studioSettings.ownerName || studioSettings.studioName || 'Master Atelier';
+    const list = [
+      owner,
+      'Master Atelier',
+      ...apprentices.map((a) => a.name),
+      ...clients.map((c) => c.assignedDesigner).filter((d): d is string => Boolean(d))
+    ];
+    return Array.from(new Set(list)).filter(Boolean);
+  }, [studioSettings.ownerName, studioSettings.studioName, apprentices, clients]);
+
+  // Filtered clients for Customer Directory
+  const filteredClients = useMemo(() => {
+    return clients.filter((client) => {
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase();
+        const nameMatch = client.name.toLowerCase().includes(q);
+        const garmentTagMatch = client.garmentTag.toLowerCase().includes(q);
+        const emailMatch = client.email.toLowerCase().includes(q);
+        const phoneMatch = client.phone.includes(q);
+        if (!nameMatch && !garmentTagMatch && !emailMatch && !phoneMatch) return false;
       }
-    } catch (e) {
-      console.error('Error loading studio settings:', e);
-    }
-    const fallback = { ...defaultStudioSettings };
-    if (!fallback.pairCode) {
-      fallback.pairCode = generateMasterWorkshopCode(fallback.studioName);
-    }
-    return fallback;
-  });
-
-  // Core app state with LocalStorage persistence (clean real data mode)
-  const [clients, setClients] = useState<Client[]>(() => {
-    const saved = localStorage.getItem('tailor_clients');
-    if (saved) {
-      try {
-        const parsed: Client[] = JSON.parse(saved);
-        if (Array.isArray(parsed)) {
-          return parsed.filter((c) => c && !isMockId(c.id));
-        }
-      } catch (e) {
-        console.error(e);
+      if (selectedFilter !== 'all') {
+        if (selectedFilter === 'VIP' && client.status !== 'VIP') return false;
+        if (selectedFilter === 'Pending Deposit' && client.status !== 'Pending Deposit') return false;
+        if (selectedFilter === 'Active' && client.status !== 'Active') return false;
       }
-    }
-    return [];
-  });
-
-  const [apprentices, setApprentices] = useState<Apprentice[]>(() => {
-    const saved = localStorage.getItem('tailor_apprentices');
-    if (saved) {
-      try {
-        const parsed: Apprentice[] = JSON.parse(saved);
-        if (Array.isArray(parsed)) {
-          return parsed.filter((a) => a && !isMockId(a.id));
-        }
-      } catch (e) {
-        console.error(e);
+      if (selectedArtistFilter !== 'all' && client.assignedDesigner !== selectedArtistFilter) {
+        return false;
       }
-    }
-    return [];
-  });
+      return true;
+    });
+  }, [clients, searchQuery, selectedFilter, selectedArtistFilter]);
 
-  const [unpaidDeposits, setUnpaidDeposits] = useState<UnpaidDeposit[]>(() => {
-    const saved = localStorage.getItem('tailor_deposits');
-    if (saved) {
-      const parsed: UnpaidDeposit[] = JSON.parse(saved);
-      return parsed.filter((d) => !isMockId(d.id));
-    }
-    return [];
-  });
-
-  const [sessions, setSessions] = useState<RunwaySession[]>(() => {
-    const saved = localStorage.getItem('tailor_sessions');
-    if (saved) {
-      const parsed: RunwaySession[] = JSON.parse(saved);
-      return parsed.filter((s) => !isMockId(s.id));
-    }
-    return [];
-  });
-
-  const [transactions, setTransactions] = useState<LedgerTransaction[]>(() => {
-    const saved = localStorage.getItem('tailor_transactions');
-    if (saved) {
-      const parsed: LedgerTransaction[] = JSON.parse(saved);
-      return parsed.filter((t) => !isMockId(t.id));
-    }
-    return [];
-  });
-
-  const [inventory, setInventory] = useState<InventoryItem[]>(() => {
-    const saved = localStorage.getItem('tailor_inventory');
-    if (saved) {
-      const parsed: InventoryItem[] = JSON.parse(saved);
-      return parsed.filter((i) => !isMockId(i.id));
-    }
-    return [];
-  });
-
-  const [apprenticeTasks, setApprenticeTasks] = useState<ApprenticeTask[]>(() => {
-    const saved = localStorage.getItem('tailor_apprentice_tasks');
-    if (saved) {
-      try {
-        const parsed: ApprenticeTask[] = JSON.parse(saved);
-        if (Array.isArray(parsed)) {
-          return parsed.filter((t) => t && !isMockId(t.id));
-        }
-      } catch (e) {
-        console.error(e);
-      }
-    }
-    return [];
-  });
-
-  // Dynamically compute real Shop Stats directly from active user & customer directory records
-  const stats: ShopStats = React.useMemo(() => {
-    // Total cash collected from all clients in Customer Directory
-    const clientRevenue = clients.reduce((sum, c) => sum + (c.depositPaid || 0), 0);
-    // Plus any extra non-client cleared revenue in transactions
-    const extraRevenue = transactions
-      .filter((t) => (t.type === 'deposit' || t.type === 'revenue') && t.status === 'cleared' && !t.clientOrVendor)
-      .reduce((sum, t) => sum + (t.amount || 0), 0);
-
-    const shopRevenue = clientRevenue + extraRevenue;
-
-    // Total unpaid deposits / balance due directly from active clients in Customer Directory
-    const clientUnpaidBalance = clients
-      .filter((c) => (c.balanceDue || 0) > 0)
-      .reduce((sum, c) => sum + (c.balanceDue || 0), 0);
-
-    const depositListAmount = unpaidDeposits.reduce((sum, d) => sum + (d.amount || 0), 0);
-    const unpaidDepositsAmount = clientUnpaidBalance > 0 ? clientUnpaidBalance : depositListAmount;
-
-    const totalCostAll = clients.reduce((sum, c) => sum + (c.totalCost || 0), 0);
-    const paidAll = clients.reduce((sum, c) => sum + (c.depositPaid || 0), 0);
-    const collectionRate = totalCostAll > 0 ? Math.round((paidAll / totalCostAll) * 100) : 0;
-    const completedCount = clients.filter((c) => c.runwayStage === 'COMPLETED' || c.runwayStage === 'DELIVERED').length;
-
-    return {
-      shopRevenue,
-      unpaidDeposits: unpaidDepositsAmount,
-      cashReceived: shopRevenue,
-      jobsCompletedTotal: clients.length,
-      jobsCompletedCount: completedCount,
-      paymentCollectionRate: collectionRate
-    };
-  }, [transactions, unpaidDeposits, clients]);
-
-  // Supabase Sync & Network Status
-  const [supabaseStatus, setSupabaseStatus] = useState<'connected' | 'syncing' | 'offline'>('syncing');
-  const [offlineNotice, setOfflineNotice] = useState<string | null>(null);
-
-  // Push Notifications State & History
-  const [notifications, setNotifications] = useState<AppNotification[]>(() => getStoredNotifications());
-  const [activeToastNotification, setActiveToastNotification] = useState<AppNotification | null>(null);
-  const [isNotificationCenterOpen, setIsNotificationCenterOpen] = useState<boolean>(false);
-
-  const unreadNotificationCount = notifications.filter((n) => !n.read).length;
-
-  // Initialize Realtime Push Notification listener across master and apprentice devices
+  // Push Notifications Listener
   useEffect(() => {
     const role = userRole.startsWith('Apprentice') ? 'apprentice' : 'master';
     const userName = activeUserFullName || (activeUserEmail ? activeUserEmail.split('@')[0] : '');
-
     const cleanup = initPushNotificationService(role, userName);
-
     const unsubscribeEvents = subscribeToNotificationEvents((incomingNotif) => {
       setNotifications(getStoredNotifications());
       setActiveToastNotification(incomingNotif);
     });
-
     return () => {
       cleanup();
       unsubscribeEvents();
     };
-  }, [userRole, activeUserFullName, activeUserEmail]);
+  }, [userRole, activeUserFullName, activeUserEmail, setNotifications, setActiveToastNotification]);
 
-  // Offline Network & Background Auto-Sync Listener
+  // Offline Network & Auto-Sync Listener
   useEffect(() => {
     const unsubscribe = subscribeNetworkStatus((isOnline, flushedCount) => {
       if (isOnline) {
@@ -333,253 +227,26 @@ export default function App() {
     }
 
     return () => unsubscribe();
-  }, []);
+  }, [setSupabaseStatus, setOfflineNotice]);
 
-  const isSyncingRef = React.useRef(false);
-
-  // Comprehensive Cross-Device Cloud Synchronization (Desktop <-> Mobile)
-  const performFullCloudSync = React.useCallback(async () => {
-    if (isSyncingRef.current) return;
-    if (typeof navigator !== 'undefined' && !navigator.onLine) {
-      setSupabaseStatus('offline');
-      return;
-    }
-
-    isSyncingRef.current = true;
-
-    try {
-      setSupabaseStatus('syncing');
-
-      // 1. Flush offline queue first so local additions/edits reach Supabase before fetching
-      await flushOfflineQueue();
-
-      // 2. Seed initial data if DB tables are completely empty
-      await seedInitialSupabaseData(
-        initialClients,
-        initialApprentices,
-        initialUnpaidDeposits,
-        initialRunwaySessions,
-        initialLedgerTransactions,
-        initialInventoryItems,
-        defaultStudioSettings
-      );
-
-      // 3. Fetch remote DB records & merge safely with local storage records
-      const dbClients = await fetchClientsFromSupabase();
-      if (dbClients !== null) {
-        setClients((prevLocal) => {
-          let stored: Client[] = [];
-          try {
-            const raw = localStorage.getItem('tailor_clients');
-            if (raw) {
-              const parsed = JSON.parse(raw);
-              if (Array.isArray(parsed)) stored = parsed.filter((c) => c && !isMockId(c.id));
-            }
-          } catch (e) {}
-
-          const localMap = new Map<string, Client>();
-          stored.forEach((c) => localMap.set(c.id, c));
-          prevLocal.forEach((c) => localMap.set(c.id, c));
-          const combinedLocal = Array.from(localMap.values());
-
-          const remoteMap = new Map(dbClients.map((c) => [c.id, c]));
-          const merged: Client[] = [...dbClients];
-
-          for (const loc of combinedLocal) {
-            if (!loc || isMockId(loc.id)) continue;
-            if (!remoteMap.has(loc.id)) {
-              merged.unshift(loc);
-              // Auto-backup local clients to Supabase cloud database
-              upsertClientToSupabase(loc);
-            }
-          }
-
-          localStorage.setItem('tailor_clients', JSON.stringify(merged));
-          return merged;
-        });
-      }
-
-      const dbApprentices = await fetchApprenticesFromSupabase();
-      const dbUsers = await fetchUserAccountsFromSupabase();
-
-      let combinedApprentices: Apprentice[] = dbApprentices ? [...dbApprentices] : [];
-
-      if (dbUsers) {
-        const apprenticeUsers = dbUsers.filter((u) => u.role && u.role.startsWith('Apprentice'));
-        for (const u of apprenticeUsers) {
-          const rawName = u.fullName && u.fullName.trim() ? u.fullName.trim() : u.email.split('@')[0];
-          const appName = rawName.charAt(0).toUpperCase() + rawName.slice(1);
-          const emailTag = u.email.split('@')[0].toLowerCase().replace(/[^a-zA-Z0-9]/g, '_');
-          const synthId = `app_${emailTag}`;
-
-          const exists = combinedApprentices.some(
-            (a) => a.id === synthId || a.name.toLowerCase() === appName.toLowerCase()
-          );
-
-          if (!exists) {
-            const initials = appName.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2) || 'AT';
-            const synthRecord: Apprentice = {
-              id: synthId,
-              name: appName,
-              initials,
-              role: 'Apprentice Trainee',
-              mentor: studioSettings.ownerName || 'Master Atelier',
-              isLinked: true,
-              handshakeLocked: true,
-              hasCert: false,
-              hoursCompleted: 0,
-              totalRequiredHours: 120,
-              certifications: [],
-              tasksCount: 0,
-              status: 'On Track',
-              specialty: 'Couture Assembly & Garment Construction'
-            };
-            combinedApprentices.push(synthRecord);
-          }
-        }
-      }
-
-      if (combinedApprentices.length > 0) {
-        setApprentices((prevLocal) => {
-          const remoteMap = new Map(combinedApprentices.map((a) => [a.id, a]));
-          const nameMap = new Map(combinedApprentices.map((a) => [a.name.toLowerCase(), a]));
-          const merged: Apprentice[] = [...combinedApprentices];
-
-          for (const loc of prevLocal) {
-            if (!loc || isMockId(loc.id)) continue;
-            if (!remoteMap.has(loc.id) && !nameMap.has(loc.name.toLowerCase())) {
-              merged.unshift(loc);
-            }
-          }
-          localStorage.setItem('tailor_apprentices', JSON.stringify(merged));
-          return merged;
-        });
-      }
-
-      const dbTasks = await fetchApprenticeTasksFromSupabase();
-      if (dbTasks !== null) {
-        setApprenticeTasks((prevLocal) => {
-          const remoteMap = new Map(dbTasks.map((t) => [t.id, t]));
-          const merged: ApprenticeTask[] = [...dbTasks];
-
-          for (const loc of prevLocal) {
-            if (!loc || isMockId(loc.id)) continue;
-            if (!remoteMap.has(loc.id)) {
-              merged.unshift(loc);
-            }
-          }
-          return merged;
-        });
-      }
-
-      const dbDeposits = await fetchUnpaidDepositsFromSupabase();
-      if (dbDeposits !== null) {
-        setUnpaidDeposits((prevLocal) => {
-          const remoteMap = new Map(dbDeposits.map((d) => [d.id, d]));
-          const merged: UnpaidDeposit[] = [...dbDeposits];
-
-          for (const loc of prevLocal) {
-            if (!loc || isMockId(loc.id)) continue;
-            if (!remoteMap.has(loc.id)) {
-              merged.unshift(loc);
-            }
-          }
-          return merged;
-        });
-      }
-
-      const dbSessions = await fetchRunwaySessionsFromSupabase();
-      if (dbSessions !== null) {
-        setSessions((prevLocal) => {
-          const remoteMap = new Map(dbSessions.map((s) => [s.id, s]));
-          const merged: RunwaySession[] = [...dbSessions];
-
-          for (const loc of prevLocal) {
-            if (!loc || isMockId(loc.id)) continue;
-            if (!remoteMap.has(loc.id)) {
-              merged.unshift(loc);
-            }
-          }
-          return merged;
-        });
-      }
-
-      const dbTx = await fetchLedgerTransactionsFromSupabase();
-      if (dbTx !== null) {
-        setTransactions((prevLocal) => {
-          const remoteMap = new Map(dbTx.map((t) => [t.id, t]));
-          const merged: LedgerTransaction[] = [...dbTx];
-
-          for (const loc of prevLocal) {
-            if (!loc || isMockId(loc.id)) continue;
-            if (!remoteMap.has(loc.id)) {
-              merged.unshift(loc);
-            }
-          }
-          return merged;
-        });
-      }
-
-      const dbInv = await fetchInventoryItemsFromSupabase();
-      if (dbInv !== null) {
-        setInventory((prevLocal) => {
-          const remoteMap = new Map(dbInv.map((i) => [i.id, i]));
-          const merged: InventoryItem[] = [...dbInv];
-
-          for (const loc of prevLocal) {
-            if (!loc || isMockId(loc.id)) continue;
-            if (!remoteMap.has(loc.id)) {
-              merged.unshift(loc);
-            }
-          }
-          return merged;
-        });
-      }
-
-      const dbSettings = await fetchStudioSettingsFromSupabase();
-      if (dbSettings) {
-        setStudioSettings(dbSettings);
-      }
-
-      await syncUserAccountsFromSupabase();
-
-      setSupabaseStatus('connected');
-    } catch (err) {
-      console.warn('[Supabase Sync] Cross-device sync operating in local mode:', err);
-      setSupabaseStatus('offline');
-    } finally {
-      isSyncingRef.current = false;
-    }
-  }, []);
-
-  // Perform Cloud Sync on Mount, Tab Focus, and Realtime Database Changes
+  // Cloud Sync on Mount, Visibility & Realtime Changes
   useEffect(() => {
-    performFullCloudSync();
-
-    const handleFocus = () => {
+    hydrateFromStorage().then(() => {
       performFullCloudSync();
-    };
-
+    });
+    const handleFocus = () => performFullCloudSync();
     const handleVisibility = () => {
-      if (document.visibilityState === 'visible') {
-        performFullCloudSync();
-      }
+      if (document.visibilityState === 'visible') performFullCloudSync();
     };
 
     window.addEventListener('focus', handleFocus);
     document.addEventListener('visibilitychange', handleVisibility);
 
-    // Supabase Realtime Listener for Instant Desktop <-> Mobile Sync
     const channel = supabase
       .channel('public-cloud-changes')
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public' },
-        () => {
-          console.log('[Supabase Realtime] Cloud DB change detected, auto-syncing...');
-          performFullCloudSync();
-        }
-      )
+      .on('postgres_changes', { event: '*', schema: 'public' }, () => {
+        performFullCloudSync();
+      })
       .subscribe();
 
     return () => {
@@ -587,177 +254,19 @@ export default function App() {
       document.removeEventListener('visibilitychange', handleVisibility);
       supabase.removeChannel(channel);
     };
-  }, [performFullCloudSync]);
+  }, [hydrateFromStorage, performFullCloudSync]);
 
-  // Search & Filter state for Customer Directory
-  const [searchQuery, setSearchQuery] = useState<string>('');
-  const [selectedFilter, setSelectedFilter] = useState<string>('all');
-  const [selectedArtistFilter, setSelectedArtistFilter] = useState<string>('all');
-
-  // Modal controls
-  const [isAddClientOpen, setIsAddClientOpen] = useState<boolean>(false);
-  const [editingClient, setEditingClient] = useState<Client | null>(null);
-
-  const [isCollectDepositOpen, setIsCollectDepositOpen] = useState<boolean>(false);
-  const [targetDeposit, setTargetDeposit] = useState<UnpaidDeposit | null>(null);
-
-  const [isAddApprenticeOpen, setIsAddApprenticeOpen] = useState<boolean>(false);
-
-  const [isBookSessionOpen, setIsBookSessionOpen] = useState<boolean>(false);
-  const [preselectedBookingClient, setPreselectedBookingClient] = useState<Client | null>(null);
-
-  const [isLogTransactionOpen, setIsLogTransactionOpen] = useState<boolean>(false);
-
-  // New Modals State
-  const [isCustomerTrackerOpen, setIsCustomerTrackerOpen] = useState<boolean>(false);
-  const [isStudioSettingsOpen, setIsStudioSettingsOpen] = useState<boolean>(false);
-  const [measurementClient, setMeasurementClient] = useState<Client | null>(null);
-  const [invoiceClient, setInvoiceClient] = useState<Client | null>(null);
-  const [specSheetClient, setSpecSheetClient] = useState<Client | null>(null);
-  const [fullMeasurementsClient, setFullMeasurementsClient] = useState<Client | null>(null);
-  const [profileClient, setProfileClient] = useState<Client | null>(null);
-  const [isAddMaterialOpen, setIsAddMaterialOpen] = useState<boolean>(false);
-  const [isCustomTaskOpen, setIsCustomTaskOpen] = useState<boolean>(false);
-  const [isMasterCertOpen, setIsMasterCertOpen] = useState<boolean>(false);
-  const [isFabricScannerOpen, setIsFabricScannerOpen] = useState<boolean>(false);
-  const [fabricScannerTab, setFabricScannerTab] = useState<'color' | 'sides' | 'saved'>('sides');
-
-  const handleOpenFabricScanner = (tab: 'color' | 'sides' | 'saved' = 'sides') => {
-    setFabricScannerTab(tab);
-    setIsFabricScannerOpen(true);
-  };
-  const [isLogoutConfirmOpen, setIsLogoutConfirmOpen] = useState<boolean>(false);
-  const [isInstallAppOpen, setIsInstallAppOpen] = useState<boolean>(false);
-  const [studioSub, setStudioSub] = useState<StudioSubscription>(getStudioSubscription);
-  const [isSubscriptionModalOpen, setIsSubscriptionModalOpen] = useState<boolean>(false);
-  const [graduationPaymentApprentice, setGraduationPaymentApprentice] = useState<Apprentice | null>(null);
-
-  const handleTriggerAddClient = () => {
-    const check = canAddClientProfile(clients.length);
-    if (!check.allowed) {
-      alert(check.reason || `Free Tier limit reached (${check.limit} client profiles). Upgrade to Tailor Pro Master for unlimited client profiles!`);
-      setIsSubscriptionModalOpen(true);
-      return;
-    }
-    setEditingClient(null);
-    setIsAddClientOpen(true);
-  };
-
-  const handleTriggerAddMaterial = () => {
-    const check = canAddMaterial(inventory.length);
-    if (!check.allowed) {
-      alert(check.reason || `Free Tier limit reached (${check.limit} materials max). Upgrade to Tailor Pro Master for unlimited inventory materials!`);
-      setIsSubscriptionModalOpen(true);
-      return;
-    }
-    setIsAddMaterialOpen(true);
-  };
-
-  const handlePromptLogout = () => {
-    setIsLogoutConfirmOpen(true);
-  };
-
-  const handleConfirmLogout = () => {
-    setIsLogoutConfirmOpen(false);
-    setIsStudioSettingsOpen(false);
-    setIsLicensePromptOpen(false);
-    setSearchQuery('');
-    setSelectedFilter('all');
-    setSelectedArtistFilter('all');
-    document.documentElement.classList.remove('dark');
-    setActiveUserEmail('');
-    setActiveUserFullName('');
-    setAuthScreen('signin');
-  };
-
-  const handleAddMaterialToInventory = (name: string, unit: string, amount: number) => {
-    const check = canAddMaterial(inventory.length);
-    if (!check.allowed) {
-      alert(check.reason || `Free Tier limit reached (${check.limit} materials max). Upgrade to Tailor Pro Master for unlimited inventory materials!`);
-      setIsSubscriptionModalOpen(true);
-      return;
-    }
-    const newItem: InventoryItem = {
-      id: `mat_${Date.now()}`,
-      name,
-      category: 'THREAD',
-      stockLevel: amount,
-      minThreshold: 5,
-      alertThreshold: 5,
-      unit,
-      status: amount > 0 ? 'In Stock' : 'Out of Stock'
-    };
-    setInventory((prev) => [newItem, ...prev]);
-    upsertInventoryItemToSupabase(newItem);
-  };
-
-  // Sync to LocalStorage & Root DOM Dark Mode class (only active when logged into app view)
-  useEffect(() => {
-    localStorage.setItem('tailor_studio_settings', JSON.stringify(studioSettings));
-    if (studioSettings.theme === 'dark' && authScreen === 'app') {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
-  }, [studioSettings, authScreen]);
-
-  useEffect(() => {
-    localStorage.setItem('tailor_clients', JSON.stringify(clients));
-  }, [clients]);
-
-  useEffect(() => {
-    localStorage.setItem('tailor_apprentices', JSON.stringify(apprentices));
-  }, [apprentices]);
-
-  useEffect(() => {
-    localStorage.setItem('tailor_deposits', JSON.stringify(unpaidDeposits));
-  }, [unpaidDeposits]);
-
-  useEffect(() => {
-    localStorage.setItem('tailor_sessions', JSON.stringify(sessions));
-  }, [sessions]);
-
-  useEffect(() => {
-    localStorage.setItem('tailor_transactions', JSON.stringify(transactions));
-  }, [transactions]);
-
-  useEffect(() => {
-    localStorage.setItem('tailor_inventory', JSON.stringify(inventory));
-  }, [inventory]);
-
-  useEffect(() => {
-    localStorage.setItem('tailor_apprentice_tasks', JSON.stringify(apprenticeTasks));
-  }, [apprenticeTasks]);
-
-  // Hardware & Phone Back Key Event Handling (Android Back Button & Web PopState)
+  // Hardware / Native Back Button Handler
   useEffect(() => {
     const handleBackButton = () => {
-      // 1. Close active modals if open
-      if (isLogoutConfirmOpen) { setIsLogoutConfirmOpen(false); return; }
-      if (isStudioSettingsOpen) { setIsStudioSettingsOpen(false); return; }
-      if (isAddClientOpen) { setIsAddClientOpen(false); setEditingClient(null); return; }
-      if (isCollectDepositOpen) { setIsCollectDepositOpen(false); setTargetDeposit(null); return; }
-      if (isAddApprenticeOpen) { setIsAddApprenticeOpen(false); return; }
-      if (isBookSessionOpen) { setIsBookSessionOpen(false); setPreselectedBookingClient(null); return; }
-      if (isLogTransactionOpen) { setIsLogTransactionOpen(false); return; }
-      if (isCustomerTrackerOpen) { setIsCustomerTrackerOpen(false); return; }
-      if (measurementClient) { setMeasurementClient(null); return; }
-      if (invoiceClient) { setInvoiceClient(null); return; }
-      if (specSheetClient) { setSpecSheetClient(null); return; }
-      if (fullMeasurementsClient) { setFullMeasurementsClient(null); return; }
-      if (profileClient) { setProfileClient(null); return; }
-      if (isAddMaterialOpen) { setIsAddMaterialOpen(false); return; }
-      if (isCustomTaskOpen) { setIsCustomTaskOpen(false); return; }
-      if (isMasterCertOpen) { setIsMasterCertOpen(false); return; }
-      if (isFabricScannerOpen) { setIsFabricScannerOpen(false); return; }
+      const modalClosed = closeActiveModalOrReturn();
+      if (modalClosed) return;
 
-      // 2. Return to home tab if on a sub-tab
       if (activeTab !== 'clients') {
         setActiveTab('clients');
         return;
       }
 
-      // 3. Otherwise minimize native app on phone
       CapacitorApp.minimizeApp();
     };
 
@@ -766,218 +275,98 @@ export default function App() {
       backListener = l;
     });
 
-    const handlePopState = () => {
-      handleBackButton();
-    };
+    const handlePopState = () => handleBackButton();
     window.addEventListener('popstate', handlePopState);
 
     return () => {
       if (backListener) backListener.remove();
       window.removeEventListener('popstate', handlePopState);
     };
-  }, [
-    isLogoutConfirmOpen,
-    isStudioSettingsOpen,
-    isAddClientOpen,
-    isCollectDepositOpen,
-    isAddApprenticeOpen,
-    isBookSessionOpen,
-    isLogTransactionOpen,
-    isCustomerTrackerOpen,
-    measurementClient,
-    invoiceClient,
-    specSheetClient,
-    fullMeasurementsClient,
-    profileClient,
-    isAddMaterialOpen,
-    isCustomTaskOpen,
-    isMasterCertOpen,
-    isFabricScannerOpen,
-    activeTab
-  ]);
+  }, [activeTab, setActiveTab, closeActiveModalOrReturn]);
 
-  // Derived list of studio tailors & designers (dynamic from studio owner & registered apprentices)
-  const artistsList = React.useMemo(() => {
-    const owner = studioSettings.ownerName || studioSettings.studioName || 'Master Atelier';
-    const list = [
-      owner,
-      'Master Atelier',
-      ...apprentices.map((a) => a.name),
-      ...clients.map((c) => c.assignedDesigner).filter((d): d is string => Boolean(d))
-    ];
-    return Array.from(new Set(list)).filter(Boolean);
-  }, [studioSettings.ownerName, studioSettings.studioName, apprentices, clients]);
-
-  // Filter clients
-  const filteredClients = clients.filter((client) => {
-    // Text search query
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase();
-      const nameMatch = client.name.toLowerCase().includes(q);
-      const garmentTagMatch = client.garmentTag.toLowerCase().includes(q);
-      const emailMatch = client.email.toLowerCase().includes(q);
-      const phoneMatch = client.phone.includes(q);
-
-      if (!nameMatch && !garmentTagMatch && !emailMatch && !phoneMatch) {
-        return false;
-      }
-    }
-
-    // Filter chip
-    if (selectedFilter !== 'all') {
-      if (selectedFilter === 'VIP' && client.status !== 'VIP') return false;
-      if (selectedFilter === 'Pending Deposit' && client.status !== 'Pending Deposit') return false;
-      if (selectedFilter === 'Active' && client.status !== 'Active') return false;
-    }
-
-    // Designer filter
-    if (selectedArtistFilter !== 'all' && client.assignedDesigner !== selectedArtistFilter) {
-      return false;
-    }
-
-    return true;
-  });
-
+  // Apprentice Graduation Check
   useEffect(() => {
     if (authScreen === 'app' && userRole.startsWith('Apprentice')) {
-      const activeApp = apprentices.find((a) => a.isLinked) || apprentices[0];
-      if (activeApp && !activeApp.handshakeLocked) {
+      const activeApp = (apprentices || []).find((a) => a && a.isLinked) || (apprentices || [])[0];
+      if (activeApp && activeApp.handshakeLocked === false && activeApp.hasCert) {
         const dismissed = sessionStorage.getItem('tailor_graduation_dismissed');
         if (!dismissed) {
-          setIsGraduationPromptOpen(true);
+          setGraduationPromptOpen(true);
         }
       }
     }
-  }, [authScreen, userRole, apprentices]);
+  }, [authScreen, userRole, apprentices, setGraduationPromptOpen]);
 
-  const handleGraduateToMasterStudio = (newStudioName: string, ownerName: string, newWorkshopCode: string) => {
-    setStudioSettings((prev) => ({
-      ...prev,
-      studioName: newStudioName,
-      ownerName: ownerName,
-      pairCode: newWorkshopCode
-    }));
-    setUserRole('Master (Studio Owner & Financial Control)');
-    setIsGraduationPromptOpen(false);
-    sessionStorage.setItem('tailor_graduation_dismissed', 'true');
+  // Pull to Refresh Hook
+  const { pullDistance, isRefreshing, progress } = usePullToRefresh({
+    onRefresh: performFullCloudSync,
+    disabled: authScreen !== 'app'
+  });
+
+  // Undo Delete Handlers
+  const handleDeleteClientWithUndo = (clientId: string) => {
+    const target = clients.find((c) => c.id === clientId);
+    if (!target) return;
+
+    setClients((prev) => prev.filter((c) => c.id !== clientId));
+    setDeletedClientBuffer(target);
+
+    if (deleteTimeoutRef.current) {
+      clearTimeout(deleteTimeoutRef.current);
+    }
+
+    deleteTimeoutRef.current = setTimeout(() => {
+      deleteClientFromSupabase(clientId);
+      setDeletedClientBuffer(null);
+    }, 6000);
   };
 
-
-
-  const handleSaveClient = (savedClient: Client) => {
-    const isNewClient = !clients.some((c) => c.id === savedClient.id);
-    if (isNewClient) {
-      const check = canAddClientProfile(clients.length);
-      if (!check.allowed) {
-        setIsAddClientOpen(false);
-        setIsSubscriptionModalOpen(true);
-        alert(check.reason || `Free Tier Limit Reached: You have reached the maximum limit of ${check.limit} client profiles on the Free Tier.`);
-        return;
-      }
+  const handleUndoDeleteClient = () => {
+    if (!deletedClientBuffer) return;
+    if (deleteTimeoutRef.current) {
+      clearTimeout(deleteTimeoutRef.current);
     }
-
-    setClients((prev) => {
-      const exists = prev.some((c) => c.id === savedClient.id);
-      let updated: Client[];
-      if (exists) {
-        updated = prev.map((c) => (c.id === savedClient.id ? savedClient : c));
-      } else {
-        updated = [savedClient, ...prev];
-      }
-      localStorage.setItem('tailor_clients', JSON.stringify(updated));
-      return updated;
-    });
-    upsertClientToSupabase(savedClient);
-    queueOfflineAction('client', savedClient);
-
-    // Automatically record consultation deposit & settlement transactions in Cashflow Ledger
-    if (savedClient.depositPaid > 0) {
-      const consultTx: LedgerTransaction = {
-        id: `tx-consult-${savedClient.id}`,
-        date: savedClient.timestamp ? savedClient.timestamp.split('T')[0] : new Date().toISOString().split('T')[0],
-        type: 'deposit',
-        category: 'Consultation Deposit',
-        description: `Consult Deposit Paid - ${savedClient.name} (${savedClient.garmentTag || 'Custom Order'})`,
-        amount: savedClient.depositPaid,
-        clientOrVendor: savedClient.name,
-        status: 'cleared',
-        method: 'Cash'
-      };
-      setTransactions((prev) => {
-        const exists = prev.some((t) => t.id === consultTx.id || t.description.includes(savedClient.name));
-        if (exists) return prev;
-        upsertLedgerTransactionToSupabase(consultTx);
-        return [consultTx, ...prev];
-      });
-    }
-
-    if (savedClient.balanceDue === 0 && savedClient.totalCost > 0) {
-      const fullSettlementTx: LedgerTransaction = {
-        id: `tx-full-${savedClient.id}`,
-        date: new Date().toISOString().split('T')[0],
-        type: 'revenue',
-        category: 'Full Settlement',
-        description: `Full Payment Completed - ${savedClient.name} (${savedClient.garmentTag || 'Custom Order'})`,
-        amount: savedClient.totalCost,
-        clientOrVendor: savedClient.name,
-        status: 'cleared',
-        method: 'Cash'
-      };
-      setTransactions((prev) => {
-        const exists = prev.some((t) => t.id === fullSettlementTx.id);
-        if (exists) return prev;
-        upsertLedgerTransactionToSupabase(fullSettlementTx);
-        return [fullSettlementTx, ...prev];
-      });
-    }
-
-    setSearchQuery('');
-    setSelectedFilter('all');
-    setSelectedArtistFilter('all');
+    const restored = deletedClientBuffer;
+    setClients((prev) => [restored, ...prev]);
+    upsertClientToSupabase(restored);
+    setDeletedClientBuffer(null);
   };
 
-  const handleUpdateMeasurements = (clientId: string, measurements: GarmentMeasurements) => {
-    const targetClient = clients.find((c) => c.id === clientId);
-    const clientName = targetClient?.name || 'Client';
-    const garmentTag = targetClient?.garmentTag || '';
+  const handleDismissUndo = () => {
+    if (deletedClientBuffer) {
+      deleteClientFromSupabase(deletedClientBuffer.id);
+    }
+    if (deleteTimeoutRef.current) {
+      clearTimeout(deleteTimeoutRef.current);
+    }
+    setDeletedClientBuffer(null);
+  };
 
-    setClients((prev) =>
-      prev.map((c) => {
-        if (c.id === clientId) {
-          const updated = { ...c, measurements };
-          upsertClientToSupabase(updated);
-          queueOfflineAction('client', updated);
-          return updated;
-        }
-        return c;
-      })
-    );
-    setProfileClient((prev) =>
-      prev && prev.id === clientId ? { ...prev, measurements } : prev
-    );
-    setFullMeasurementsClient((prev) =>
-      prev && prev.id === clientId ? { ...prev, measurements } : prev
-    );
+  // Handlers
+  const handleTriggerAddClient = () => {
+    const check = canAddClientProfile(clients.length);
+    if (!check.allowed) {
+      alert(check.reason || `Free Tier limit reached (${check.limit} client profiles). Upgrade to Tailor Pro Master for unlimited client profiles!`);
+      setSubscriptionModalOpen(true);
+      return;
+    }
+    openAddClient(null);
+  };
 
-    // Push notification to Master when apprentice takes/updates client measurements
-    const rawAppName = activeUserFullName || (activeUserEmail ? activeUserEmail.split('@')[0] : 'Apprentice Trainee');
-    const appName = rawAppName.trim().charAt(0).toUpperCase() + rawAppName.trim().slice(1);
-    
-    notifyMeasurementRecorded({
-      clientName,
-      garmentTag,
-      apprenticeName: userRole.startsWith('Apprentice') ? appName : (studioSettings.ownerName ? `${studioSettings.ownerName} (Studio)` : 'Workshop Team'),
-      masterName: studioSettings.ownerName || 'Master Atelier',
-      clientId
-    });
+  const handleTriggerAddMaterial = () => {
+    const check = canAddMaterial(inventory.length);
+    if (!check.allowed) {
+      alert(check.reason || `Free Tier limit reached (${check.limit} materials max). Upgrade to Tailor Pro Master for unlimited inventory materials!`);
+      setSubscriptionModalOpen(true);
+      return;
+    }
+    setAddMaterialOpen(true);
   };
 
   const handleAdvanceRunwayStage = (clientId: string, newStage: RunwayStage) => {
     setClients((prev) => {
       const updatedList = prev.map((c) => {
-        if (c && c.id === clientId) {
-          return { ...c, runwayStage: newStage };
-        }
+        if (c && c.id === clientId) return { ...c, runwayStage: newStage };
         return c;
       });
       const target = updatedList.find((c) => c && c.id === clientId);
@@ -985,7 +374,6 @@ export default function App() {
         upsertClientToSupabase(target);
         queueOfflineAction('client', target);
 
-        // Push notification when apprentice advances garment runway stage
         if (userRole.startsWith('Apprentice')) {
           const rawAppName = activeUserFullName || (activeUserEmail ? activeUserEmail.split('@')[0] : 'Apprentice Trainee');
           const appName = rawAppName.trim().charAt(0).toUpperCase() + rawAppName.trim().slice(1);
@@ -998,81 +386,19 @@ export default function App() {
           });
         }
       }
-      try {
-        localStorage.setItem('tailor_clients', JSON.stringify(updatedList));
-      } catch (e) {
-        console.warn('Could not save clients to localStorage:', e);
-      }
       return updatedList;
     });
   };
 
-  const handleUpdateApprenticeHours = (id: string, additionalHours: number) => {
-    setApprentices((prev) =>
-      prev.map((app) => {
-        if (app.id === id) {
-          const newHours = app.hoursCompleted + additionalHours;
-          const updated: Apprentice = {
-            ...app,
-            hoursCompleted: newHours,
-            status: newHours >= 450 ? 'Graduating' : app.status
-          };
-          upsertApprenticeToSupabase(updated);
-          queueOfflineAction('apprentice', updated);
-          return updated;
-        }
-        return app;
-      })
-    );
-  };
-
-  const handleSaveApprentice = (newApprentice: Apprentice) => {
-    const check = canLinkApprentice(apprentices.length);
-    if (!check.allowed) {
-      setIsAddApprenticeOpen(false);
-      setIsSubscriptionModalOpen(true);
-      alert(check.reason || `Free Tier Limit Reached: Free tier allows linking max 1 apprentice profile. Upgrade to Master for unlimited linked apprentices!`);
-      return;
-    }
-    setApprentices((prev) => [newApprentice, ...prev]);
-    upsertApprenticeToSupabase(newApprentice);
-    queueOfflineAction('apprentice', newApprentice);
-  };
-
-  const handleToggleApprenticeHandshake = (id: string) => {
-    setApprentices((prev) =>
-      prev.map((app) => {
-        if (app.id === id) {
-          const nextLocked = !app.handshakeLocked;
-          const updated: Apprentice = {
-            ...app,
-            handshakeLocked: nextLocked,
-            hasCert: true,
-          };
-          upsertApprenticeToSupabase(updated);
-          queueOfflineAction('apprentice', updated);
-
-          if (!nextLocked) {
-            notifyCertificateUnlocked({
-              apprenticeName: app.name,
-              masterName: studioSettings.ownerName || 'Master Atelier'
-            });
-          }
-
-          return updated;
-        }
-        return app;
-      })
-    );
-  };
-
   const handleMarkPaidDirectly = (clientId: string, paymentMethod: string = 'Cash') => {
-    const client = clients.find((c) => c.id === clientId);
-    if (!client) return;
+    const rawClient = clients.find((c) => c.id === clientId);
+    if (!rawClient) return;
+    const client = sanitizeClient(rawClient);
+    const clientTotal = parseCleanNumber(client.totalCost);
+    const clientPaid = parseCleanNumber(client.depositPaid);
+    const clientBal = parseCleanNumber(client.balanceDue);
+    const remainingAmount = clientBal > 0 ? clientBal : Math.max(0, clientTotal - clientPaid);
 
-    const remainingAmount = client.balanceDue > 0 ? client.balanceDue : Math.max(0, client.totalCost - client.depositPaid);
-
-    // Remove any unpaid deposit for this client from state & Supabase
     const matchingDep = unpaidDeposits.find((d) => d.clientId === clientId);
     setUnpaidDeposits((prev) => prev.filter((d) => d.clientId !== clientId && d.id !== `dep-${clientId}`));
     if (matchingDep) {
@@ -1082,121 +408,31 @@ export default function App() {
       deleteUnpaidDepositFromSupabase(clientId);
     }
 
-    // Update client record
-    const updatedClient: Client = {
+    const updatedClient: Client = sanitizeClient({
       ...client,
-      depositPaid: client.totalCost > 0 ? client.totalCost : client.depositPaid + remainingAmount,
+      depositPaid: clientTotal > 0 ? clientTotal : clientPaid + remainingAmount,
       balanceDue: 0,
       status: 'Active'
-    };
-    setClients((prev) => prev.map((c) => (c.id === clientId ? updatedClient : c)));
+    });
+    setClients((prev) => prev.map((c) => (c.id === clientId ? updatedClient : sanitizeClient(c))));
     upsertClientToSupabase(updatedClient);
     queueOfflineAction('client', updatedClient);
 
-    // Record settlement transaction if there was a balance
     if (remainingAmount > 0) {
-      const settlementTx: LedgerTransaction = {
+      const settlementTx = sanitizeTransaction({
         id: `tx-settle-${clientId}-${Date.now()}`,
         date: new Date().toISOString().split('T')[0],
-        type: 'revenue',
+        type: 'revenue' as const,
         category: 'Remaining Balance Settlement',
         description: `Full Settlement Paid - ${client.name} (${client.garmentTag || 'Custom Order'})`,
         amount: remainingAmount,
         clientOrVendor: client.name,
-        status: 'cleared',
-        method: paymentMethod as LedgerTransaction['method']
-      };
-
+        status: 'cleared' as const,
+        method: (paymentMethod || 'Cash') as any
+      });
       setTransactions((prev) => [settlementTx, ...prev]);
-      upsertLedgerTransactionToSupabase(settlementTx);
       queueOfflineAction('transaction', settlementTx);
     }
-  };
-
-  const handleProcessDepositCollection = (depositId: string, paymentMethod: string) => {
-    const depFromList = unpaidDeposits.find((d) => d.id === depositId);
-    const dep = depFromList || (targetDeposit?.id === depositId ? targetDeposit : null);
-
-    const targetClientId = dep ? dep.clientId : (depositId.startsWith('dep-') ? depositId.replace('dep-', '') : depositId);
-    const targetClient = clients.find((c) => c.id === targetClientId || c.id === depositId);
-
-    if (!dep && !targetClient) {
-      console.warn('Could not find deposit or client for ID:', depositId);
-      return;
-    }
-
-    const clientName = dep?.clientName || targetClient?.name || 'Client';
-    const garmentTag = dep?.garmentTag || targetClient?.garmentTag || 'Custom Order';
-    const amountToCollect = dep ? dep.amount : (targetClient?.balanceDue || 0);
-
-    // Remove from unpaid deposits list & Supabase DB
-    setUnpaidDeposits((prev) => prev.filter((d) => d.id !== depositId && d.clientId !== targetClientId));
-    if (depFromList) {
-      deleteUnpaidDepositFromSupabase(depFromList.id);
-    } else if (targetClientId) {
-      deleteUnpaidDepositFromSupabase(depositId);
-      deleteUnpaidDepositFromSupabase(`dep-${targetClientId}`);
-    }
-
-    // Update client balance due & Supabase DB
-    if (targetClient) {
-      const newBalance = Math.max(0, targetClient.balanceDue - amountToCollect);
-      const updatedClient: Client = {
-        ...targetClient,
-        depositPaid: targetClient.depositPaid + amountToCollect,
-        balanceDue: newBalance,
-        status: newBalance <= 0 ? 'Active' : targetClient.status
-      };
-
-      setClients((prev) =>
-        prev.map((c) => (c.id === targetClient.id ? updatedClient : c))
-      );
-      upsertClientToSupabase(updatedClient);
-      queueOfflineAction('client', updatedClient);
-    }
-
-    // Add transaction to ledger & Supabase DB
-    if (amountToCollect > 0) {
-      const newTx: LedgerTransaction = {
-        id: `tx-${Date.now()}`,
-        date: new Date().toISOString().split('T')[0],
-        type: 'deposit',
-        category: 'Client Payment',
-        description: `Payment Cleared - ${clientName} (${garmentTag})`,
-        amount: amountToCollect,
-        clientOrVendor: clientName,
-        status: 'cleared',
-        method: paymentMethod as LedgerTransaction['method']
-      };
-
-      setTransactions((prev) => [newTx, ...prev]);
-      upsertLedgerTransactionToSupabase(newTx);
-      queueOfflineAction('transaction', newTx);
-    }
-  };
-
-  const handleBookSession = (newSession: RunwaySession) => {
-    setSessions((prev) => [newSession, ...prev]);
-    upsertRunwaySessionToSupabase(newSession);
-  };
-
-  const handleUpdateSessionStatus = (id: string, newStatus: RunwaySession['status']) => {
-    setSessions((prev) =>
-      prev.map((s) => {
-        if (s.id === id) {
-          const updated = { ...s, status: newStatus };
-          upsertRunwaySessionToSupabase(updated);
-          return updated;
-        }
-        return s;
-      })
-    );
-  };
-
-  const handleSaveTransaction = (newTx: LedgerTransaction) => {
-    setTransactions((prev) => [newTx, ...prev]);
-    upsertLedgerTransactionToSupabase(newTx);
-    queueOfflineAction('transaction', newTx);
   };
 
   const handleRestockInventoryItem = (id: string, amount: number) => {
@@ -1207,9 +443,8 @@ export default function App() {
           const updated = {
             ...item,
             stockLevel: newStock,
-            status: newStock > item.minThreshold ? 'In Stock' : 'Low Stock'
+            status: (newStock > item.minThreshold ? 'In Stock' : 'Low Stock') as any
           };
-          upsertInventoryItemToSupabase(updated);
           queueOfflineAction('inventory', updated);
           return updated;
         }
@@ -1218,275 +453,84 @@ export default function App() {
     );
   };
 
-  const handleSaveMaterial = (newItem: InventoryItem) => {
-    const check = canAddMaterial(inventory.length);
-    if (!check.allowed) {
-      setIsAddMaterialOpen(false);
-      setIsSubscriptionModalOpen(true);
-      alert(check.reason || `Free Tier Limit Reached: Free tier accounts can add up to 5 inventory materials. Upgrade to Master for unlimited stock catalog!`);
-      return;
-    }
-    setInventory((prev) => [newItem, ...prev]);
-    upsertInventoryItemToSupabase(newItem);
-    queueOfflineAction('inventory', newItem);
-  };
-
-  const handleSaveTask = (taskData: string | { title: string; assignedTo?: string; category?: string; masterNotes?: string }) => {
-    const title = typeof taskData === 'string' ? taskData : taskData.title;
-    const assignedTo = typeof taskData === 'object' && taskData.assignedTo ? taskData.assignedTo : 'all';
-    const category = typeof taskData === 'object' && taskData.category ? taskData.category : 'Master Workshop Assignment';
-    const masterNotes = typeof taskData === 'object' && taskData.masterNotes ? taskData.masterNotes : 'Assigned by Master Trainer.';
-
-    const newTask: ApprenticeTask = {
-      id: `task_${Date.now()}`,
-      title,
-      assignedTo,
-      isCompleted: false,
-      status: 'in_progress',
-      category,
-      masterNotes
-    };
-
-    setApprenticeTasks((prev) => {
-      const updated = [newTask, ...prev];
-      localStorage.setItem('tailor_apprentice_tasks', JSON.stringify(updated));
-      return updated;
-    });
-    upsertApprenticeTaskToSupabase(newTask);
-    queueOfflineAction('task', newTask);
-
-    // Push notification to Apprentice(s) on phone
-    notifyTaskAssigned({
-      taskTitle: title,
-      apprenticeName: assignedTo,
-      masterName: studioSettings.ownerName || 'Master Trainer',
-      category
-    });
-  };
-
   const handleAssignCurriculumTask = (apprenticeName: string, taskTitle: string) => {
-    const newTask: ApprenticeTask = {
+    const newTask = {
       id: `curr_task_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
       title: taskTitle,
       assignedTo: apprenticeName || 'all',
       isCompleted: false,
-      status: 'in_progress',
+      status: 'in_progress' as const,
       category: 'Curriculum Skills Unit',
-      masterNotes: 'Master Atelier skills curriculum assignment.'
+      masterNotes: 'Master Atelier skills curriculum assignment.',
+      createdAt: new Date().toISOString()
     };
-
-    setApprenticeTasks((prev) => {
-      const updated = [newTask, ...prev];
-      localStorage.setItem('tailor_apprentice_tasks', JSON.stringify(updated));
-      return updated;
-    });
-    upsertApprenticeTaskToSupabase(newTask);
+    setApprenticeTasks((prev) => [newTask, ...prev]);
     queueOfflineAction('task', newTask);
-
-    // Push notification to Apprentice on phone
-    notifyTaskAssigned({
-      taskTitle,
-      apprenticeName,
-      masterName: studioSettings.ownerName || 'Master Trainer',
-      category: 'Curriculum Skills Unit'
-    });
   };
 
-  const handleCompleteTask = (taskId: string) => {
-    setApprenticeTasks((prev) => {
-      const updated = prev.map((t) => {
-        if (t.id === taskId) {
-          const u = {
-            ...t,
-            isCompleted: true,
-            status: 'review_pending' as ApprenticeTaskStatus,
-            completedAt: new Date().toISOString().split('T')[0]
-          };
-          upsertApprenticeTaskToSupabase(u);
-          queueOfflineAction('task', u);
-          return u;
+  const handleToggleApprenticeHandshake = (id: string) => {
+    setApprentices((prev) =>
+      prev.map((app) => {
+        if (app.id === id) {
+          const nextLocked = !app.handshakeLocked;
+          const updated = { ...app, handshakeLocked: nextLocked, hasCert: true };
+          upsertApprenticeToSupabase(updated);
+          queueOfflineAction('apprentice', updated);
+          return updated;
         }
-        return t;
-      });
-      localStorage.setItem('tailor_apprentice_tasks', JSON.stringify(updated));
-      return updated;
-    });
-
-    const targetTask = apprenticeTasks.find((t) => t.id === taskId);
-    const rawAppName = activeUserFullName || (activeUserEmail ? activeUserEmail.split('@')[0] : 'Apprentice Trainee');
-    const appName = rawAppName.trim().charAt(0).toUpperCase() + rawAppName.trim().slice(1);
-
-    // Push notification to Master: Apprentice completed task and submitted for review
-    notifyTaskSubmitted({
-      taskTitle: targetTask?.title || 'Workshop Duty',
-      apprenticeName: appName,
-      masterName: studioSettings.ownerName || 'Master Trainer',
-      taskId
-    });
+        return app;
+      })
+    );
   };
 
   const handlePassTask = (taskId: string) => {
     const targetTask = apprenticeTasks.find((t) => t.id === taskId);
-
-    setApprenticeTasks((prev) => {
-      const updated = prev.map((t) => {
-        if (t.id === taskId) {
-          const u = {
-            ...t,
-            isCompleted: true,
-            status: 'passed' as ApprenticeTaskStatus,
-            passedAt: new Date().toISOString().split('T')[0]
-          };
-          upsertApprenticeTaskToSupabase(u);
-          queueOfflineAction('task', u);
-          return u;
-        }
-        return t;
-      });
-      localStorage.setItem('tailor_apprentice_tasks', JSON.stringify(updated));
-
-      if (targetTask) {
-        setApprentices((appPrev) => {
-          const appUpdated = appPrev.map((a) => {
-            if (!targetTask.assignedTo || targetTask.assignedTo === 'all' || targetTask.assignedTo === a.id || targetTask.assignedTo === a.name) {
-              return { ...a, tasksCount: (a.tasksCount || 0) + 1 };
-            }
-            return a;
-          });
-          localStorage.setItem('tailor_apprentices', JSON.stringify(appUpdated));
-          return appUpdated;
-        });
-      }
-      return updated;
-    });
-
-    // Push notification to Apprentice: Master approved & passed the task!
-    notifyTaskPassed({
-      taskTitle: targetTask?.title || 'Workshop Duty',
-      apprenticeName: targetTask?.assignedTo || 'all',
-      masterName: studioSettings.ownerName || 'Master Trainer',
-      taskId
-    });
-  };
-
-  const handleSyncNewWorkshopCode = (newCode: string) => {
-    setStudioSettings((prev) => ({ ...prev, pairCode: newCode }));
-
-    const rawName = activeUserFullName || (activeUserEmail ? activeUserEmail.split('@')[0] : 'Apprentice Scholar');
-    const apprenticeName = rawName.trim().charAt(0).toUpperCase() + rawName.trim().slice(1);
-    const initials = apprenticeName.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2) || 'AS';
-    const apprenticeId = `app_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
-
-    const linkedApprentice: Apprentice = {
-      id: apprenticeId,
-      name: apprenticeName,
-      initials,
-      role: 'Apprentice Trainee',
-      mentor: studioSettings.ownerName || 'Master Atelier',
-      isLinked: true,
-      handshakeLocked: true,
-      hasCert: false,
-      hoursCompleted: 0,
-      totalRequiredHours: 120,
-      certifications: [],
-      tasksCount: 0,
-      status: 'On Track',
-      specialty: 'Couture Assembly & Garment Construction'
-    };
-
-    setApprentices((prev) => {
-      const exists = prev.some((a) => a.name.toLowerCase() === linkedApprentice.name.toLowerCase());
-      let updated: Apprentice[];
-      if (exists) {
-        updated = prev.map((a) =>
-          a.name.toLowerCase() === linkedApprentice.name.toLowerCase()
-            ? { ...a, isLinked: true }
-            : a
-        );
-      } else {
-        updated = [linkedApprentice, ...prev];
-      }
-      localStorage.setItem('tailor_apprentices', JSON.stringify(updated));
-      return updated;
-    });
-
-    upsertApprenticeToSupabase(linkedApprentice);
-
-    // Push notification to Master: New apprentice linked
-    notifyApprenticeLinked({
-      apprenticeName,
-      masterName: studioSettings.ownerName || 'Master Atelier',
-      workshopCode: newCode
-    });
-  };
-
-  const handleRefreshApprentices = async () => {
-    await performFullCloudSync();
+    setApprenticeTasks((prev) =>
+      prev.map((t) => (t.id === taskId ? { ...t, isCompleted: true, status: 'passed' as const, passedAt: new Date().toISOString().split('T')[0] } : t))
+    );
+    if (targetTask) {
+      setApprentices((appPrev) =>
+        appPrev.map((a) => {
+          if (!targetTask.assignedTo || targetTask.assignedTo === 'all' || targetTask.assignedTo === a.id || targetTask.assignedTo === a.name) {
+            return { ...a, tasksCount: (a.tasksCount || 0) + 1 };
+          }
+          return a;
+        })
+      );
+    }
   };
 
   const handleUnlinkApprentice = (apprenticeId: string) => {
-    setApprentices((prev) => {
-      const updated = prev.filter((a) => a.id !== apprenticeId);
-      localStorage.setItem('tailor_apprentices', JSON.stringify(updated));
-      return updated;
-    });
+    setApprentices((prev) => prev.filter((a) => a.id !== apprenticeId));
     deleteApprenticeFromSupabase(apprenticeId);
   };
 
-  // App theme state
-  const [theme, setTheme] = useState<'light' | 'dark'>(
-    studioSettings.theme || 'light'
-  );
-
-  useEffect(() => {
-    if (theme === 'dark') {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
-  }, [theme]);
-
-  const handleToggleTheme = (newTheme: 'light' | 'dark') => {
-    setTheme(newTheme);
-    setStudioSettings((prev) => ({ ...prev, theme: newTheme }));
-  };
-
-  const handleSignInSuccess = (email: string, selectedRole?: UserRole, password?: string) => {
+  const handleSignInSuccess = (email: string, selectedRole?: UserRole) => {
     setSearchQuery('');
     setSelectedFilter('all');
     setSelectedArtistFilter('all');
     const userEmail = email.trim() || 'master@tailorpro.com';
     setActiveUserEmail(userEmail);
 
-    // Note: credentials have already been verified by SignInView before this callback fires.
-
     const isApprenticeEmail =
       userEmail.toLowerCase().includes('apprentice') ||
       userEmail.toLowerCase().includes('trainee') ||
       userEmail.toLowerCase().includes('scholar');
-
     const resolvedRole: UserRole = selectedRole || (isApprenticeEmail ? 'Apprentice (Trainee & CAD Blueprint View)' : 'Master (Studio Owner & Financial Control)');
 
-    // 1. Synchronously activate workspace & transition to main app dashboard
     setWorkspaceActivated(true);
     setUserRole(resolvedRole);
-    setIsLicensePromptOpen(false);
+    setLicensePromptOpen(false);
     setAuthScreen('app');
 
-    // 2. Register/update user account record locally
     const users = getUserAccountRecords();
-    let user = users.find((u) => u.email.toLowerCase() === userEmail.toLowerCase());
+    const user = users.find((u) => u.email.toLowerCase() === userEmail.toLowerCase());
     if (user) {
       user.status = 'approved';
       if (selectedRole) user.role = selectedRole;
       saveUserAccountRecords(users);
       if (user.fullName && user.fullName.trim() && !user.fullName.includes('@')) {
         setActiveUserFullName(user.fullName.trim());
-      } else {
-        const appMatch = apprentices.find((a) => a.id.toLowerCase().includes(userEmail.split('@')[0].toLowerCase()) || a.name.toLowerCase() === userEmail.split('@')[0].toLowerCase());
-        if (appMatch && appMatch.name && !appMatch.name.includes('@')) {
-          setActiveUserFullName(appMatch.name);
-        }
       }
     } else {
       registerUserAccount({
@@ -1497,7 +541,6 @@ export default function App() {
       });
     }
 
-    // 3. Trigger cloud sync asynchronously in background
     setTimeout(() => {
       syncUserAccountsFromSupabase();
       performFullCloudSync();
@@ -1530,62 +573,12 @@ export default function App() {
         ? (masterWorkshopCode && masterWorkshopCode.trim() ? masterWorkshopCode.trim() : (studioSettings.pairCode || generateMasterWorkshopCode(masterBrandName)))
         : generateMasterWorkshopCode(masterBrandName);
 
-      const updatedSettings: StudioSettings = {
-        ...studioSettings,
-        studioName: masterBrandName,
-        pairCode: newPairCode
-      };
-
+      const updatedSettings = { ...studioSettings, studioName: masterBrandName, pairCode: newPairCode };
       setStudioSettings(updatedSettings);
-      localStorage.setItem('tailor_studio_settings', JSON.stringify(updatedSettings));
-      try {
-        upsertStudioSettingsToSupabase(updatedSettings);
-      } catch (e) {
-        console.warn('Could not sync settings to supabase:', e);
-      }
 
       setUserRole(role);
       setActiveUserEmail(userEmail);
-      if (fullName && fullName.trim()) {
-        setActiveUserFullName(fullName.trim());
-      }
-
-      if (role.startsWith('Apprentice')) {
-        const rawName = fullName && fullName.trim() ? fullName.trim() : (userEmail ? userEmail.split('@')[0] : 'Apprentice Trainee');
-        const appName = rawName.charAt(0).toUpperCase() + rawName.slice(1);
-        const initials = appName.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2) || 'AT';
-
-        const newApprenticeRecord: Apprentice = {
-          id: `app_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
-          name: appName,
-          initials,
-          role: 'Apprentice Trainee',
-          mentor: studioSettings.ownerName || 'Master Atelier',
-          isLinked: true,
-          handshakeLocked: true,
-          hasCert: false,
-          hoursCompleted: 0,
-          totalRequiredHours: 120,
-          certifications: [],
-          tasksCount: 0,
-          status: 'On Track',
-          specialty: 'Couture Assembly & Garment Construction'
-        };
-
-        setApprentices((prev) => {
-          const filtered = prev.filter(
-            (a) => a.name.toLowerCase() !== appName.toLowerCase()
-          );
-          const updated = [newApprenticeRecord, ...filtered];
-          localStorage.setItem('tailor_apprentices', JSON.stringify(updated));
-          try {
-            upsertApprenticeToSupabase(newApprenticeRecord);
-          } catch (e) {
-            console.warn('Could not sync apprentice to supabase:', e);
-          }
-          return updated;
-        });
-      }
+      if (fullName && fullName.trim()) setActiveUserFullName(fullName.trim());
 
       registerUserAccount({
         email: userEmail,
@@ -1596,283 +589,155 @@ export default function App() {
       });
 
       setWorkspaceActivated(true);
-      setIsLicensePromptOpen(false);
+      setLicensePromptOpen(false);
       setAuthScreen('app');
     } catch (err) {
       console.error('Registration processing failed:', err);
-      // Fallback: activate workspace and navigate to app
       setWorkspaceActivated(true);
-      setIsLicensePromptOpen(false);
+      setLicensePromptOpen(false);
       setAuthScreen('app');
     }
   };
 
-  // Render Splash Screen on initial load
+  const handleSyncNewWorkshopCode = (newCode: string) => {
+    setStudioSettings((prev) => ({ ...prev, pairCode: newCode }));
+    const rawName = activeUserFullName || (activeUserEmail ? activeUserEmail.split('@')[0] : 'Apprentice Scholar');
+    const apprenticeName = rawName.trim().charAt(0).toUpperCase() + rawName.trim().slice(1);
+    const initials = apprenticeName.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2) || 'AS';
+    const apprenticeId = `app_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
+
+    const linkedApprentice: Apprentice = {
+      id: apprenticeId,
+      name: apprenticeName,
+      initials,
+      role: 'Apprentice Trainee',
+      mentor: studioSettings.ownerName || 'Master Atelier',
+      isLinked: true,
+      handshakeLocked: true,
+      hasCert: false,
+      hoursCompleted: 0,
+      totalRequiredHours: 120,
+      certifications: [],
+      tasksCount: 0,
+      status: 'On Track',
+      specialty: 'Couture Assembly & Garment Construction'
+    };
+
+    setApprentices((prev) => {
+      const exists = prev.some((a) => a.name.toLowerCase() === linkedApprentice.name.toLowerCase());
+      if (exists) {
+        return prev.map((a) => (a.name.toLowerCase() === linkedApprentice.name.toLowerCase() ? { ...a, isLinked: true } : a));
+      }
+      return [linkedApprentice, ...prev];
+    });
+
+    upsertApprenticeToSupabase(linkedApprentice);
+    notifyApprenticeLinked({
+      apprenticeName,
+      masterName: studioSettings.ownerName || 'Master Atelier',
+      workshopCode: newCode
+    });
+  };
+
+  // Splash Screen
   if (showSplash) {
     return <SplashScreen onFinish={() => setShowSplash(false)} />;
   }
 
-  // Render Customer Order Status Tracker Screen if opened from signin or app
-  if (isCustomerTrackerOpen) {
-    return (
-      <CustomerTrackingModal
-        clients={clients}
-        studioSettings={studioSettings}
-        onClose={() => setIsCustomerTrackerOpen(false)}
-      />
-    );
-  }
-
-  // Render Auth Views if not logged in
+  // Sign In Screen
   if (authScreen === 'signin') {
     return (
       <>
-        <PWAInstallBanner onOpenInstallModal={() => setIsInstallAppOpen(true)} />
+        <PWAInstallBanner onOpenInstallModal={() => setInstallAppOpen(true)} />
         <SignInView
           onSignInSuccess={handleSignInSuccess}
           onGoToRegister={() => setAuthScreen('register')}
-          onOpenCustomerTracker={() => setIsCustomerTrackerOpen(true)}
-          onOpenAdminPortal={() => setIsAdminPortalOpen(true)}
-          onOpenInstallApp={() => setIsInstallAppOpen(true)}
+          onOpenCustomerTracker={() => setCustomerTrackerOpen(true)}
+          onOpenAdminPortal={() => setAdminPortalOpen(true)}
+          onOpenInstallApp={() => setInstallAppOpen(true)}
         />
-        <InstallAppModal
-          isOpen={isInstallAppOpen}
-          onClose={() => setIsInstallAppOpen(false)}
-        />
-        {isLicensePromptOpen && (
-          <LicenseKeyVerificationModal
-            userEmail={activeUserEmail}
-            onActivated={() => {
-              setIsLicensePromptOpen(false);
-              setAuthScreen('app');
-            }}
-            onLogout={() => {
-              setIsLicensePromptOpen(false);
-              setAuthScreen('signin');
-            }}
-          />
-        )}
-        {isAdminPortalOpen && (
-          <SuperAdminPortal
-            isOpen={isAdminPortalOpen}
-            onClose={() => setIsAdminPortalOpen(false)}
-          />
-        )}
+        <ModalRoot />
       </>
     );
   }
 
+  // Register Screen
   if (authScreen === 'register') {
     return (
       <>
-        <RegisterStudioView
-          onRegisterSuccess={handleRegisterSuccess}
-          onGoToSignIn={() => setAuthScreen('signin')}
-        />
-        {isLicensePromptOpen && (
-          <LicenseKeyVerificationModal
-            userEmail={activeUserEmail}
-            onActivated={() => {
-              setIsLicensePromptOpen(false);
-              setAuthScreen('app');
-            }}
-            onLogout={() => {
-              setIsLicensePromptOpen(false);
-              setAuthScreen('signin');
-            }}
+        <Suspense fallback={<ScreenFallback />}>
+          <RegisterStudioView
+            onRegisterSuccess={handleRegisterSuccess}
+            onGoToSignIn={() => setAuthScreen('signin')}
           />
-        )}
-        {isAdminPortalOpen && (
-          <SuperAdminPortal
-            isOpen={isAdminPortalOpen}
-            onClose={() => setIsAdminPortalOpen(false)}
-          />
-        )}
+        </Suspense>
+        <ModalRoot />
       </>
     );
   }
 
-  const handleUpdateApprenticeName = (newName: string) => {
-    const cleanName = newName.trim();
-    if (!cleanName) return;
-
-    // 1. Update active user full name state
-    setActiveUserFullName(cleanName);
-
-    // 2. Update local user account records
-    if (activeUserEmail) {
-      const users = getUserAccountRecords();
-      const user = users.find((u) => u.email.toLowerCase() === activeUserEmail.toLowerCase());
-      if (user) {
-        user.fullName = cleanName;
-        saveUserAccountRecords(users);
-      }
-    }
-
-    // 3. Update apprentices array and persist to localStorage & Supabase
-    setApprentices((prev) => {
-      const active = prev.find((a) => (activeUserEmail && a.id.toLowerCase().includes(activeUserEmail.split('@')[0].toLowerCase())) || a.isLinked) || prev[0];
-      const initials = cleanName.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2) || 'AT';
-      
-      let updatedList: Apprentice[];
-      if (active) {
-        const updated: Apprentice = {
-          ...active,
-          name: cleanName,
-          initials,
-          isLinked: true
-        };
-        upsertApprenticeToSupabase(updated);
-        queueOfflineAction('apprentice', updated);
-        updatedList = prev.map((a) => (a.id === active.id ? updated : a));
-      } else {
-        const newRecord: Apprentice = {
-          id: `app_${cleanName.toLowerCase().replace(/\s+/g, '_')}`,
-          name: cleanName,
-          initials,
-          role: 'Apprentice Trainee',
-          mentor: studioSettings.ownerName || 'Kausar Mohammed',
-          isLinked: true,
-          handshakeLocked: true,
-          hasCert: false,
-          hoursCompleted: 120,
-          totalRequiredHours: 120,
-          certifications: [],
-          tasksCount: 0,
-          status: 'On Track',
-          specialty: 'Couture Assembly & Garment Construction'
-        };
-        upsertApprenticeToSupabase(newRecord);
-        queueOfflineAction('apprentice', newRecord);
-        updatedList = [newRecord, ...prev];
-      }
-
-      localStorage.setItem('tailor_apprentices', JSON.stringify(updatedList));
-      return updatedList;
-    });
-  };
-
-  // Render Apprentice View if authScreen is 'app' and userRole is Apprentice
+  // Apprentice App View
   if (authScreen === 'app' && userRole.startsWith('Apprentice')) {
-    const targetName = activeUserFullName.trim();
+    const targetName = (activeUserFullName || '').trim();
+    const safeAppList = (apprentices || []).filter(Boolean);
     const matchedAppRecord = targetName
-      ? apprentices.find((a) => a.name.toLowerCase() === targetName.toLowerCase())
-      : (activeUserEmail ? apprentices.find((a) => a.id.toLowerCase().includes(activeUserEmail.split('@')[0].toLowerCase()) || a.name.toLowerCase() === activeUserEmail.split('@')[0].toLowerCase()) : undefined);
+      ? safeAppList.find((a) => a?.name && a.name.toLowerCase() === targetName.toLowerCase())
+      : (activeUserEmail ? safeAppList.find((a) => (a?.id && a.id.toLowerCase().includes(activeUserEmail.split('@')[0].toLowerCase())) || (a?.name && a.name.toLowerCase() === activeUserEmail.split('@')[0].toLowerCase())) : undefined);
 
-    const activeAppRecord = matchedAppRecord || apprentices.find((a) => a.isLinked) || apprentices[0];
-    const resolvedAppName = targetName || (activeAppRecord && !activeAppRecord.name.includes('@') ? activeAppRecord.name : '') || (activeUserEmail ? activeUserEmail.split('@')[0] : 'Apprentice Trainee');
+    const activeAppRecord = matchedAppRecord || safeAppList.find((a) => a?.isLinked) || safeAppList[0];
+    const resolvedAppName = targetName || (activeAppRecord?.name && !activeAppRecord.name.includes('@') ? activeAppRecord.name : '') || (activeUserEmail ? activeUserEmail.split('@')[0] : 'Apprentice Trainee');
 
     return (
       <>
-        <ApprenticeAppView
-          clients={clients}
-          apprentices={apprentices}
-          tasks={apprenticeTasks}
-          studioName={
-            studioSettings.studioName && studioSettings.studioName !== 'My Atelier Studio'
-              ? studioSettings.studioName
-              : 'MOKARS STITCHES STUDIO'
-          }
-          masterName={studioSettings.ownerName || 'Mubarik Tuahir Ali'}
-          studioLogoUrl={studioSettings.logoUrl}
-          workshopCode={studioSettings.pairCode}
-          onSyncNewWorkshopCode={(newCode) => {
-            handleSyncNewWorkshopCode(newCode);
-          }}
-          apprenticeName={resolvedAppName}
-          onUpdateApprenticeName={handleUpdateApprenticeName}
-          theme={theme}
-          onToggleTheme={handleToggleTheme}
-          onAdvanceStage={handleAdvanceRunwayStage}
-          onOpenMeasurementsForClient={(client) => setMeasurementClient(client)}
-          onOpenAddNewClient={() => {
-            setEditingClient(null);
-            setIsAddClientOpen(true);
-          }}
-          onSwitchRoleToMaster={() =>
-            setUserRole('Master (Studio Owner & Financial Control)')
-          }
-          onLogout={handlePromptLogout}
-          onCompleteTask={handleCompleteTask}
-          unreadNotificationCount={unreadNotificationCount}
-          onOpenNotificationCenter={() => setIsNotificationCenterOpen(true)}
-        />
+        <Suspense fallback={<ScreenFallback />}>
+          <ApprenticeAppView
+            clients={clients}
+            apprentices={apprentices}
+            tasks={apprenticeTasks}
+            studioName={studioSettings.studioName && studioSettings.studioName !== 'My Atelier Studio' ? studioSettings.studioName : 'MOKARS STITCHES STUDIO'}
+            masterName={studioSettings.ownerName || 'Mubarik Tuahir Ali'}
+            studioLogoUrl={studioSettings.logoUrl}
+            workshopCode={studioSettings.pairCode}
+            onSyncNewWorkshopCode={handleSyncNewWorkshopCode}
+            apprenticeName={resolvedAppName}
+            onUpdateApprenticeName={(newName) => {
+              const cleanName = newName.trim();
+              if (!cleanName) return;
+              setActiveUserFullName(cleanName);
+            }}
+            theme={theme}
+            onToggleTheme={toggleTheme}
+            onAdvanceStage={handleAdvanceRunwayStage}
+            onOpenMeasurementsForClient={(client) => setMeasurementClient(client)}
+            onOpenAddNewClient={() => openAddClient(null)}
+            onSwitchRoleToMaster={() => setUserRole('Master (Studio Owner & Financial Control)')}
+            onLogout={() => setLogoutConfirmOpen(true)}
+            onCompleteTask={(taskId) => {
+              setApprenticeTasks((prev) => prev.map((t) => (t.id === taskId ? { ...t, isCompleted: true, status: 'review_pending' as const } : t)));
+            }}
+            unreadNotificationCount={unreadNotificationCount}
+            onOpenNotificationCenter={() => setNotificationCenterOpen(true)}
+          />
+        </Suspense>
 
-        {/* Floating Realtime Push Notification Banner */}
         <NotificationToastBanner
           notification={activeToastNotification}
           onClose={() => setActiveToastNotification(null)}
-          onClickNotification={() => {
-            setIsNotificationCenterOpen(true);
-          }}
+          onClickNotification={() => setNotificationCenterOpen(true)}
         />
-
-        {/* Push Notification History & Controls Modal */}
-        <NotificationCenterModal
-          isOpen={isNotificationCenterOpen}
-          onClose={() => setIsNotificationCenterOpen(false)}
-          notifications={notifications}
-          onMarkAllRead={() => setNotifications(markAllNotificationsAsRead())}
-          onClearAll={() => setNotifications(clearAllNotifications())}
-          currentUserRole={userRole}
-          onSelectNotification={(notif) => {
-            setNotifications((prev) => prev.map((n) => n.id === notif.id ? { ...n, read: true } : n));
-          }}
-        />
-
-        {/* Push Permission Prompt Banner */}
         <PushPermissionBanner />
-
-        {/* Global Modals for Apprentice Actions */}
-        <AddClientModal
-          isOpen={isAddClientOpen}
-          onClose={() => {
-            setIsAddClientOpen(false);
-            setEditingClient(null);
-          }}
-          onSaveClient={handleSaveClient}
-          editingClient={editingClient}
-          artistsList={artistsList}
-        />
-
-        {measurementClient && (
-          <GarmentMeasurementsModal
-            client={measurementClient}
-            onSave={handleUpdateMeasurements}
-            onClose={() => setMeasurementClient(null)}
-          />
-        )}
-
-        <ApprenticeMasterGraduationModal
-          isOpen={isGraduationPromptOpen}
-          onClose={() => {
-            setIsGraduationPromptOpen(false);
-            sessionStorage.setItem('tailor_graduation_dismissed', 'true');
-          }}
-          apprenticeName={resolvedAppName}
-          masterName={studioSettings.ownerName || 'Mubarik Tuahir Ali'}
-          onGraduateToMasterStudio={handleGraduateToMasterStudio}
-        />
-
-        <LogoutConfirmationModal
-          isOpen={isLogoutConfirmOpen}
-          onClose={() => setIsLogoutConfirmOpen(false)}
-          onConfirm={handleConfirmLogout}
-        />
+        <ModalRoot />
       </>
     );
   }
 
+  // Master Studio Dashboard
   return (
     <div className={`min-h-screen md:pl-64 pt-[max(112px,calc(102px+env(safe-area-inset-top,0px)))] sm:pt-36 md:pt-40 pb-32 sm:pb-36 transition-colors duration-300 font-['Plus_Jakarta_Sans',sans-serif] ${
-      theme === 'dark'
-        ? 'bg-[#061E1B] text-slate-100 dark'
-        : 'bg-[#EBF5F0] text-[#0D3B36]'
+      theme === 'dark' ? 'bg-[#061E1B] text-slate-100 dark' : 'bg-[#EBF5F0] text-[#0D3B36]'
     }`}>
-      {/* PWA Install Banner for Browser Visitors */}
-      <PWAInstallBanner onOpenInstallModal={() => setIsInstallAppOpen(true)} />
+      <PWAInstallBanner onOpenInstallModal={() => setInstallAppOpen(true)} />
 
-      {/* Offline / Reconnection Toast Banner */}
       {offlineNotice && (
         <div className="fixed top-20 left-1/2 -translate-x-1/2 z-50 bg-[#0D3B36] text-white px-5 py-2.5 rounded-full shadow-2xl border-2 border-[#DCA134] text-xs font-black flex items-center gap-2 animate-bounce max-w-sm text-center">
           <span>{offlineNotice}</span>
@@ -1882,88 +747,62 @@ export default function App() {
       {/* App Header */}
       <Header
         studioSettings={studioSettings}
-        onOpenStudioSettings={() => setIsStudioSettingsOpen(true)}
+        onOpenStudioSettings={() => setStudioSettingsOpen(true)}
         onOpenAddClient={handleTriggerAddClient}
-        onOpenBookSession={() => {
-          setPreselectedBookingClient(null);
-          setIsBookSessionOpen(true);
-        }}
+        onOpenBookSession={() => openBookSession(null)}
         activeTab={activeTab}
         onOpenMasterCertificate={() => {
           if (studioSub.tier === 'FREE') {
             alert('Master Certificate is locked on Tailor Pro Free 👑. Upgrade to Tailor Pro Master (GHS 35/mo) to unlock your official Master Atelier Certificate!');
-            setIsSubscriptionModalOpen(true);
+            setSubscriptionModalOpen(true);
             return;
           }
-          setIsMasterCertOpen(true);
+          setMasterCertOpen(true);
         }}
-        onOpenSubscriptionModal={() => setIsSubscriptionModalOpen(true)}
+        onOpenSubscriptionModal={() => setSubscriptionModalOpen(true)}
         subscriptionTier={studioSub.tier}
-        onOpenInstallApp={() => setIsInstallAppOpen(true)}
-        onOpenAdminPortal={() => setIsAdminPortalOpen(true)}
+        onOpenInstallApp={() => setInstallAppOpen(true)}
+        onOpenAdminPortal={() => setAdminPortalOpen(true)}
         onManualSync={performFullCloudSync}
         theme={theme}
-        onToggleTheme={handleToggleTheme}
+        onToggleTheme={toggleTheme}
         supabaseStatus={supabaseStatus}
         unreadNotificationCount={unreadNotificationCount}
-        onOpenNotificationCenter={() => setIsNotificationCenterOpen(true)}
+        onOpenNotificationCenter={() => setNotificationCenterOpen(true)}
       />
 
-      {/* Main Container */}
+      {/* Main Content Area */}
       <main className="max-w-7xl mx-auto px-2.5 sm:px-6">
-        {/* TAB 1: CLIENTS & MAIN DASHBOARD VIEW */}
         {activeTab === 'clients' && (
           <div className="animate-fade-in space-y-2">
-            {/* 1. Metric Cards (Shop Revenue & Unpaid Deposits) */}
             <MetricCards
               stats={stats}
               unpaidDeposits={unpaidDeposits}
               clients={clients}
-              onOpenCollectDeposit={(dep) => {
-                if (dep) {
-                  setTargetDeposit(dep);
-                } else {
-                  const unpaidClient = clients.find((c) => (c.balanceDue || 0) > 0);
-                  if (unpaidClient) {
-                    const clientDep = unpaidDeposits.find((d) => d.clientId === unpaidClient.id) || {
-                      id: `dep-${unpaidClient.id}`,
-                      clientId: unpaidClient.id,
-                      clientName: unpaidClient.name,
-                      garmentType: unpaidClient.garmentTag || 'Custom Order',
-                      amount: unpaidClient.balanceDue,
-                      date: 'Today',
-                      phone: unpaidClient.phone
-                    };
-                    setTargetDeposit(clientDep);
-                  } else {
-                    setTargetDeposit(null);
-                  }
-                }
-                setIsCollectDepositOpen(true);
-              }}
+              onOpenCollectDeposit={(dep) => openCollectDeposit(dep || null)}
               onOpenLedger={() => setActiveTab('ledger')}
               onOpenRunway={() => setActiveTab('runway')}
             />
 
-            {/* 2. Apprentice Registry */}
-            <ApprenticeRegistry
-              apprentices={apprentices}
-              tasks={apprenticeTasks}
-              pairCode={studioSettings.pairCode}
-              studioLogoUrl={studioSettings.logoUrl}
-              studioName={studioSettings.studioName}
-              masterTrainer={studioSettings.ownerName}
-              onRefreshApprentices={handleRefreshApprentices}
-              onOpenCustomTaskModal={() => setIsCustomTaskOpen(true)}
-              onAssignCurriculumTask={handleAssignCurriculumTask}
-              onToggleHandshake={handleToggleApprenticeHandshake}
-              onPassTask={handlePassTask}
-              onUnlinkApprentice={handleUnlinkApprentice}
-              onOpenGraduationPaymentModal={(app) => setGraduationPaymentApprentice(app)}
-              onTriggerUpgradeModal={() => setIsSubscriptionModalOpen(true)}
-            />
+            <Suspense fallback={<ViewFallback minHeight="200px" />}>
+              <ApprenticeRegistry
+                apprentices={apprentices}
+                tasks={apprenticeTasks}
+                pairCode={studioSettings.pairCode}
+                studioLogoUrl={studioSettings.logoUrl}
+                studioName={studioSettings.studioName}
+                masterTrainer={studioSettings.ownerName}
+                onRefreshApprentices={performFullCloudSync}
+                onOpenCustomTaskModal={() => setCustomTaskOpen(true)}
+                onAssignCurriculumTask={handleAssignCurriculumTask}
+                onToggleHandshake={handleToggleApprenticeHandshake}
+                onPassTask={handlePassTask}
+                onUnlinkApprentice={handleUnlinkApprentice}
+                onOpenGraduationPaymentModal={(app) => setGraduationPaymentApprentice(app)}
+                onTriggerUpgradeModal={() => setSubscriptionModalOpen(true)}
+              />
+            </Suspense>
 
-            {/* 3. Search Bar & Filter Chips */}
             <SearchBarAndFilters
               searchQuery={searchQuery}
               onSearchChange={setSearchQuery}
@@ -1975,396 +814,113 @@ export default function App() {
               totalResultsCount={filteredClients.length}
             />
 
-            {/* 4. Customer Directory */}
             <CustomerDirectory
               clients={filteredClients}
               unpaidDeposits={unpaidDeposits}
-              onOpenCollectDeposit={(dep) => {
-                setTargetDeposit(dep || null);
-                setIsCollectDepositOpen(true);
-              }}
-              onOpenBookSessionForClient={(client) => {
-                setPreselectedBookingClient(client);
-                setIsBookSessionOpen(true);
-              }}
-              onEditClient={(client) => {
-                setEditingClient(client);
-                setIsAddClientOpen(true);
-              }}
+              onOpenCollectDeposit={(dep) => openCollectDeposit(dep || null)}
+              onOpenBookSessionForClient={(client) => openBookSession(client)}
+              onEditClient={(client) => openAddClient(client)}
               onOpenMeasurements={(client) => setMeasurementClient(client)}
               onOpenFullMeasurements={(client) => setFullMeasurementsClient(client)}
               onOpenInvoice={(client) => setInvoiceClient(client)}
               onOpenNewConsult={handleTriggerAddClient}
               onSelectClient={(client) => setProfileClient(client)}
-              onDeleteClient={(clientId) => {
-                setClients((prev) => {
-                  const filtered = prev.filter((c) => c.id !== clientId);
-                  localStorage.setItem('tailor_clients', JSON.stringify(filtered));
-                  return filtered;
-                });
-                deleteClientFromSupabase(clientId);
-              }}
-              onAssignDuty={() => setIsCustomTaskOpen(true)}
+              onDeleteClient={handleDeleteClientWithUndo}
+              onAssignDuty={() => setCustomTaskOpen(true)}
             />
           </div>
         )}
 
-        {/* TAB 2: RUNWAY VIEW */}
         {activeTab === 'runway' && (
           <div className="animate-fade-in">
-            <RunwayView
-              clients={clients}
-              onAdvanceStage={handleAdvanceRunwayStage}
-              onOpenBookSession={() => setIsBookSessionOpen(true)}
-            />
+            <Suspense fallback={<ViewFallback minHeight="300px" />}>
+              <RunwayView
+                clients={clients}
+                onAdvanceStage={handleAdvanceRunwayStage}
+                onOpenBookSession={() => openBookSession(null)}
+              />
+            </Suspense>
           </div>
         )}
 
-        {/* TAB 3: LEDGER VIEW */}
         {activeTab === 'ledger' && (
           <div className="animate-fade-in">
-            <LedgerView
-              transactions={transactions}
-              clients={clients}
-              onOpenLogTransaction={() => setIsLogTransactionOpen(true)}
-              onOpenInvoice={(client) => setInvoiceClient(client)}
-              onOpenCollectDeposit={(client) => {
-                const dep = unpaidDeposits.find((d) => d.clientId === client.id) || {
-                  id: `dep-${client.id}`,
-                  clientId: client.id,
-                  clientName: client.name,
-                  garmentType: client.garmentTag,
-                  amount: client.balanceDue,
-                  date: 'Today',
-                  phone: client.phone
-                };
-                setTargetDeposit(dep);
-                setIsCollectDepositOpen(true);
-              }}
-              onOpenFittingSession={(client) => {
-                setPreselectedBookingClient(client);
-                setIsBookSessionOpen(true);
-              }}
-              onAdvanceStage={handleAdvanceRunwayStage}
-              onMarkPaidDirectly={handleMarkPaidDirectly}
-            />
+            <Suspense fallback={<ViewFallback minHeight="300px" />}>
+              <LedgerView
+                transactions={transactions}
+                clients={clients}
+                onOpenLogTransaction={() => setLogTransactionOpen(true)}
+                onOpenInvoice={(client) => setInvoiceClient(client)}
+                onOpenCollectDeposit={(client) => {
+                  const dep: UnpaidDeposit = unpaidDeposits.find((d) => d.clientId === client.id) || {
+                    id: `dep-${client.id}`,
+                    clientId: client.id,
+                    clientName: client.name,
+                    garmentTag: client.garmentTag || 'Custom Order',
+                    amount: client.balanceDue,
+                    dueDate: 'Today',
+                    phone: client.phone
+                  };
+                  openCollectDeposit(dep);
+                }}
+                onOpenFittingSession={(client) => openBookSession(client)}
+                onAdvanceStage={handleAdvanceRunwayStage}
+                onMarkPaidDirectly={handleMarkPaidDirectly}
+              />
+            </Suspense>
           </div>
         )}
 
-        {/* TAB 4: INVENTORY VIEW */}
         {activeTab === 'inventory' && (
           <div className="animate-fade-in">
-            <InventoryView
-              items={inventory}
-              studioSettings={studioSettings}
-              onRestockItem={handleRestockInventoryItem}
-              onOpenAddMaterialModal={handleTriggerAddMaterial}
-              onOpenFabricScanner={(tab) => handleOpenFabricScanner(tab || 'sides')}
-              onRemoveItem={(id) => setInventory((prev) => prev.filter((item) => item.id !== id))}
-              onTriggerUpgradeModal={() => setIsSubscriptionModalOpen(true)}
-            />
+            <Suspense fallback={<ViewFallback minHeight="300px" />}>
+              <InventoryView
+                items={inventory}
+                studioSettings={studioSettings}
+                onRestockItem={handleRestockInventoryItem}
+                onOpenAddMaterialModal={handleTriggerAddMaterial}
+                onOpenFabricScanner={(tab) => openFabricScanner(tab || 'sides')}
+                onRemoveItem={(id) => setInventory((prev) => prev.filter((item) => item.id !== id))}
+                onTriggerUpgradeModal={() => setSubscriptionModalOpen(true)}
+              />
+            </Suspense>
           </div>
         )}
       </main>
 
-      {/* Floating Bottom Navigation Bar (Mobile) & Side Navigation Sidebar (Desktop) */}
       <BottomNav
         activeTab={activeTab}
         onTabChange={setActiveTab}
         onOpenQuickAdd={handleTriggerAddClient}
-        onOpenStudioSettings={() => setIsStudioSettingsOpen(true)}
+        onOpenStudioSettings={() => setStudioSettingsOpen(true)}
         studioName={studioSettings.studioName}
         ownerName={studioSettings.ownerName}
         pairCode={studioSettings.pairCode}
         studioLogoUrl={studioSettings.logoUrl}
       />
 
-      {/* Modals */}
-      <AddClientModal
-        isOpen={isAddClientOpen}
-        onClose={() => {
-          setIsAddClientOpen(false);
-          setEditingClient(null);
-        }}
-        onSaveClient={handleSaveClient}
-        editingClient={editingClient}
-        artistsList={artistsList}
-      />
-
-      <CollectDepositModal
-        isOpen={isCollectDepositOpen}
-        onClose={() => {
-          setIsCollectDepositOpen(false);
-          setTargetDeposit(null);
-        }}
-        deposit={targetDeposit}
-        unpaidDepositsList={
-          unpaidDeposits.length > 0
-            ? unpaidDeposits
-            : clients
-                .filter((c) => (c.balanceDue || 0) > 0)
-                .map((c) => ({
-                  id: `dep-${c.id}`,
-                  clientId: c.id,
-                  clientName: c.name,
-                  garmentType: c.garmentTag || 'Custom Order',
-                  amount: c.balanceDue,
-                  date: 'Today',
-                  phone: c.phone
-                }))
-        }
-        onProcessCollection={handleProcessDepositCollection}
-      />
-
-      <AddApprenticeModal
-        isOpen={isAddApprenticeOpen}
-        onClose={() => setIsAddApprenticeOpen(false)}
-        onSaveApprentice={handleSaveApprentice}
-        mentorsList={artistsList}
-      />
-
-      <BookSessionModal
-        isOpen={isBookSessionOpen}
-        onClose={() => {
-          setIsBookSessionOpen(false);
-          setPreselectedBookingClient(null);
-        }}
-        clientsList={clients}
-        preselectedClient={preselectedBookingClient}
-        artistsList={artistsList}
-        onBookSession={handleBookSession}
-      />
-
-      <LogTransactionModal
-        isOpen={isLogTransactionOpen}
-        onClose={() => setIsLogTransactionOpen(false)}
-        onSaveTransaction={handleSaveTransaction}
-      />
-
-      {isCustomerTrackerOpen && (
-        <CustomerTrackingModal
-          clients={clients}
-          studioSettings={studioSettings}
-          onClose={() => setIsCustomerTrackerOpen(false)}
-        />
-      )}
-
-      {isStudioSettingsOpen && (
-        <StudioSettingsModal
-          settings={studioSettings}
-          onSave={(updated) => {
-            setStudioSettings(updated);
-            localStorage.setItem('tailor_studio_settings', JSON.stringify(updated));
-            if (updated.theme) {
-              setTheme(updated.theme);
-            }
-            upsertStudioSettingsToSupabase(updated);
-          }}
-          onToggleTheme={handleToggleTheme}
-          onLogout={handlePromptLogout}
-          onClose={() => setIsStudioSettingsOpen(false)}
-          apprentices={apprentices}
-          onUnlinkApprentice={handleUnlinkApprentice}
-          userRole={userRole}
-        />
-      )}
-
-      {measurementClient && (
-        <GarmentMeasurementsModal
-          client={measurementClient}
-          studioSettings={studioSettings}
-          onSave={handleUpdateMeasurements}
-          onClose={() => setMeasurementClient(null)}
-        />
-      )}
-
-      {invoiceClient && (
-        <InvoiceModal
-          client={invoiceClient}
-          onClose={() => setInvoiceClient(null)}
-          studioSettings={studioSettings}
-          studioName={studioSettings.studioName}
-          momoNumber={studioSettings.momoNumber}
-          momoHolderName={studioSettings.momoHolderName || studioSettings.momoName}
-          studioLogoUrl={studioSettings.logoUrl}
-        />
-      )}
-
-      {specSheetClient && (
-        <SpecSheetModal
-          client={specSheetClient}
-          studioSettings={studioSettings}
-          onClose={() => setSpecSheetClient(null)}
-        />
-      )}
-
-      {fullMeasurementsClient && (
-        <FullMeasurementsModal
-          isOpen={!!fullMeasurementsClient}
-          onClose={() => setFullMeasurementsClient(null)}
-          client={clients.find((c) => c.id === fullMeasurementsClient.id) || fullMeasurementsClient}
-          studioSettings={studioSettings}
-          onOpenMeasurements={(clientToMeasure) => {
-            setFullMeasurementsClient(null);
-            setMeasurementClient(clientToMeasure);
-          }}
-          onUpdateClientPhoto={(clientId, photoUrl) => {
-            setClients((prev) => {
-              const updatedList = prev.map((c) => {
-                if (c.id === clientId) {
-                  const updated = { ...c, avatarUrl: photoUrl };
-                  upsertClientToSupabase(updated);
-                  queueOfflineAction('client', updated);
-                  return updated;
-                }
-                return c;
-              });
-              localStorage.setItem('tailor_clients', JSON.stringify(updatedList));
-              return updatedList;
-            });
-          }}
-        />
-      )}
-
-      {profileClient && (
-        <ClientProfileModal
-          isOpen={!!profileClient}
-          client={profileClient}
-          studioSettings={studioSettings}
-          onClose={() => setProfileClient(null)}
-          onEditClient={(clientToEdit) => {
-            setProfileClient(null);
-            setEditingClient(clientToEdit);
-            setIsAddClientOpen(true);
-          }}
-          onUpdateClient={(updatedClient) => {
-            setClients((prev) => {
-              const updatedList = prev.map((c) => (c.id === updatedClient.id ? updatedClient : c));
-              localStorage.setItem('tailor_clients', JSON.stringify(updatedList));
-              return updatedList;
-            });
-            upsertClientToSupabase(updatedClient);
-            queueOfflineAction('client', updatedClient);
-            setProfileClient(updatedClient);
-          }}
-          onDeleteClient={(clientId) => {
-            setClients((prev) => {
-              const filtered = prev.filter((c) => c.id !== clientId);
-              localStorage.setItem('tailor_clients', JSON.stringify(filtered));
-              return filtered;
-            });
-            deleteClientFromSupabase(clientId);
-            setProfileClient(null);
-          }}
-          onOpenMeasurements={(clientToMeasure) => {
-            setMeasurementClient(clientToMeasure);
-          }}
-          onOpenSpecSheet={(clientToView) => {
-            setSpecSheetClient(clientToView);
-          }}
-          onOpenInvoice={(clientToInvoice) => {
-            setInvoiceClient(clientToInvoice);
-          }}
-          onUpdateNotes={(clientId, newNotes) => {
-            setClients((prev) => {
-              const updatedList = prev.map((c) => {
-                if (c.id === clientId) {
-                  const updated = { ...c, notes: newNotes };
-                  upsertClientToSupabase(updated);
-                  queueOfflineAction('client', updated);
-                  return updated;
-                }
-                return c;
-              });
-              localStorage.setItem('tailor_clients', JSON.stringify(updatedList));
-              return updatedList;
-            });
-            setProfileClient((prev) => (prev ? { ...prev, notes: newNotes } : null));
-          }}
-        />
-      )}
-
-      <AddMaterialModal
-        isOpen={isAddMaterialOpen}
-        onClose={() => setIsAddMaterialOpen(false)}
-        onSaveMaterial={handleSaveMaterial}
-      />
-
-      <FabricColorScannerModal
-        isOpen={isFabricScannerOpen}
-        onClose={() => setIsFabricScannerOpen(false)}
-        initialTab={fabricScannerTab}
-        onAddMaterialToInventory={handleAddMaterialToInventory}
-      />
-
-      <SubscriptionPlansModal
-        isOpen={isSubscriptionModalOpen}
-        onClose={() => setIsSubscriptionModalOpen(false)}
-        onSubscriptionUpdated={(newSub) => setStudioSub(newSub)}
-      />
-
-      <GraduationPaymentModal
-        isOpen={!!graduationPaymentApprentice}
-        onClose={() => setGraduationPaymentApprentice(null)}
-        apprentice={graduationPaymentApprentice}
-      />
-
-      <CustomTaskModal
-        isOpen={isCustomTaskOpen}
-        onClose={() => setIsCustomTaskOpen(false)}
-        onSaveTask={handleSaveTask}
-        apprentices={apprentices}
-        tasks={apprenticeTasks}
-      />
-
-      {isMasterCertOpen && (
-        <MasterCertificateModal
-          isOpen={isMasterCertOpen}
-          onClose={() => setIsMasterCertOpen(false)}
-          studioName={studioSettings.studioName || 'MOKARS STITCHES STUDIO'}
-          masterTrainer={studioSettings.ownerName || studioSettings.tailorName || 'Mubarik Tuahir Ali'}
-          ceoName="MUBARIK TUAHIR ALI"
-          studioLogoUrl={studioSettings.logoUrl}
-          subscriptionTier={studioSub.tier}
-          onOpenSubscriptionModal={() => setIsSubscriptionModalOpen(true)}
-        />
-      )}
-
-      <LogoutConfirmationModal
-        isOpen={isLogoutConfirmOpen}
-        onClose={() => setIsLogoutConfirmOpen(false)}
-        onConfirm={handleConfirmLogout}
-      />
-
-      <InstallAppModal
-        isOpen={isInstallAppOpen}
-        onClose={() => setIsInstallAppOpen(false)}
-      />
-
-      {/* Floating Realtime Push Notification Banner */}
       <NotificationToastBanner
         notification={activeToastNotification}
         onClose={() => setActiveToastNotification(null)}
-        onClickNotification={() => {
-          setIsNotificationCenterOpen(true);
-        }}
+        onClickNotification={() => setNotificationCenterOpen(true)}
       />
 
-      {/* Push Notification History & Controls Modal */}
-      <NotificationCenterModal
-        isOpen={isNotificationCenterOpen}
-        onClose={() => setIsNotificationCenterOpen(false)}
-        notifications={notifications}
-        onMarkAllRead={() => setNotifications(markAllNotificationsAsRead())}
-        onClearAll={() => setNotifications(clearAllNotifications())}
-        currentUserRole={userRole}
-        onSelectNotification={(notif) => {
-          setNotifications((prev) => prev.map((n) => n.id === notif.id ? { ...n, read: true } : n));
-        }}
+      <PullToRefreshIndicator
+        pullDistance={pullDistance}
+        isRefreshing={isRefreshing}
+        progress={progress}
       />
 
-      {/* Push Permission Prompt Banner */}
+      <UndoDeleteToast
+        deletedClient={deletedClientBuffer}
+        onUndo={handleUndoDeleteClient}
+        onDismiss={handleDismissUndo}
+      />
+
       <PushPermissionBanner />
+      <ModalRoot />
     </div>
   );
 }
+
+export default App;

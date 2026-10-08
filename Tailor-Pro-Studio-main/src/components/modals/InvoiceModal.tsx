@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { X, Phone, MessageSquare, Download, Check, Copy, Sparkles, ShieldCheck, Loader2 } from 'lucide-react';
 import { Client, StudioSettings } from '../../types';
 import { downloadOrShareDocument, generateInvoiceHtml } from '../../utils/mobileDocumentDownloader';
+import { parseCleanNumber } from '../../utils/numeric';
 
 interface InvoiceModalProps {
   isOpen?: boolean;
@@ -32,9 +33,9 @@ export const InvoiceModal: React.FC<InvoiceModalProps> = ({
 
   if (!isOpen || !client) return null;
 
-  const totalCost = Number(client.totalCost) || 0;
-  const depositPaid = Number(client.depositPaid) || 0;
-  const balanceDue = client.balanceDue !== undefined ? Number(client.balanceDue) : Math.max(0, totalCost - depositPaid);
+  const totalCost = parseCleanNumber(client.totalCost);
+  const depositPaid = parseCleanNumber(client.depositPaid);
+  const balanceDue = client.balanceDue !== undefined ? parseCleanNumber(client.balanceDue) : Math.max(0, totalCost - depositPaid);
   const isPaid = balanceDue <= 0;
 
   const invoiceNumber = `INV-${client.id ? client.id.replace(/[^a-zA-Z0-9]/g, '').slice(-4).toUpperCase() : '1001'}`;
