@@ -588,6 +588,46 @@ export function App() {
         licenseKey
       });
 
+      if (isApprentice) {
+        const rawName = (fullName && fullName.trim()) || userEmail.split('@')[0] || 'Apprentice Scholar';
+        const apprenticeName = rawName.charAt(0).toUpperCase() + rawName.slice(1);
+        const initials = apprenticeName.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2) || 'AS';
+        const emailTag = userEmail.split('@')[0].toLowerCase().replace(/[^a-zA-Z0-9]/g, '_');
+        const apprenticeId = `app_${Date.now()}_${emailTag}`;
+
+        const newApprenticeRecord: Apprentice = {
+          id: apprenticeId,
+          name: apprenticeName,
+          initials,
+          role: 'Apprentice Trainee',
+          mentor: masterBrandName || studioSettings.ownerName || 'Master Atelier',
+          isLinked: true,
+          handshakeLocked: true,
+          hasCert: false,
+          hoursCompleted: 0,
+          totalRequiredHours: 120,
+          certifications: ['Pattern Drafting & Garment Construction'],
+          tasksCount: 0,
+          status: 'On Track',
+          specialty: 'Couture Assembly & Garment Construction'
+        };
+
+        setApprentices((prev) => {
+          const exists = prev.some((a) => a.name.toLowerCase() === apprenticeName.toLowerCase() || a.id === apprenticeId);
+          if (exists) {
+            return prev.map((a) => (a.name.toLowerCase() === apprenticeName.toLowerCase() ? { ...a, isLinked: true, mentor: newApprenticeRecord.mentor } : a));
+          }
+          return [newApprenticeRecord, ...prev];
+        });
+
+        upsertApprenticeToSupabase(newApprenticeRecord);
+        notifyApprenticeLinked({
+          apprenticeName,
+          masterName: studioSettings.ownerName || masterBrandName || 'Master Atelier',
+          workshopCode: newPairCode
+        });
+      }
+
       setWorkspaceActivated(true);
       setLicensePromptOpen(false);
       setAuthScreen('app');
@@ -604,29 +644,30 @@ export function App() {
     const rawName = activeUserFullName || (activeUserEmail ? activeUserEmail.split('@')[0] : 'Apprentice Scholar');
     const apprenticeName = rawName.trim().charAt(0).toUpperCase() + rawName.trim().slice(1);
     const initials = apprenticeName.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2) || 'AS';
-    const apprenticeId = `app_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
+    const emailTag = (activeUserEmail ? activeUserEmail.split('@')[0] : 'app').toLowerCase().replace(/[^a-zA-Z0-9]/g, '_');
+    const apprenticeId = `app_${Date.now()}_${emailTag}`;
 
     const linkedApprentice: Apprentice = {
       id: apprenticeId,
       name: apprenticeName,
       initials,
       role: 'Apprentice Trainee',
-      mentor: studioSettings.ownerName || 'Master Atelier',
+      mentor: studioSettings.ownerName || studioSettings.studioName || 'Master Atelier',
       isLinked: true,
       handshakeLocked: true,
       hasCert: false,
       hoursCompleted: 0,
       totalRequiredHours: 120,
-      certifications: [],
+      certifications: ['Pattern Drafting & Garment Construction'],
       tasksCount: 0,
       status: 'On Track',
       specialty: 'Couture Assembly & Garment Construction'
     };
 
     setApprentices((prev) => {
-      const exists = prev.some((a) => a.name.toLowerCase() === linkedApprentice.name.toLowerCase());
+      const exists = prev.some((a) => a.name.toLowerCase() === linkedApprentice.name.toLowerCase() || a.id === apprenticeId);
       if (exists) {
-        return prev.map((a) => (a.name.toLowerCase() === linkedApprentice.name.toLowerCase() ? { ...a, isLinked: true } : a));
+        return prev.map((a) => (a.name.toLowerCase() === linkedApprentice.name.toLowerCase() ? { ...a, isLinked: true, mentor: linkedApprentice.mentor } : a));
       }
       return [linkedApprentice, ...prev];
     });

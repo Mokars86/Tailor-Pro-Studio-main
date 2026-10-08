@@ -39,7 +39,7 @@ import { syncUserAccountsFromSupabase } from '../services/licenseService';
 import { parseCleanNumber, sanitizeClient, sanitizeTransaction, sanitizeDeposit } from '../utils/numeric';
 
 const isMockId = (id?: string) =>
-  ['cli-1', 'cli-2', 'cli-3', 'cli-4', 'app-1', 'app_raeesa_mubarick', 'app_raeesa_mohammed', 'dep-1', 'dep-2', 'tx-1', 'tx-2', 'inv-1', 'inv-2', 'inv-3', 'run-1', 'run-2'].includes(id || '');
+  ['cli-1', 'cli-2', 'cli-3', 'cli-4', 'app-1', 'dep-1', 'dep-2', 'tx-1', 'tx-2', 'inv-1', 'inv-2', 'inv-3', 'run-1', 'run-2'].includes(id || '');
 
 function loadInitialStudioSettings(): StudioSettings {
   try {
@@ -375,18 +375,19 @@ export const useDataStore = create<DataState>((set, get) => ({
               name: appName,
               initials,
               role: 'Apprentice Trainee',
-              mentor: get().studioSettings.ownerName || 'Master Atelier',
+              mentor: get().studioSettings.ownerName || get().studioSettings.studioName || 'Master Atelier',
               isLinked: true,
               handshakeLocked: true,
               hasCert: false,
               hoursCompleted: 0,
               totalRequiredHours: 120,
-              certifications: [],
+              certifications: ['Pattern Drafting & Garment Construction'],
               tasksCount: 0,
               status: 'On Track',
               specialty: 'Couture Assembly & Garment Construction'
             };
             combinedApprentices.push(synthRecord);
+            upsertApprenticeToSupabase(synthRecord);
           }
         }
       }

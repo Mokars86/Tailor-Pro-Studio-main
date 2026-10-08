@@ -69,6 +69,7 @@ export const ApprenticeRegistry: React.FC<ApprenticeRegistryProps> = ({
 
   // Registry Tab: 'active' (enrolled apprentices) | 'graduated' (alumni history reference)
   const [registryTab, setRegistryTab] = useState<'active' | 'graduated'>('active');
+  const [activeSearchQuery, setActiveSearchQuery] = useState('');
   const [alumniSearchQuery, setAlumniSearchQuery] = useState('');
 
   // Persisted list of Graduated Alumni
@@ -616,372 +617,439 @@ export const ApprenticeRegistry: React.FC<ApprenticeRegistryProps> = ({
               </button>
             </div>
           ) : (() => {
-            const visibleApprentices = apprentices.slice(0, 1);
-            const hasMultipleApprentices = apprentices.length > 1;
+            const filteredApprentices = apprentices.filter((apprentice) => {
+              if (!activeSearchQuery.trim()) return true;
+              const q = activeSearchQuery.toLowerCase();
+              return (
+                apprentice.name.toLowerCase().includes(q) ||
+                (apprentice.role && apprentice.role.toLowerCase().includes(q)) ||
+                (apprentice.specialty && apprentice.specialty.toLowerCase().includes(q)) ||
+                (apprentice.status && apprentice.status.toLowerCase().includes(q))
+              );
+            });
 
             return (
               <div className="space-y-3">
-                <div className="grid grid-cols-1 gap-3 relative z-10">
-                  {visibleApprentices.map((apprentice) => {
-                    const isHandshakeApproved = !apprentice.handshakeLocked;
-                    const assignedDuties = tasks.filter(
-                      (t) => t.assignedTo === 'all' || t.assignedTo === apprentice.id || t.assignedTo === apprentice.name
-                    );
-                    const pendingDuties = assignedDuties.filter((t) => t.status !== 'passed');
-                    const passedDuties = assignedDuties.filter((t) => t.status === 'passed');
-                    const isPassedExpanded = Boolean(expandedPassedTasks[apprentice.id]);
-                    
-                    // Strict Curriculum Completion: Requires all 13 core curriculum tasks passed (or explicit graduation status)
-                    const TOTAL_CORE_CURRICULUM_TASKS = 13;
-                    const isCurriculumCompleted =
-                      apprentice.status === 'Graduated' ||
-                      apprentice.hasCert === true ||
-                      (passedDuties.length >= TOTAL_CORE_CURRICULUM_TASKS && passedDuties.length === assignedDuties.length) ||
-                      (apprentice.totalRequiredHours > 0 && apprentice.hoursCompleted >= apprentice.totalRequiredHours && passedDuties.length >= TOTAL_CORE_CURRICULUM_TASKS && passedDuties.length === assignedDuties.length);
+                {/* Active Apprentices Filter Search Bar (when multiple apprentices exist) */}
+                {apprentices.length > 1 && (
+                  <div className="bg-[#082824] p-2.5 rounded-2xl border border-amber-400/30 flex items-center gap-2">
+                    <div className="relative flex-1">
+                      <Search className="w-3.5 h-3.5 text-amber-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                      <input
+                        type="text"
+                        value={activeSearchQuery}
+                        onChange={(e) => setActiveSearchQuery(e.target.value)}
+                        placeholder="Search active apprentices by name, specialty, or role..."
+                        className="w-full pl-9 pr-3 py-1.5 rounded-xl bg-[#041916] border border-amber-400/30 text-xs font-bold text-white placeholder-amber-200/40 focus:outline-none focus:ring-1 focus:ring-[#DCA134]"
+                      />
+                    </div>
+                    <span className="text-[10px] font-black text-amber-300 bg-amber-500/20 px-2.5 py-1 rounded-xl border border-amber-400/30 shrink-0">
+                      {filteredApprentices.length} of {apprentices.length}
+                    </span>
+                  </div>
+                )}
 
-                    return (
-                      <div
-                        key={apprentice.id}
-                        className="bg-[#082824] rounded-2xl p-3.5 sm:p-5 border-2 border-[#DCA134]/50 shadow-xl space-y-3 sm:space-y-3.5 text-white overflow-hidden"
-                      >
-                        {/* Top Info Row */}
-                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
-                          <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
-                            {/* Avatar Circle */}
-                            <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-[#041916] border-2 border-[#DCA134] text-[#DCA134] font-black flex items-center justify-center text-xs sm:text-sm shadow-sm shrink-0">
-                              {apprentice.initials || apprentice.name?.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2) || 'AT'}
-                            </div>
+                {filteredApprentices.length === 0 ? (
+                  <div className="p-6 text-center text-xs text-amber-200/80 font-bold bg-[#082824] rounded-2xl border border-amber-400/30 space-y-1">
+                    <Users className="w-7 h-7 text-amber-400 mx-auto opacity-70" />
+                    <p>No Matching Active Apprentices</p>
+                    <p className="text-[11px] text-white/50 font-normal">
+                      No apprentices match "{activeSearchQuery}". Clear search to view all enrolled apprentices.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 gap-3 relative z-10">
+                    {filteredApprentices.map((apprentice) => {
+                      const isHandshakeApproved = !apprentice.handshakeLocked;
+                      const assignedDuties = tasks.filter(
+                        (t) => t.assignedTo === 'all' || t.assignedTo === apprentice.id || t.assignedTo === apprentice.name
+                      );
+                      const pendingDuties = assignedDuties.filter((t) => t.status !== 'passed');
+                      const passedDuties = assignedDuties.filter((t) => t.status === 'passed');
+                      const isPassedExpanded = Boolean(expandedPassedTasks[apprentice.id]);
+                      
+                      // Strict Curriculum Completion: Requires all 13 core curriculum tasks passed (or explicit graduation status)
+                      const TOTAL_CORE_CURRICULUM_TASKS = 13;
+                      const isCurriculumCompleted =
+                        apprentice.status === 'Graduated' ||
+                        apprentice.hasCert === true ||
+                        (passedDuties.length >= TOTAL_CORE_CURRICULUM_TASKS && passedDuties.length === assignedDuties.length) ||
+                        (apprentice.totalRequiredHours > 0 && apprentice.hoursCompleted >= apprentice.totalRequiredHours && passedDuties.length >= TOTAL_CORE_CURRICULUM_TASKS && passedDuties.length === assignedDuties.length);
 
-                            <div className="min-w-0 flex-1">
-                              <h3 className="font-black text-sm sm:text-base text-white truncate">
-                                {apprentice.name}
-                              </h3>
-                              <div className="flex items-center gap-1.5 sm:gap-2 text-[10px] sm:text-xs text-amber-100 font-semibold mt-0.5 flex-wrap">
-                                <span className="font-bold text-amber-200">{apprentice.role || 'Apprentice Trainee'}</span>
-                                <span>•</span>
-                                <span className="text-emerald-400 font-bold flex items-center gap-1">
-                                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" /> Auto-Synced
-                                </span>
-                                <span>•</span>
-                                <span className="text-amber-300 font-extrabold bg-amber-500/20 px-2 py-0.5 rounded-full border border-amber-400/40">
-                                  {passedDuties.length} / {assignedDuties.length} Duties Passed
-                                </span>
+                      const requiredHrs = apprentice.totalRequiredHours || 120;
+                      const completedHrs = apprentice.hoursCompleted || 0;
+                      const hrsPercent = Math.min(100, Math.round((completedHrs / requiredHrs) * 100));
+
+                      return (
+                        <div
+                          key={apprentice.id}
+                          className="bg-[#082824] rounded-2xl p-3.5 sm:p-5 border-2 border-[#DCA134]/50 shadow-xl space-y-3 sm:space-y-3.5 text-white overflow-hidden"
+                        >
+                          {/* Top Info Row */}
+                          <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+                            <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+                              {/* Avatar Circle */}
+                              <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-[#041916] border-2 border-[#DCA134] text-[#DCA134] font-black flex items-center justify-center text-xs sm:text-sm shadow-sm shrink-0">
+                                {apprentice.initials || apprentice.name?.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2) || 'AT'}
+                              </div>
+
+                              <div className="min-w-0 flex-1">
+                                <h3 className="font-black text-sm sm:text-base text-white truncate flex items-center gap-2 flex-wrap">
+                                  <span>{apprentice.name}</span>
+                                  <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 text-[10px] font-black border border-emerald-500/30 flex items-center gap-1">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" /> Live Workshop Synced
+                                  </span>
+                                </h3>
+                                <div className="flex items-center gap-1.5 sm:gap-2 text-[10px] sm:text-xs text-amber-100 font-semibold mt-0.5 flex-wrap">
+                                  <span className="font-bold text-amber-200">{apprentice.role || 'Apprentice Trainee'}</span>
+                                  <span>•</span>
+                                  <span className="text-slate-300">{apprentice.specialty || 'Garment Construction & Tailoring'}</span>
+                                  <span>•</span>
+                                  <span className="text-amber-300 font-extrabold bg-amber-500/20 px-2 py-0.5 rounded-full border border-amber-400/40">
+                                    {passedDuties.length} / {assignedDuties.length} Duties Passed
+                                  </span>
+                                </div>
                               </div>
                             </div>
-                          </div>
 
-                          {/* Status Action Buttons */}
-                          <div className="grid grid-cols-2 xs:flex xs:flex-wrap items-center gap-1.5 sm:gap-2 w-full md:w-auto pt-2 md:pt-0 border-t md:border-t-0 border-amber-400/20">
-                            {/* Handshake Button */}
-                            <button
-                              type="button"
-                              disabled={!isCurriculumCompleted}
-                              onClick={() => {
-                                if (!isCurriculumCompleted) return;
-                                handleToggleHandshakeAction(apprentice);
-                              }}
-                              className={`px-2.5 sm:px-3.5 py-1.5 rounded-xl sm:rounded-full text-[10px] sm:text-xs font-black flex items-center justify-center gap-1.5 transition-all border shadow-xs truncate ${
-                                isHandshakeApproved
-                                  ? 'bg-emerald-600/40 text-emerald-300 border-emerald-500/60 cursor-pointer opacity-90'
-                                  : !isCurriculumCompleted
-                                  ? 'bg-slate-800/90 text-slate-400 border-slate-700 cursor-not-allowed opacity-60'
-                                  : 'bg-[#DCA134] hover:bg-[#c9902b] text-[#0D3B36] border-amber-200 active:scale-95 cursor-pointer'
-                              }`}
-                              title={
-                                isHandshakeApproved
-                                  ? 'Master Handshake Granted (Approved)'
-                                  : !isCurriculumCompleted
-                                  ? `Handshake Locked 🔒: Requires full curriculum completion (${passedDuties.length}/13 core tasks passed)`
-                                  : 'Grant Master Handshake Approval'
-                              }
-                            >
-                              <Handshake className={`w-3.5 h-3.5 shrink-0 ${isHandshakeApproved ? 'text-emerald-300' : !isCurriculumCompleted ? 'text-slate-400' : 'text-[#0D3B36]'}`} />
-                              <span className="truncate">
-                                {isHandshakeApproved
-                                  ? 'Handshake Approved ✓'
-                                  : !isCurriculumCompleted
-                                  ? 'Handshake Locked 🔒'
-                                  : 'Grant Handshake 🤝'}
-                              </span>
-                            </button>
+                            {/* Status Action Buttons */}
+                            <div className="grid grid-cols-2 xs:flex xs:flex-wrap items-center gap-1.5 sm:gap-2 w-full md:w-auto pt-2 md:pt-0 border-t md:border-t-0 border-amber-400/20">
+                              {/* Handshake Button */}
+                              <button
+                                type="button"
+                                disabled={!isCurriculumCompleted}
+                                onClick={() => {
+                                  if (!isCurriculumCompleted) return;
+                                  handleToggleHandshakeAction(apprentice);
+                                }}
+                                className={`px-2.5 sm:px-3.5 py-1.5 rounded-xl sm:rounded-full text-[10px] sm:text-xs font-black flex items-center justify-center gap-1.5 transition-all border shadow-xs truncate ${
+                                  isHandshakeApproved
+                                    ? 'bg-emerald-600/40 text-emerald-300 border-emerald-500/60 cursor-pointer opacity-90'
+                                    : !isCurriculumCompleted
+                                    ? 'bg-slate-800/90 text-slate-400 border-slate-700 cursor-not-allowed opacity-60'
+                                    : 'bg-[#DCA134] hover:bg-[#c9902b] text-[#0D3B36] border-amber-200 active:scale-95 cursor-pointer'
+                                }`}
+                                title={
+                                  isHandshakeApproved
+                                    ? 'Master Handshake Granted (Approved)'
+                                    : !isCurriculumCompleted
+                                    ? `Handshake Locked 🔒: Requires full curriculum completion (${passedDuties.length}/13 core tasks passed)`
+                                    : 'Grant Master Handshake Approval'
+                                }
+                              >
+                                <Handshake className={`w-3.5 h-3.5 shrink-0 ${isHandshakeApproved ? 'text-emerald-300' : !isCurriculumCompleted ? 'text-slate-400' : 'text-[#0D3B36]'}`} />
+                                <span className="truncate">
+                                  {isHandshakeApproved
+                                    ? 'Handshake Approved ✓'
+                                    : !isCurriculumCompleted
+                                    ? 'Handshake Locked 🔒'
+                                    : 'Grant Handshake 🤝'}
+                                </span>
+                              </button>
 
-                            {/* Cert Button */}
-                            {(() => {
-                              const payment = getGraduationPayment(apprentice.id);
-                              const isCertPaid = payment?.isPaid || false;
+                              {/* Cert Button */}
+                              {(() => {
+                                const payment = getGraduationPayment(apprentice.id);
+                                const isCertPaid = payment?.isPaid || false;
 
-                              return (
+                                return (
+                                  <button
+                                    type="button"
+                                    disabled={!isCurriculumCompleted}
+                                    onClick={() => {
+                                      if (!isCurriculumCompleted) return;
+                                      if (!isCertPaid) {
+                                        if (onOpenGraduationPaymentModal) {
+                                          onOpenGraduationPaymentModal(apprentice);
+                                        } else {
+                                          alert(`Graduation fee payment (GHS 300) is required to unlock certificate for ${apprentice.name}.`);
+                                        }
+                                      } else {
+                                        setSelectedCertApprentice(apprentice);
+                                      }
+                                    }}
+                                    className={`px-2.5 sm:px-3.5 py-1.5 rounded-xl sm:rounded-full text-[10px] sm:text-xs font-black flex items-center justify-center gap-1.5 transition-all shadow-xs truncate ${
+                                      !isCurriculumCompleted
+                                        ? 'bg-slate-900/90 text-slate-400 border border-slate-700 cursor-not-allowed opacity-60'
+                                        : !isCertPaid
+                                        ? 'bg-amber-400 hover:bg-amber-300 text-[#061E1B] border border-amber-500 cursor-pointer active:scale-95 font-black'
+                                        : 'bg-[#061E1B] hover:bg-[#041412] text-amber-300 border border-[#DCA134] active:scale-95 cursor-pointer'
+                                    }`}
+                                    title={
+                                      !isCurriculumCompleted
+                                        ? `Certificate Locked 🔒: Requires full curriculum completion (${passedDuties.length}/13 core tasks passed)`
+                                        : !isCertPaid
+                                        ? 'Pay GHS 300 Graduation Fee to Unlock Certificate 📜'
+                                        : 'View / Print Graduation Certificate 📜'
+                                    }
+                                  >
+                                    <Sparkles className={`w-3.5 h-3.5 shrink-0 ${!isCurriculumCompleted ? 'text-slate-400' : 'text-amber-300'}`} />
+                                    <span className="truncate">
+                                      {!isCurriculumCompleted
+                                        ? 'Cert 🔒'
+                                        : !isCertPaid
+                                        ? 'Pay Cert 📜'
+                                        : 'Cert 📜'}
+                                    </span>
+                                  </button>
+                                );
+                              })()}
+
+                              {/* Graduate & Archive Button */}
+                              {isCurriculumCompleted && (
                                 <button
                                   type="button"
-                                  disabled={!isCurriculumCompleted}
                                   onClick={() => {
-                                    if (!isCurriculumCompleted) return;
-                                    if (!isCertPaid) {
-                                      if (onOpenGraduationPaymentModal) {
-                                        onOpenGraduationPaymentModal(apprentice);
-                                      } else {
-                                        alert(`Graduation fee payment (GHS 300) is required to unlock certificate for ${apprentice.name}.`);
-                                      }
-                                    } else {
-                                      setSelectedCertApprentice(apprentice);
+                                    if (window.confirm(`Graduate and archive ${apprentice.name} to the Master Atelier Alumni History Roster?`)) {
+                                      handleGraduateAndArchive(apprentice);
                                     }
                                   }}
-                                  className={`px-2.5 sm:px-3.5 py-1.5 rounded-xl sm:rounded-full text-[10px] sm:text-xs font-black flex items-center justify-center gap-1.5 transition-all shadow-xs truncate ${
-                                    !isCurriculumCompleted
-                                      ? 'bg-slate-900/90 text-slate-400 border border-slate-700 cursor-not-allowed opacity-60'
-                                      : !isCertPaid
-                                      ? 'bg-amber-400 hover:bg-amber-300 text-[#061E1B] border border-amber-500 cursor-pointer active:scale-95 font-black'
-                                      : 'bg-[#061E1B] hover:bg-[#041412] text-amber-300 border border-[#DCA134] active:scale-95 cursor-pointer'
-                                  }`}
-                                  title={
-                                    !isCurriculumCompleted
-                                      ? `Certificate Locked 🔒: Requires full curriculum completion (${passedDuties.length}/13 core tasks passed)`
-                                      : !isCertPaid
-                                      ? 'Pay GHS 300 Graduation Fee to Unlock Certificate 📜'
-                                      : 'View / Print Graduation Certificate 📜'
-                                  }
+                                  className="px-2.5 sm:px-3 py-1.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-200 text-[10px] sm:text-xs font-extrabold border border-amber-400/40 flex items-center justify-center gap-1 transition-all active:scale-95 cursor-pointer truncate"
+                                  title="Graduate & Archive apprentice to permanent Alumni History"
                                 >
-                                  <Sparkles className={`w-3.5 h-3.5 shrink-0 ${!isCurriculumCompleted ? 'text-slate-400' : 'text-amber-300'}`} />
-                                  <span className="truncate">
-                                    {!isCurriculumCompleted
-                                      ? 'Cert 🔒'
-                                      : !isCertPaid
-                                      ? 'Pay Cert 📜'
-                                      : 'Cert 📜'}
-                                  </span>
+                                  <GraduationCap className="w-3.5 h-3.5 text-amber-300 shrink-0" />
+                                  <span className="truncate">Graduate 🎓</span>
                                 </button>
-                              );
-                            })()}
+                              )}
 
-                            {/* Graduate & Archive Button */}
-                            {isCurriculumCompleted && (
+                              {/* Curriculum Button */}
                               <button
                                 type="button"
                                 onClick={() => {
-                                  if (window.confirm(`Graduate and archive ${apprentice.name} to the Master Atelier Alumni History Roster?`)) {
-                                    handleGraduateAndArchive(apprentice);
-                                  }
+                                  setSelectedCurriculumApprenticeId(apprentice.id);
+                                  setIsCurriculumOpen(true);
                                 }}
-                                className="px-2.5 sm:px-3 py-1.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-200 text-[10px] sm:text-xs font-extrabold border border-amber-400/40 flex items-center justify-center gap-1 transition-all active:scale-95 cursor-pointer truncate"
-                                title="Graduate & Archive apprentice to permanent Alumni History"
+                                className="px-2.5 sm:px-3 py-1.5 rounded-xl bg-emerald-700/30 hover:bg-emerald-700/50 text-emerald-200 border border-emerald-500/40 text-[10px] sm:text-xs font-black flex items-center justify-center gap-1 transition-all active:scale-95 cursor-pointer truncate"
+                                title="Open Skills Curriculum for this apprentice"
                               >
-                                <GraduationCap className="w-3.5 h-3.5 text-amber-300 shrink-0" />
-                                <span className="truncate">Graduate 🎓</span>
+                                <BookOpen className="w-3.5 h-3.5 text-emerald-300 shrink-0" />
+                                <span className="truncate">Curriculum 📖</span>
                               </button>
-                            )}
 
-                            {/* Curriculum Button */}
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setSelectedCurriculumApprenticeId(apprentice.id);
-                                setIsCurriculumOpen(true);
-                              }}
-                              className="px-2.5 sm:px-3 py-1.5 rounded-xl bg-emerald-700/30 hover:bg-emerald-700/50 text-emerald-200 border border-emerald-500/40 text-[10px] sm:text-xs font-black flex items-center justify-center gap-1 transition-all active:scale-95 cursor-pointer truncate"
-                              title="Open Skills Curriculum for this apprentice"
-                            >
-                              <BookOpen className="w-3.5 h-3.5 text-emerald-300 shrink-0" />
-                              <span className="truncate">Curriculum 📖</span>
-                            </button>
-
-                            {/* Assign Duty */}
-                            <button
-                              type="button"
-                              onClick={onOpenCustomTaskModal}
-                              className="px-2.5 sm:px-3.5 py-1.5 rounded-xl bg-[#DCA134] hover:bg-[#c9902b] text-[#0D3B36] text-[10px] sm:text-xs font-black flex items-center justify-center gap-1 transition-all shadow-2xs active:scale-95 cursor-pointer truncate"
-                            >
-                              <Plus className="w-3.5 h-3.5 text-[#0D3B36] shrink-0" />
-                              <span className="truncate">Assign Duty</span>
-                            </button>
-
-                            {/* Unbind Button */}
-                            {onUnlinkApprentice && (
+                              {/* Assign Duty */}
                               <button
                                 type="button"
-                                onClick={() => {
-                                  if (window.confirm(`Are you sure you want to unlink and unbind ${apprentice.name} from your Master Studio?`)) {
-                                    onUnlinkApprentice(apprentice.id);
-                                    setCurriculumNotice(`${apprentice.name} unlinked from Master Studio.`);
-                                    setTimeout(() => setCurriculumNotice(null), 3000);
-                                  }
-                                }}
-                                className="px-2.5 sm:px-3 py-1.5 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 text-[10px] sm:text-xs font-bold border border-rose-400/40 flex items-center justify-center gap-1 transition-all active:scale-95 cursor-pointer truncate"
-                                title="Unbind / Unlink Apprentice from Master Studio"
+                                onClick={onOpenCustomTaskModal}
+                                className="px-2.5 sm:px-3.5 py-1.5 rounded-xl bg-[#DCA134] hover:bg-[#c9902b] text-[#0D3B36] text-[10px] sm:text-xs font-black flex items-center justify-center gap-1 transition-all shadow-2xs active:scale-95 cursor-pointer truncate"
                               >
-                                <UserX className="w-3.5 h-3.5 text-rose-400 shrink-0" />
-                                <span className="truncate">Unbind</span>
+                                <Plus className="w-3.5 h-3.5 text-[#0D3B36] shrink-0" />
+                                <span className="truncate">Assign Duty</span>
                               </button>
-                            )}
-                          </div>
-                        </div>
 
-                        {/* Assigned Duties & Evaluation List */}
-                      <div className="pt-3 border-t border-amber-400/20 space-y-2.5">
-                        <div className="flex items-center justify-between gap-2">
-                          <span className="text-[11px] sm:text-sm font-black text-amber-300 uppercase tracking-wider flex items-center gap-1.5 drop-shadow-sm truncate">
-                            <BookOpen className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#DCA134] shrink-0" />
-                            <span className="truncate">Assigned Duties & Evaluation</span>
-                          </span>
-                          <div className="flex items-center gap-1.5">
-                            {pendingDuties.length > 0 && (
-                              <span className="text-[9px] sm:text-[10px] font-extrabold text-amber-300 bg-amber-500/20 px-2 py-0.5 rounded-md border border-amber-400/40">
-                                {pendingDuties.length} Active
-                              </span>
-                            )}
-                            {passedDuties.length > 0 && (
-                              <span className="text-[9px] sm:text-[10px] font-extrabold text-emerald-300 bg-emerald-500/20 px-2 py-0.5 rounded-md border border-emerald-400/40">
-                                {passedDuties.length} Passed ✓
-                              </span>
-                            )}
-                          </div>
-                        </div>
-
-                        {assignedDuties.length === 0 ? (
-                          <div className="p-2.5 sm:p-3 rounded-xl sm:rounded-2xl bg-[#041916] border border-amber-400/30 text-[11px] sm:text-xs font-semibold text-slate-200 text-center">
-                            No active duties assigned. Click "+ Assign Duty" above to delegate a task.
-                          </div>
-                        ) : (
-                          <div className="space-y-2.5">
-                            {/* Active / Pending Duties List */}
-                            {pendingDuties.length > 0 && (
-                              <div className="space-y-2">
-                                {pendingDuties.map((duty) => {
-                                  const isReviewPending = duty.status === 'review_pending' || duty.isCompleted;
-
-                                  return (
-                                    <div
-                                      key={duty.id}
-                                      className="p-2.5 sm:p-3 rounded-xl sm:rounded-2xl bg-[#041916] border border-amber-400/30 flex flex-col xs:flex-row xs:items-center justify-between gap-2 text-xs"
-                                    >
-                                      <div className="min-w-0 flex-1">
-                                        <p className="font-extrabold text-white text-xs sm:text-sm truncate">
-                                          {duty.title}
-                                        </p>
-                                        <div className="flex items-center gap-1.5 sm:gap-2 text-[10px] sm:text-xs text-amber-200/90 font-medium mt-0.5 flex-wrap">
-                                          <span className="font-bold text-amber-300">{duty.category || 'Workshop Duty'}</span>
-                                          {duty.dueDate && <span>· Due: {duty.dueDate}</span>}
-                                        </div>
-                                      </div>
-
-                                      {/* Status Badge & Master Pass Action Button */}
-                                      <div className="flex items-center gap-1.5 sm:gap-2 shrink-0 self-end xs:self-auto">
-                                        {isReviewPending ? (
-                                          <span className="px-2.5 py-0.5 sm:py-1 rounded-full bg-indigo-500/25 text-indigo-200 text-[10px] sm:text-xs font-black uppercase border border-indigo-400/50 flex items-center gap-1">
-                                            <Clock className="w-3 h-3 text-indigo-300 shrink-0" />
-                                            <span>Pending</span>
-                                          </span>
-                                        ) : (
-                                          <span className="px-2.5 py-0.5 sm:py-1 rounded-full bg-amber-500/25 text-amber-200 text-[10px] sm:text-xs font-black uppercase border border-amber-400/50 flex items-center gap-1">
-                                            <Clock className="w-3 h-3 text-amber-300 shrink-0" />
-                                            <span>In Progress</span>
-                                          </span>
-                                        )}
-
-                                        {/* Master Pass Action Button */}
-                                        {onPassTask && (
-                                          <button
-                                            type="button"
-                                            onClick={() => onPassTask(duty.id)}
-                                            className="px-3 py-1 sm:py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white text-[11px] sm:text-xs font-black flex items-center gap-1 shadow-md transition-all active:scale-95 cursor-pointer"
-                                            title="Approve apprentice duty and mark as Passed"
-                                          >
-                                            <CheckCircle2 className="w-3.5 h-3.5 text-white shrink-0" />
-                                            <span>Pass</span>
-                                          </button>
-                                        )}
-                                      </div>
-                                    </div>
-                                  );
-                                })}
-                              </div>
-                            )}
-
-                            {/* Collapsible Passed Tasks Section */}
-                            {passedDuties.length > 0 && (
-                              <div className="space-y-2 pt-0.5">
+                              {/* Unbind Button */}
+                              {onUnlinkApprentice && (
                                 <button
                                   type="button"
-                                  onClick={() => togglePassedTasks(apprentice.id)}
-                                  className="w-full flex items-center justify-between p-2.5 rounded-xl bg-emerald-950/40 border border-emerald-500/30 hover:bg-emerald-900/50 text-emerald-300 text-xs font-bold transition-all cursor-pointer shadow-2xs"
+                                  onClick={() => {
+                                    if (window.confirm(`Are you sure you want to unlink and unbind ${apprentice.name} from your Master Studio?`)) {
+                                      onUnlinkApprentice(apprentice.id);
+                                      setCurriculumNotice(`${apprentice.name} unlinked from Master Studio.`);
+                                      setTimeout(() => setCurriculumNotice(null), 3000);
+                                    }
+                                  }}
+                                  className="px-2.5 sm:px-3 py-1.5 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 text-[10px] sm:text-xs font-bold border border-rose-400/40 flex items-center justify-center gap-1 transition-all active:scale-95 cursor-pointer truncate"
+                                  title="Unbind / Unlink Apprentice from Master Studio"
                                 >
-                                  <div className="flex items-center gap-2">
-                                    <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-                                    <span className="font-extrabold uppercase tracking-wide text-[11px] sm:text-xs">
-                                      Passed Tasks ({passedDuties.length})
-                                    </span>
-                                  </div>
-                                  <div className="flex items-center gap-1 text-[10px] sm:text-[11px] text-emerald-300 font-extrabold">
-                                    <span>{isPassedExpanded ? 'Hide Passed' : 'Show Passed'}</span>
-                                    {isPassedExpanded ? <ChevronUp className="w-4 h-4 shrink-0" /> : <ChevronDown className="w-4 h-4 shrink-0" />}
-                                  </div>
+                                  <UserX className="w-3.5 h-3.5 text-rose-400 shrink-0" />
+                                  <span className="truncate">Unbind</span>
                                 </button>
+                              )}
+                            </div>
+                          </div>
 
-                                {isPassedExpanded && (
-                                  <div className="space-y-2 pt-1 pl-1 sm:pl-2 border-l-2 border-emerald-500/30 max-h-56 overflow-y-auto pr-1 custom-scrollbar">
-                                    {passedDuties.map((duty) => (
-                                      <div
-                                        key={duty.id}
-                                        className="p-2.5 sm:p-3 rounded-xl bg-[#041916]/80 border border-emerald-500/30 flex flex-col xs:flex-row xs:items-center justify-between gap-2 text-xs"
-                                      >
-                                        <div className="min-w-0 flex-1">
-                                          <p className="font-extrabold text-white text-xs sm:text-sm truncate flex items-center gap-1.5">
-                                            <span className="text-emerald-400 font-bold">✓</span>
-                                            <span>{duty.title}</span>
-                                          </p>
-                                          <div className="flex items-center gap-1.5 sm:gap-2 text-[10px] sm:text-xs text-emerald-200/80 font-medium mt-0.5 flex-wrap">
-                                            <span className="font-bold text-emerald-400">{duty.category || 'Workshop Duty'}</span>
-                                            {duty.passedAt && <span>· Passed: {duty.passedAt}</span>}
+                          {/* Training Hours & Mentor Summary Grid */}
+                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs pt-1">
+                            <div className="p-2.5 rounded-xl bg-[#041916] border border-amber-400/20 space-y-1">
+                              <div className="flex items-center justify-between text-[10px] font-bold text-amber-300">
+                                <span>TRAINING HOURS</span>
+                                <span>{hrsPercent}%</span>
+                              </div>
+                              <div className="font-black text-xs text-white">
+                                {completedHrs} / {requiredHrs} hrs
+                              </div>
+                              <div className="w-full h-1.5 rounded-full bg-slate-800 overflow-hidden">
+                                <div
+                                  className="h-full bg-gradient-to-r from-amber-400 to-emerald-400 rounded-full transition-all duration-500"
+                                  style={{ width: `${hrsPercent}%` }}
+                                />
+                              </div>
+                            </div>
+
+                            <div className="p-2.5 rounded-xl bg-[#041916] border border-amber-400/20 space-y-0.5">
+                              <span className="text-[10px] font-bold text-emerald-400 block">WORKSHOP LINK KEY</span>
+                              <span className="font-mono font-black text-xs text-amber-200 truncate block">
+                                {pairCode}
+                              </span>
+                              <span className="text-[10px] text-slate-400 block">
+                                Direct Master Atelier Sync
+                              </span>
+                            </div>
+
+                            <div className="p-2.5 rounded-xl bg-[#041916] border border-amber-400/20 space-y-0.5">
+                              <span className="text-[10px] font-bold text-amber-300 block">ASSIGNED MENTOR</span>
+                              <span className="font-black text-xs text-white truncate block">
+                                {apprentice.mentor || masterTrainer || 'Master Atelier'}
+                              </span>
+                              <span className="text-[10px] text-slate-400 block">
+                                Principal Atelier Instructor
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Assigned Duties & Evaluation List */}
+                          <div className="pt-3 border-t border-amber-400/20 space-y-2.5">
+                            <div className="flex items-center justify-between gap-2">
+                              <span className="text-[11px] sm:text-sm font-black text-amber-300 uppercase tracking-wider flex items-center gap-1.5 drop-shadow-sm truncate">
+                                <BookOpen className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#DCA134] shrink-0" />
+                                <span className="truncate">Assigned Duties & Evaluation</span>
+                              </span>
+                              <div className="flex items-center gap-1.5">
+                                {pendingDuties.length > 0 && (
+                                  <span className="text-[9px] sm:text-[10px] font-extrabold text-amber-300 bg-amber-500/20 px-2 py-0.5 rounded-md border border-amber-400/40">
+                                    {pendingDuties.length} Active
+                                  </span>
+                                )}
+                                {passedDuties.length > 0 && (
+                                  <span className="text-[9px] sm:text-[10px] font-extrabold text-emerald-300 bg-emerald-500/20 px-2 py-0.5 rounded-md border border-emerald-400/40">
+                                    {passedDuties.length} Passed ✓
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+
+                            {assignedDuties.length === 0 ? (
+                              <div className="p-2.5 sm:p-3 rounded-xl sm:rounded-2xl bg-[#041916] border border-amber-400/30 text-[11px] sm:text-xs font-semibold text-slate-200 text-center">
+                                No active duties assigned. Click "+ Assign Duty" above to delegate a task.
+                              </div>
+                            ) : (
+                              <div className="space-y-2.5">
+                                {/* Active / Pending Duties List */}
+                                {pendingDuties.length > 0 && (
+                                  <div className="space-y-2">
+                                    {pendingDuties.map((duty) => {
+                                      const isReviewPending = duty.status === 'review_pending' || duty.isCompleted;
+
+                                      return (
+                                        <div
+                                          key={duty.id}
+                                          className="p-2.5 sm:p-3 rounded-xl sm:rounded-2xl bg-[#041916] border border-amber-400/30 flex flex-col xs:flex-row xs:items-center justify-between gap-2 text-xs"
+                                        >
+                                          <div className="min-w-0 flex-1">
+                                            <p className="font-extrabold text-white text-xs sm:text-sm truncate">
+                                              {duty.title}
+                                            </p>
+                                            <div className="flex items-center gap-1.5 sm:gap-2 text-[10px] sm:text-xs text-amber-200/90 font-medium mt-0.5 flex-wrap">
+                                              <span className="font-bold text-amber-300">{duty.category || 'Workshop Duty'}</span>
+                                              {duty.dueDate && <span>· Due: {duty.dueDate}</span>}
+                                            </div>
+                                          </div>
+
+                                          {/* Status Badge & Master Pass Action Button */}
+                                          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0 self-end xs:self-auto">
+                                            {isReviewPending ? (
+                                              <span className="px-2.5 py-0.5 sm:py-1 rounded-full bg-indigo-500/25 text-indigo-200 text-[10px] sm:text-xs font-black uppercase border border-indigo-400/50 flex items-center gap-1">
+                                                <Clock className="w-3 h-3 text-indigo-300 shrink-0" />
+                                                <span>Pending</span>
+                                              </span>
+                                            ) : (
+                                              <span className="px-2.5 py-0.5 sm:py-1 rounded-full bg-amber-500/25 text-amber-200 text-[10px] sm:text-xs font-black uppercase border border-amber-400/50 flex items-center gap-1">
+                                                <Clock className="w-3 h-3 text-amber-300 shrink-0" />
+                                                <span>In Progress</span>
+                                              </span>
+                                            )}
+
+                                            {/* Master Pass Action Button */}
+                                            {onPassTask && (
+                                              <button
+                                                type="button"
+                                                onClick={() => onPassTask(duty.id)}
+                                                className="px-3 py-1 sm:py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white text-[11px] sm:text-xs font-black flex items-center gap-1 shadow-md transition-all active:scale-95 cursor-pointer"
+                                                title="Approve apprentice duty and mark as Passed"
+                                              >
+                                                <CheckCircle2 className="w-3.5 h-3.5 text-white shrink-0" />
+                                                <span>Pass</span>
+                                              </button>
+                                            )}
                                           </div>
                                         </div>
-                                        <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 text-[10px] font-black uppercase border border-emerald-400/40 flex items-center gap-1 shrink-0 self-end xs:self-auto">
-                                          <CheckCircle2 className="w-3 h-3 text-emerald-400 shrink-0" />
-                                          <span>Passed ✓</span>
+                                      );
+                                    })}
+                                  </div>
+                                )}
+
+                                {/* Collapsible Passed Tasks Section */}
+                                {passedDuties.length > 0 && (
+                                  <div className="space-y-2 pt-0.5">
+                                    <button
+                                      type="button"
+                                      onClick={() => togglePassedTasks(apprentice.id)}
+                                      className="w-full flex items-center justify-between p-2.5 rounded-xl bg-emerald-950/40 border border-emerald-500/30 hover:bg-emerald-900/50 text-emerald-300 text-xs font-bold transition-all cursor-pointer shadow-2xs"
+                                    >
+                                      <div className="flex items-center gap-2">
+                                        <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                                        <span className="font-extrabold uppercase tracking-wide text-[11px] sm:text-xs">
+                                          Passed Tasks ({passedDuties.length})
                                         </span>
                                       </div>
-                                    ))}
+                                      <div className="flex items-center gap-1 text-[10px] sm:text-[11px] text-emerald-300 font-extrabold">
+                                        <span>{isPassedExpanded ? 'Hide Passed' : 'Show Passed'}</span>
+                                        {isPassedExpanded ? <ChevronUp className="w-4 h-4 shrink-0" /> : <ChevronDown className="w-4 h-4 shrink-0" />}
+                                      </div>
+                                    </button>
+
+                                    {isPassedExpanded && (
+                                      <div className="space-y-2 pt-1 pl-1 sm:pl-2 border-l-2 border-emerald-500/30 max-h-56 overflow-y-auto pr-1 custom-scrollbar">
+                                        {passedDuties.map((duty) => (
+                                          <div
+                                            key={duty.id}
+                                            className="p-2.5 sm:p-3 rounded-xl bg-[#041916]/80 border border-emerald-500/30 flex flex-col xs:flex-row xs:items-center justify-between gap-2 text-xs"
+                                          >
+                                            <div className="min-w-0 flex-1">
+                                              <p className="font-extrabold text-white text-xs sm:text-sm truncate flex items-center gap-1.5">
+                                                <span className="text-emerald-400 font-bold">✓</span>
+                                                <span>{duty.title}</span>
+                                              </p>
+                                              <div className="flex items-center gap-1.5 sm:gap-2 text-[10px] sm:text-xs text-emerald-200/80 font-medium mt-0.5 flex-wrap">
+                                                <span className="font-bold text-emerald-400">{duty.category || 'Workshop Duty'}</span>
+                                                {duty.passedAt && <span>· Passed: {duty.passedAt}</span>}
+                                              </div>
+                                            </div>
+                                            <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 text-[10px] font-black uppercase border border-emerald-400/40 flex items-center gap-1 shrink-0 self-end xs:self-auto">
+                                              <CheckCircle2 className="w-3 h-3 text-emerald-400 shrink-0" />
+                                              <span>Passed ✓</span>
+                                            </span>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    )}
                                   </div>
                                 )}
                               </div>
                             )}
                           </div>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-
-              {/* View All Apprentices Footer Action */}
-              {hasMultipleApprentices && (
-                <div className="pt-3 border-t border-white/10 flex flex-col sm:flex-row items-center justify-between gap-3 relative z-10 bg-[#041916]/50 p-3 sm:p-3.5 rounded-2xl border border-[#DCA134]/30 shadow-md">
-                  <div className="flex items-center gap-2.5 text-xs text-amber-200 font-semibold min-w-0 w-full sm:w-auto">
-                    <div className="w-8 h-8 rounded-xl bg-amber-400/10 border border-amber-400/30 flex items-center justify-center text-[#DCA134] shrink-0">
-                      <Users className="w-4 h-4" />
-                    </div>
-                    <div className="min-w-0">
-                      <span className="font-bold text-white block text-xs sm:text-sm truncate">
-                        Showing 1 of {apprentices.length} registered apprentices
-                      </span>
-                      <span className="text-[10px] sm:text-[11px] text-amber-200/70 font-normal block truncate">
-                        Click below to open full screen training roster
-                      </span>
-                    </div>
+                        </div>
+                      );
+                    })}
                   </div>
+                )}
 
-                  <button
-                    type="button"
-                    onClick={() => setIsAllApprenticesModalOpen(true)}
-                    className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-[#DCA134] hover:bg-[#c9902b] text-[#0D3B36] font-black text-xs border border-amber-200 shadow-md flex items-center justify-center gap-2 transition-all active:scale-95 cursor-pointer shrink-0"
-                  >
-                    <Eye className="w-4 h-4 text-[#0D3B36]" />
-                    <span>View All Apprentices ({apprentices.length})</span>
-                  </button>
-                </div>
-              )}
-            </div>
-          );
-        })()}
-      </div>)}
+                {/* View Full Roster Modal Trigger (for when master wants full screen mode) */}
+                {apprentices.length > 1 && (
+                  <div className="pt-2 flex justify-end">
+                    <button
+                      type="button"
+                      onClick={() => setIsAllApprenticesModalOpen(true)}
+                      className="px-3.5 py-2 rounded-xl bg-[#041916] hover:bg-[#082824] text-amber-300 text-xs font-bold border border-amber-400/30 flex items-center gap-1.5 transition-all cursor-pointer"
+                    >
+                      <Eye className="w-3.5 h-3.5 text-amber-400" />
+                      <span>Open Full-Screen Supervision View</span>
+                    </button>
+                  </div>
+                )}
+              </div>
+            );
+          })()}
+        </div>)}
 
       {/* Dedicated Full-Screen All Master Apprentices & Trainees Modal */}
       {isAllApprenticesModalOpen && (
