@@ -521,9 +521,21 @@ export const ClientProfileModal: React.FC<ClientProfileModalProps> = ({
                     </div>
                   </div>
 
-                  <span className="px-4 py-2 rounded-full bg-amber-400/20 text-amber-800 dark:text-amber-300 border border-amber-400/40 text-xs font-black uppercase tracking-wider shrink-0 text-center">
-                    {client.runwayStage || 'Cutting'}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    {onOpenSpecSheet && (
+                      <button
+                        type="button"
+                        onClick={() => onOpenSpecSheet(client)}
+                        className="px-3.5 py-1.5 rounded-full bg-[#0D3B36] dark:bg-amber-400 hover:bg-[#082824] dark:hover:bg-amber-300 text-white dark:text-[#0D3B36] font-['Outfit'] font-extrabold text-xs flex items-center gap-1.5 shadow-xs transition-all active:scale-95 cursor-pointer shrink-0"
+                      >
+                        <FileText className="w-3.5 h-3.5 text-amber-300 dark:text-[#0D3B36]" />
+                        <span>View Spec Sheet</span>
+                      </button>
+                    )}
+                    <span className="px-4 py-2 rounded-full bg-amber-400/20 text-amber-800 dark:text-amber-300 border border-amber-400/40 text-xs font-black uppercase tracking-wider shrink-0 text-center">
+                      {client.runwayStage || 'Cutting'}
+                    </span>
+                  </div>
                 </div>
               </div>
 

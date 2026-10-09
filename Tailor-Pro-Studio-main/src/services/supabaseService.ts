@@ -11,6 +11,7 @@ import {
   StudioSettings,
   UserAccountRecord
 } from '../types';
+import { isMockOrTestApprentice } from '../utils/numeric';
 
 /**
  * Helper to wrap network promises with an offline check and fast timeout
@@ -128,56 +129,95 @@ export async function deleteClientFromSupabase(clientId: string): Promise<boolea
 // APPRENTICES SYNCRONIZATION
 // ==========================================
 
-export async function fetchApprenticesFromSupabase(): Promise<Apprentice[] | null> {
+export async function fetchApprenticesFromSupabase(masterWorkshopCode?: string): Promise<Apprentice[] | null> {
   return withTimeout(async () => {
-    const { data, error } = await supabase.from('apprentices').select('*');
-    if (error || !data) return null;
-    if (data.length === 0) return [];
+    const { data, error } = await supabase.from('profiles').select('*');
+    if (error) {
+      console.warn('[Supabase DB] Error fetching apprentice profiles:', error.message);
+      return null;
+    }
+    if (!data || data.length === 0) return [];
 
-    return data.map((row: any) => ({
-      id: row.id,
-      name: row.name,
-      initials: row.initials || '',
-      role: row.role || 'Apprentice',
-      mentor: row.mentor || '',
-      isLinked: row.is_linked ?? true,
-      handshakeLocked: row.handshake_locked ?? true,
-      hasCert: row.has_cert ?? false,
-      avatarUrl: row.avatar_url,
-      hoursCompleted: Number(row.hours_completed || 0),
-      totalRequiredHours: Number(row.total_required_hours || 500),
-      certifications: row.certifications || [],
-      tasksCount: Number(row.tasks_count || 0),
-      status: row.status || 'On Track',
-      specialty: row.specialty || ''
-    }));
-  }, 2500);
+    const apprenticeRows = data.filter((row: any) => {
+      const role = (row.role || '').toLowerCase();
+      const isApprenticeRole = role.includes('apprentice') || role.includes('trainee') || role.includes('scholar');
+      if (!isApprenticeRole) return false;
+
+      const rawName = (row.designer_name || row.full_name || row.email?.split('@')[0] || '').trim();
+      const email = (row.email || '').trim().toLowerCase();
+
+      // Filter out test and mock profiles
+      if (isMockOrTestApprentice({ id: row.id, name: rawName, email, role })) {
+        return false;
+      }
+
+      // If a workshop code is provided, only return apprentices paired with this workshop
+      if (masterWorkshopCode && masterWorkshopCode.trim()) {
+        const normMasterCode = masterWorkshopCode.trim().toUpperCase();
+        const rowCode = (row.license_key || row.studio_name || '').trim().toUpperCase();
+        if (rowCode && rowCode !== normMasterCode) {
+          return false;
+        }
+      }
+
+      return true;
+    });
+
+    return apprenticeRows.map((row: any) => {
+      const rawName = row.designer_name || row.full_name || row.email?.split('@')[0] || 'Apprentice';
+      const apprenticeName = rawName.charAt(0).toUpperCase() + rawName.slice(1);
+      const initials = apprenticeName.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2) || 'AT';
+      const workshopCode = row.license_key || row.studio_name || '';
+
+      return {
+        id: row.id,
+        name: apprenticeName,
+        initials,
+        role: row.role || 'Apprentice Trainee',
+        mentor: row.studio_name || 'Master Atelier',
+        isLinked: true,
+        handshakeLocked: true,
+        hasCert: false,
+        avatarUrl: undefined,
+        hoursCompleted: 0,
+        totalRequiredHours: 120,
+        certifications: ['Pattern Drafting & Garment Construction'],
+        tasksCount: 0,
+        status: 'On Track' as const,
+        specialty: 'Couture Assembly & Garment Construction',
+        workshopCode: workshopCode,
+        email: row.email || ''
+      };
+    });
+  }, 3500);
 }
 
 export async function upsertApprenticeToSupabase(apprentice: Apprentice): Promise<boolean> {
   if (typeof navigator !== 'undefined' && !navigator.onLine) return false;
   try {
+    const authRes = await supabase.auth.getUser();
+    const authUser = authRes.data?.user;
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(apprentice.id);
+    const profileId = isUuid ? apprentice.id : (authUser ? authUser.id : null);
+
+    if (!profileId) {
+      return false;
+    }
+
     const dbRecord = {
-      id: apprentice.id,
-      name: apprentice.name,
-      initials: apprentice.initials,
-      role: apprentice.role,
-      mentor: apprentice.mentor,
-      is_linked: apprentice.isLinked,
-      handshake_locked: apprentice.handshakeLocked,
-      has_cert: apprentice.hasCert,
-      avatar_url: apprentice.avatarUrl,
-      hours_completed: apprentice.hoursCompleted,
-      total_required_hours: apprentice.totalRequiredHours,
-      certifications: apprentice.certifications || [],
-      tasks_count: apprentice.tasksCount,
-      status: apprentice.status,
-      specialty: apprentice.specialty,
-      updated_at: new Date().toISOString()
+      id: profileId,
+      designer_name: apprentice.name,
+      studio_name: apprentice.mentor || 'TAILOR PRO STUDIO',
+      role: apprentice.role || 'Apprentice (Trainee & CAD Blueprint View)',
+      status: 'approved',
+      license_key: apprentice.workshopCode || undefined
     };
 
     const res = await withTimeout(async () => {
-      const { error } = await supabase.from('apprentices').upsert(dbRecord);
+      const { error } = await supabase.from('profiles').upsert(dbRecord);
+      if (error) {
+        console.warn('[Supabase DB] Apprentice profile update notice:', error.message);
+      }
       return !error;
     }, 3000);
     return Boolean(res);
@@ -189,8 +229,10 @@ export async function upsertApprenticeToSupabase(apprentice: Apprentice): Promis
 export async function deleteApprenticeFromSupabase(apprenticeId: string): Promise<boolean> {
   if (typeof navigator !== 'undefined' && !navigator.onLine) return false;
   try {
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(apprenticeId);
+    if (!isUuid) return true;
     const res = await withTimeout(async () => {
-      const { error } = await supabase.from('apprentices').delete().eq('id', apprenticeId);
+      const { error } = await supabase.from('profiles').delete().eq('id', apprenticeId);
       return !error;
     }, 3000);
     return Boolean(res);
@@ -608,10 +650,35 @@ export async function signUpSupabaseUser(
       });
       if (error) {
         console.warn('[Supabase Auth] Sign up warning:', error.message);
+        // If already registered, try signing in
+        if (error.message.toLowerCase().includes('already registered')) {
+          const signInRes = await supabase.auth.signInWithPassword({ email, password });
+          if (!signInRes.error && signInRes.data.user) {
+            return { success: true, user: signInRes.data.user };
+          }
+        }
         return { success: false, error: error.message };
       }
       return { success: true, user: data.user };
-    }, 4000);
+    }, 5000);
+
+    if (res && res.success && res.user) {
+      try {
+        const profileRecord = {
+          id: res.user.id,
+          email: res.user.email || email,
+          designer_name: metadata?.fullName || metadata?.designer_name || email.split('@')[0],
+          studio_name: metadata?.studioName || metadata?.masterWorkshopCode || 'TAILOR PRO STUDIO',
+          role: metadata?.role || 'Apprentice (Trainee & CAD Blueprint View)',
+          status: 'approved',
+          plan: 'free',
+          license_key: metadata?.masterWorkshopCode || metadata?.licenseKey || null
+        };
+        await supabase.from('profiles').upsert(profileRecord);
+      } catch (profErr) {
+        console.warn('[Supabase DB] Auto-profile creation notice:', profErr);
+      }
+    }
 
     return res || { success: false, error: 'Registration saved locally.' };
   } catch (err: any) {
@@ -634,7 +701,7 @@ export async function signInSupabaseUser(email: string, password: string) {
         return { success: false, error: error.message };
       }
       return { success: true, user: data.user };
-    }, 4000);
+    }, 5000);
 
     return res || { success: false, error: 'Network timeout during sign in' };
   } catch (err: any) {
@@ -648,42 +715,83 @@ export async function signInSupabaseUser(email: string, password: string) {
 
 export async function fetchUserAccountsFromSupabase(): Promise<UserAccountRecord[] | null> {
   return withTimeout(async () => {
-    const { data, error } = await supabase.from('user_accounts').select('*');
-    if (error || !data) return null;
+    const { data, error } = await supabase.from('profiles').select('*');
+    if (error) {
+      console.warn('[Supabase DB] Error fetching profiles as user accounts:', error.message);
+      return null;
+    }
+    if (!data || data.length === 0) return [];
 
     return data.map((row: any) => ({
       id: row.id,
-      email: row.email,
-      fullName: row.full_name || '',
+      email: row.email || '',
+      fullName: row.designer_name || row.full_name || '',
       studioName: row.studio_name || '',
-      role: row.role || '',
+      role: row.role || 'Master (Studio Owner & Financial Control)',
       licenseKey: row.license_key || undefined,
-      status: row.status || 'pending',
-      registeredAt: row.registered_at || new Date().toISOString()
+      status: (row.status as 'pending' | 'approved' | 'rejected') || 'approved',
+      registeredAt: row.created_at || row.registered_at || new Date().toISOString()
     }));
-  }, 2500);
+  }, 3500);
 }
 
 export async function upsertUserAccountToSupabase(userRecord: UserAccountRecord): Promise<boolean> {
   if (typeof navigator !== 'undefined' && !navigator.onLine) return false;
   try {
+    const authRes = await supabase.auth.getUser();
+    const authUser = authRes.data?.user;
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(userRecord.id);
+    const profileId = isUuid ? userRecord.id : (authUser?.email?.toLowerCase() === userRecord.email?.toLowerCase() ? authUser.id : null);
+
+    if (!profileId) {
+      return false;
+    }
+
     const dbRecord = {
-      id: userRecord.id,
+      id: profileId,
       email: userRecord.email.toLowerCase(),
-      full_name: userRecord.fullName,
+      designer_name: userRecord.fullName,
       studio_name: userRecord.studioName,
       role: userRecord.role,
-      license_key: userRecord.licenseKey || null,
-      status: userRecord.status,
-      registered_at: userRecord.registeredAt || new Date().toISOString(),
-      updated_at: new Date().toISOString()
+      status: userRecord.status || 'approved',
+      license_key: userRecord.licenseKey || null
     };
+
     const res = await withTimeout(async () => {
-      const { error } = await supabase.from('user_accounts').upsert(dbRecord);
+      const { error } = await supabase.from('profiles').upsert(dbRecord);
+      if (error) {
+        console.warn('[Supabase DB] Profile upsert notice:', error.message);
+      }
       return !error;
     }, 3000);
     return Boolean(res);
   } catch (err) {
+    return false;
+  }
+}
+
+export async function syncApprenticeWorkshopCodeToSupabase(workshopCode: string, apprenticeName?: string): Promise<boolean> {
+  if (typeof navigator !== 'undefined' && !navigator.onLine) return false;
+  try {
+    const authRes = await supabase.auth.getUser();
+    const authUser = authRes.data?.user;
+    if (!authUser) return false;
+
+    const dbRecord: Record<string, any> = {
+      id: authUser.id,
+      license_key: workshopCode.trim().toUpperCase(),
+      studio_name: workshopCode.trim().toUpperCase()
+    };
+    if (apprenticeName && apprenticeName.trim()) {
+      dbRecord.designer_name = apprenticeName.trim();
+    }
+
+    const res = await withTimeout(async () => {
+      const { error } = await supabase.from('profiles').upsert(dbRecord);
+      return !error;
+    }, 3000);
+    return Boolean(res);
+  } catch {
     return false;
   }
 }

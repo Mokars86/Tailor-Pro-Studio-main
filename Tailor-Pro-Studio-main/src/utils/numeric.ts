@@ -58,6 +58,57 @@ export const sanitizeTransaction = (t: LedgerTransaction): LedgerTransaction => 
 };
 
 /**
+ * Detects whether an apprentice object or identifier represents mock, dummy, or test data.
+ */
+export const isMockOrTestApprentice = (app?: any): boolean => {
+  if (!app) return true;
+  if (typeof app === 'string') {
+    const s = app.toLowerCase().trim();
+    if (['app-1', 'app-2', 'app-3', 'cli-1', 'cli-2', 'cli-3', 'cli-4'].includes(s)) return true;
+    if (s.startsWith('mock') || s.startsWith('test-') || s.includes('_mock') || s.includes('_test')) return true;
+    if (['apprentice scholar', 'apprentice trainee', 'test apprentice', 'mock apprentice', 'scholar', 'test user', 'mock user'].includes(s)) return true;
+    return false;
+  }
+  const id = (app.id || '').toLowerCase().trim();
+  const name = (app.name || '').toLowerCase().trim();
+  const email = (app.email || '').toLowerCase().trim();
+
+  // Mock ID checks
+  if (['app-1', 'app-2', 'app-3', 'cli-1', 'cli-2', 'cli-3', 'cli-4'].includes(id)) return true;
+  if (id.startsWith('mock') || id.startsWith('test-') || id.includes('_mock') || id.includes('_test')) return true;
+
+  // Mock / generic test names
+  const mockNames = [
+    'apprentice scholar',
+    'apprentice trainee',
+    'test apprentice',
+    'mock apprentice',
+    'sample apprentice',
+    'demo apprentice',
+    'test trainee',
+    'mock trainee',
+    'scholar',
+    'test user',
+    'mock user'
+  ];
+  if (mockNames.includes(name)) return true;
+  if (name.includes('mock apprentice') || name.includes('test apprentice')) return true;
+
+  // Mock / dummy email domains & patterns
+  if (
+    email.endsWith('@example.com') ||
+    email.includes('mock') ||
+    email.startsWith('test@') ||
+    email.includes('testapprentice') ||
+    email.includes('mockapprentice')
+  ) {
+    return true;
+  }
+
+  return false;
+};
+
+/**
  * Sanitizes unpaid deposit record so amount is always a valid number.
  */
 export const sanitizeDeposit = (d: UnpaidDeposit): UnpaidDeposit => {
@@ -67,3 +118,5 @@ export const sanitizeDeposit = (d: UnpaidDeposit): UnpaidDeposit => {
     amount: parseCleanNumber(d.amount)
   };
 };
+
+

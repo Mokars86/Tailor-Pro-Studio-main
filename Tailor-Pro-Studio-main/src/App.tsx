@@ -41,7 +41,8 @@ import {
   deleteClientFromSupabase,
   signUpSupabaseUser,
   supabase,
-  deleteApprenticeFromSupabase
+  deleteApprenticeFromSupabase,
+  syncApprenticeWorkshopCodeToSupabase
 } from './services/supabaseService';
 import {
   subscribeNetworkStatus,
@@ -133,6 +134,7 @@ export function App() {
     setCustomerTrackerOpen,
     setMeasurementClient,
     setFullMeasurementsClient,
+    setSpecSheetClient,
     setInvoiceClient,
     setProfileClient,
     setAddMaterialOpen,
@@ -560,18 +562,19 @@ export function App() {
       const userEmail = email.trim() || 'designer@tailorpro.com';
       const masterBrandName = studioName && studioName.trim() ? studioName.trim() : 'TAILOR PRO STUDIO';
 
-      if (password && userEmail) {
-        signUpSupabaseUser(userEmail, password, {
-          fullName: fullName || 'Atelier Designer',
-          role,
-          studioName: masterBrandName
-        }).catch((err) => console.warn('[Supabase Auth] Sign up warning:', err));
-      }
-
       const isApprentice = role.startsWith('Apprentice');
       const newPairCode = isApprentice
         ? (masterWorkshopCode && masterWorkshopCode.trim() ? masterWorkshopCode.trim() : (studioSettings.pairCode || generateMasterWorkshopCode(masterBrandName)))
         : generateMasterWorkshopCode(masterBrandName);
+
+      if (password && userEmail) {
+        signUpSupabaseUser(userEmail, password, {
+          fullName: fullName || 'Atelier Designer',
+          role,
+          studioName: masterBrandName,
+          masterWorkshopCode: isApprentice ? newPairCode : undefined
+        }).catch((err) => console.warn('[Supabase Auth] Sign up warning:', err));
+      }
 
       const updatedSettings = { ...studioSettings, studioName: masterBrandName, pairCode: newPairCode };
       setStudioSettings(updatedSettings);
@@ -585,7 +588,7 @@ export function App() {
         fullName: fullName || 'Atelier Designer',
         studioName: masterBrandName,
         role,
-        licenseKey
+        licenseKey: isApprentice ? newPairCode : licenseKey
       });
 
       if (isApprentice) {
@@ -609,18 +612,26 @@ export function App() {
           certifications: ['Pattern Drafting & Garment Construction'],
           tasksCount: 0,
           status: 'On Track',
-          specialty: 'Couture Assembly & Garment Construction'
+          specialty: 'Couture Assembly & Garment Construction',
+          workshopCode: newPairCode,
+          email: userEmail
         };
 
         setApprentices((prev) => {
           const exists = prev.some((a) => a.name.toLowerCase() === apprenticeName.toLowerCase() || a.id === apprenticeId);
           if (exists) {
-            return prev.map((a) => (a.name.toLowerCase() === apprenticeName.toLowerCase() ? { ...a, isLinked: true, mentor: newApprenticeRecord.mentor } : a));
+            return prev.map((a) => (a.name.toLowerCase() === apprenticeName.toLowerCase() ? { ...a, isLinked: true, mentor: newApprenticeRecord.mentor, workshopCode: newPairCode } : a));
           }
           return [newApprenticeRecord, ...prev];
         });
 
+        // Clear any old cached milestones so new apprentice starts afresh
+        storageService.removeItem(`tailor_apprentice_milestones_${apprenticeId.toLowerCase()}`);
+        storageService.removeItem(`tailor_apprentice_milestones_${apprenticeName.toLowerCase().replace(/[^a-z0-9]/g, '_')}`);
+        storageService.removeItem('tailor_apprentice_milestones_default');
+
         upsertApprenticeToSupabase(newApprenticeRecord);
+        syncApprenticeWorkshopCodeToSupabase(newPairCode, apprenticeName);
         notifyApprenticeLinked({
           apprenticeName,
           masterName: studioSettings.ownerName || masterBrandName || 'Master Atelier',
@@ -661,18 +672,26 @@ export function App() {
       certifications: ['Pattern Drafting & Garment Construction'],
       tasksCount: 0,
       status: 'On Track',
-      specialty: 'Couture Assembly & Garment Construction'
+      specialty: 'Couture Assembly & Garment Construction',
+      workshopCode: newCode,
+      email: activeUserEmail
     };
 
     setApprentices((prev) => {
       const exists = prev.some((a) => a.name.toLowerCase() === linkedApprentice.name.toLowerCase() || a.id === apprenticeId);
       if (exists) {
-        return prev.map((a) => (a.name.toLowerCase() === linkedApprentice.name.toLowerCase() ? { ...a, isLinked: true, mentor: linkedApprentice.mentor } : a));
+        return prev.map((a) => (a.name.toLowerCase() === linkedApprentice.name.toLowerCase() ? { ...a, isLinked: true, mentor: linkedApprentice.mentor, workshopCode: newCode } : a));
       }
       return [linkedApprentice, ...prev];
     });
 
+    // Clear any old cached milestones so synced apprentice starts afresh
+    storageService.removeItem(`tailor_apprentice_milestones_${apprenticeId.toLowerCase()}`);
+    storageService.removeItem(`tailor_apprentice_milestones_${apprenticeName.toLowerCase().replace(/[^a-z0-9]/g, '_')}`);
+    storageService.removeItem('tailor_apprentice_milestones_default');
+
     upsertApprenticeToSupabase(linkedApprentice);
+    syncApprenticeWorkshopCodeToSupabase(newCode, apprenticeName);
     notifyApprenticeLinked({
       apprenticeName,
       masterName: studioSettings.ownerName || 'Master Atelier',
@@ -863,6 +882,7 @@ export function App() {
               onEditClient={(client) => openAddClient(client)}
               onOpenMeasurements={(client) => setMeasurementClient(client)}
               onOpenFullMeasurements={(client) => setFullMeasurementsClient(client)}
+              onOpenSpecSheet={(client) => setSpecSheetClient(client)}
               onOpenInvoice={(client) => setInvoiceClient(client)}
               onOpenNewConsult={handleTriggerAddClient}
               onSelectClient={(client) => setProfileClient(client)}
@@ -879,6 +899,7 @@ export function App() {
                 clients={clients}
                 onAdvanceStage={handleAdvanceRunwayStage}
                 onOpenBookSession={() => openBookSession(null)}
+                onOpenSpecSheet={(client) => setSpecSheetClient(client)}
               />
             </Suspense>
           </div>

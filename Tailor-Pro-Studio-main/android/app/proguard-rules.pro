@@ -16,6 +16,7 @@
 # debugging stack traces.
 -keepattributes SourceFile,LineNumberTable
 -keepattributes *Annotation*
+-keepattributes JavascriptInterface
 
 # Capacitor ProGuard rules
 -keep public class com.getcapacitor.** { *; }
@@ -24,4 +25,13 @@
     @com.getcapacitor.PluginMethod public *;
     @android.webkit.JavascriptInterface public *;
 }
+
+# WebKit and WebView interface rules
+-keepclassmembers class * {
+    public *;
+}
+
+# AndroidX Core
+-keep class androidx.core.** { *; }
+-dontwarn androidx.core.**
 

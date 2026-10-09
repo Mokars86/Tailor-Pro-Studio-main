@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   ArrowLeft,
   Upload,
@@ -17,10 +17,14 @@ import {
   Calculator,
   RefreshCw,
   AlertCircle,
-  CheckCircle2
+  CheckCircle2,
+  Package,
+  ChevronRight,
+  Palette
 } from 'lucide-react';
 import { Client, SpecSheetGarment, StudioSettings } from '../../types';
 import { FullMeasurementsModal } from './FullMeasurementsModal';
+import { storageService } from '../../services/storageService';
 
 interface SpecSheetModalProps {
   client: Client;
@@ -28,6 +32,19 @@ interface SpecSheetModalProps {
   onClose: () => void;
   onSaveSpecSheet?: (clientId: string, garments: SpecSheetGarment[]) => void;
 }
+
+export const POPULAR_GARMENT_STYLES = [
+  'Straight Dress',
+  'Evening Gown',
+  'Senator Wear',
+  'Kente Corset Gown',
+  'Tailored Suit & Blazer',
+  'Kaftan / Boubou / Agbada',
+  'Skirt & Blouse (Slit & Kaba)',
+  'Corset & Trousers',
+  'Couture Jumpsuit',
+  'Smock / Fugu'
+];
 
 /* =========================================================
    Modern Human Fashion Croquis Vector Component
@@ -43,18 +60,18 @@ const ModernHumanCroquis: React.FC<HumanCroquisProps> = ({
   viewAngle,
   showGuideLines
 }) => {
-  const normalizedType = garmentType.toLowerCase();
+  const normalizedType = (garmentType || '').toLowerCase();
 
-  const isSuit = normalizedType.includes('suit') || normalizedType.includes('blazer') || normalizedType.includes('jacket') || normalizedType.includes('tuxedo');
-  const isKaftan = normalizedType.includes('kaftan') || normalizedType.includes('boubou') || normalizedType.includes('agbada') || normalizedType.includes('robe');
-  const isGown = normalizedType.includes('gown') || normalizedType.includes('maxi') || normalizedType.includes('evening');
-  const isSkirt = normalizedType.includes('skirt') || normalizedType.includes('two piece') || normalizedType.includes('top &');
+  const isSuit = normalizedType.includes('suit') || normalizedType.includes('blazer') || normalizedType.includes('jacket') || normalizedType.includes('tuxedo') || normalizedType.includes('senator');
+  const isKaftan = normalizedType.includes('kaftan') || normalizedType.includes('boubou') || normalizedType.includes('agbada') || normalizedType.includes('robe') || normalizedType.includes('smock') || normalizedType.includes('fugu');
+  const isGown = normalizedType.includes('gown') || normalizedType.includes('maxi') || normalizedType.includes('evening') || normalizedType.includes('wedding') || normalizedType.includes('ball');
+  const isSkirt = normalizedType.includes('skirt') || normalizedType.includes('two piece') || normalizedType.includes('top &') || normalizedType.includes('slit') || normalizedType.includes('kaba');
 
   return (
     <div className="relative w-full h-full flex items-center justify-center select-none">
       <svg
         viewBox="0 0 160 300"
-        className="w-full h-full max-h-[300px] drop-shadow-md transition-all duration-300"
+        className="w-full h-full max-h-[290px] drop-shadow-md transition-all duration-300"
       >
         <defs>
           {/* Subtle Ambient Gradients */}
@@ -90,12 +107,10 @@ const ModernHumanCroquis: React.FC<HumanCroquisProps> = ({
           <path d="M68 53 Q80 57 92 53" className="stroke-slate-300 dark:stroke-slate-600 stroke-[1] fill-none" />
 
           {/* Torso Silhouette (Bust, Waist, Hips) */}
-          {/* Left Body Side Contour */}
           <path
             d="M60 56 Q52 75 58 92 Q62 108 59 122 Q54 138 52 165 L56 220 L58 280 M58 220 L60 280"
             className="stroke-slate-400 dark:stroke-slate-500 stroke-[1.2] fill-none"
           />
-          {/* Right Body Side Contour */}
           <path
             d="M100 56 Q108 75 102 92 Q98 108 101 122 Q106 138 108 165 L104 220 L102 280 M102 220 L100 280"
             className="stroke-slate-400 dark:stroke-slate-500 stroke-[1.2] fill-none"
@@ -110,9 +125,7 @@ const ModernHumanCroquis: React.FC<HumanCroquisProps> = ({
           )}
 
           {/* Arms Pose */}
-          {/* Left Arm */}
           <path d="M59 56 Q48 90 44 135 L42 170" className="stroke-slate-400 dark:stroke-slate-500 stroke-[1.2] fill-none" />
-          {/* Right Arm */}
           <path d="M101 56 Q112 90 116 135 L118 170" className="stroke-slate-400 dark:stroke-slate-500 stroke-[1.2] fill-none" />
           {/* Hands */}
           <circle cx="41.5" cy="173" r="2.5" className="fill-slate-400 dark:fill-slate-500" />
@@ -314,39 +327,39 @@ export function calculateFabricYardage(
   let baseInches = 0;
   let liningRatio = 0.8;
   let interfacingYards = 0.5;
-  let typeLabel = 'Straight Dress';
+  let typeLabel = garmentType || 'Straight Dress';
 
-  if (type.includes('gown') || type.includes('evening') || type.includes('maxi') || type.includes('ball')) {
+  if (type.includes('gown') || type.includes('evening') || type.includes('maxi') || type.includes('ball') || type.includes('wedding')) {
     baseInches = baseLength * 2.4 + 16;
     liningRatio = 1.0;
     interfacingYards = 0.75;
     typeLabel = 'Evening / Flared Gown';
-  } else if (type.includes('kaftan') || type.includes('boubou') || type.includes('agbada') || type.includes('robe')) {
+  } else if (type.includes('kaftan') || type.includes('boubou') || type.includes('agbada') || type.includes('robe') || type.includes('smock') || type.includes('fugu')) {
     baseInches = baseLength * 2.2 + sleeveLen + 10;
     liningRatio = 0.5;
     interfacingYards = 0.5;
     typeLabel = 'Kaftan / Boubou / Agbada';
-  } else if (type.includes('suit') || type.includes('blazer') || type.includes('jacket') || type.includes('tuxedo')) {
+  } else if (type.includes('suit') || type.includes('blazer') || type.includes('jacket') || type.includes('tuxedo') || type.includes('senator')) {
     const trouserLen = baseLength > 30 ? baseLength : 40;
     baseInches = 30 + trouserLen + sleeveLen + 14;
     liningRatio = 1.0;
     interfacingYards = 1.25;
-    typeLabel = 'Tailored Suit & Blazer';
-  } else if (type.includes('skirt') || type.includes('two piece') || type.includes('top &')) {
+    typeLabel = 'Tailored Suit / Senator Wear';
+  } else if (type.includes('skirt') || type.includes('two piece') || type.includes('top &') || type.includes('slit') || type.includes('kaba')) {
     baseInches = baseLength * 1.6 + 14;
     liningRatio = 0.8;
     interfacingYards = 0.5;
-    typeLabel = 'Skirt & Blouse';
-  } else if (type.includes('corset') || type.includes('pants') || type.includes('trouser')) {
+    typeLabel = 'Skirt & Blouse (Slit & Kaba)';
+  } else if (type.includes('corset') || type.includes('pants') || type.includes('trouser') || type.includes('jumpsuit')) {
     baseInches = baseLength * 1.5 + 12;
     liningRatio = 0.7;
     interfacingYards = 0.75;
-    typeLabel = 'Corset Top & Trousers';
+    typeLabel = 'Corset / Trousers / Jumpsuit';
   } else {
     baseInches = baseLength + sleeveLen + 10;
     liningRatio = 0.8;
     interfacingYards = 0.5;
-    typeLabel = 'Straight Dress';
+    typeLabel = garmentType || 'Custom Garment';
   }
 
   const totalInches = baseInches * widthMult;
@@ -378,22 +391,32 @@ export const SpecSheetModal: React.FC<SpecSheetModalProps> = ({
 }) => {
   const clientMeasures = extractClientMeasurementValues(client);
 
-  const defaultGarments: SpecSheetGarment[] = [
-    {
-      id: `g-${Date.now()}`,
-      garmentType: client.garmentTag || 'Straight Dress',
-      fabricBoltWidth: '60 Inches Width',
-      fabricPhotos: [],
-      notes: client.notes || '',
-      yardsNeeded: calculateFabricYardage(
-        client.garmentTag || 'Straight Dress',
-        '60 Inches Width',
-        clientMeasures
-      ).mainYards
+  const getInitialGarments = (): SpecSheetGarment[] => {
+    if (client.specSheetGarments && Array.isArray(client.specSheetGarments) && client.specSheetGarments.length > 0) {
+      return client.specSheetGarments;
     }
-  ];
+    const cached = storageService.getItemSync<SpecSheetGarment[]>(`tailor_spec_sheets_${client.id}`, null);
+    if (cached && Array.isArray(cached) && cached.length > 0) {
+      return cached;
+    }
+    return [
+      {
+        id: `g-${Date.now()}`,
+        garmentType: client.garmentTag || 'Straight Dress',
+        fabricBoltWidth: '60 Inches Width',
+        fabricPhotos: [],
+        notes: client.notes || '',
+        yardsNeeded: calculateFabricYardage(
+          client.garmentTag || 'Straight Dress',
+          '60 Inches Width',
+          clientMeasures
+        ).mainYards
+      }
+    ];
+  };
 
-  const [garments, setGarments] = useState<SpecSheetGarment[]>(defaultGarments);
+  const [garments, setGarments] = useState<SpecSheetGarment[]>(getInitialGarments);
+  const [activeTab, setActiveTab] = useState<number | 'all'>('all');
   const [savedNotice, setSavedNotice] = useState(false);
   const [isFullMeasurementsOpen, setIsFullMeasurementsOpen] = useState(false);
   const [croquisAngles, setCroquisAngles] = useState<{ [key: string]: 'front' | 'back' }>({});
@@ -409,8 +432,38 @@ export const SpecSheetModal: React.FC<SpecSheetModalProps> = ({
     'High Collar',
     'Off-Shoulder',
     'Side Slit',
-    'Horsehair Hemline'
+    'Horsehair Hemline',
+    'Interfacing Stabilized',
+    'French Seams'
   ];
+
+  // Overview Summary Totals across all garments in the order
+  const summaryTotals = useMemo(() => {
+    let totalMainYards = 0;
+    let totalLiningYards = 0;
+    let totalInterfacingYards = 0;
+    let totalPhotos = 0;
+
+    garments.forEach((g) => {
+      const autoYards = calculateFabricYardage(
+        g.garmentType || 'Straight Dress',
+        g.fabricBoltWidth || '60 Inches Width',
+        clientMeasures
+      );
+      const main = g.yardsNeeded !== undefined ? g.yardsNeeded : autoYards.mainYards;
+      totalMainYards += main;
+      totalLiningYards += (g.liningYards !== undefined ? g.liningYards : autoYards.liningYards);
+      totalInterfacingYards += (g.interfacingYards !== undefined ? g.interfacingYards : autoYards.interfacingYards);
+      totalPhotos += (g.fabricPhotos?.length || 0);
+    });
+
+    return {
+      totalMainYards: Math.round(totalMainYards * 100) / 100,
+      totalLiningYards: Math.round(totalLiningYards * 100) / 100,
+      totalInterfacingYards: Math.round(totalInterfacingYards * 100) / 100,
+      totalPhotos
+    };
+  }, [garments, clientMeasures]);
 
   const handleUpdateGarment = (index: number, updated: Partial<SpecSheetGarment>) => {
     setGarments((prev) => {
@@ -420,22 +473,28 @@ export const SpecSheetModal: React.FC<SpecSheetModalProps> = ({
     });
   };
 
-  const handleAddGarment = () => {
+  const handleAddGarment = (initialStyle: string = '') => {
+    const styleName = initialStyle.trim() || 'Straight Dress';
     const defaultYards = calculateFabricYardage(
-      'Straight Dress',
+      styleName,
       '60 Inches Width',
       clientMeasures
     ).mainYards;
 
     const newG: SpecSheetGarment = {
-      id: `g-${Date.now()}`,
-      garmentType: 'Straight Dress',
+      id: `g-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      garmentType: styleName,
       fabricBoltWidth: '60 Inches Width',
       fabricPhotos: [],
       notes: '',
       yardsNeeded: defaultYards
     };
-    setGarments((prev) => [...prev, newG]);
+    setGarments((prev) => {
+      const updated = [...prev, newG];
+      // Switch active tab to the newly added garment
+      setActiveTab(updated.length - 1);
+      return updated;
+    });
   };
 
   const handleAdjustYards = (index: number, delta: number, currentAutoYards: number) => {
@@ -450,7 +509,15 @@ export const SpecSheetModal: React.FC<SpecSheetModalProps> = ({
 
   const handleRemoveGarment = (index: number) => {
     if (garments.length <= 1) return;
-    setGarments((prev) => prev.filter((_, i) => i !== index));
+    setGarments((prev) => {
+      const updated = prev.filter((_, i) => i !== index);
+      if (typeof activeTab === 'number') {
+        if (activeTab >= updated.length) {
+          setActiveTab(Math.max(0, updated.length - 1));
+        }
+      }
+      return updated;
+    });
   };
 
   const handleAddFabricPhoto = (index: number, e: React.ChangeEvent<HTMLInputElement>) => {
@@ -499,6 +566,7 @@ export const SpecSheetModal: React.FC<SpecSheetModalProps> = ({
   };
 
   const handleConfirm = () => {
+    storageService.setItem(`tailor_spec_sheets_${client.id}`, garments);
     if (onSaveSpecSheet) {
       onSaveSpecSheet(client.id, garments);
     }
@@ -509,31 +577,31 @@ export const SpecSheetModal: React.FC<SpecSheetModalProps> = ({
     }, 800);
   };
 
-  const rawBust = client.measurements?.bustOrChest || client.measurements?.bust || client.measurements?.chest;
-  const rawLength = client.measurements?.fullLength;
-
-  const bustVal = rawBust && rawBust !== '0.0' && rawBust !== '0' ? `${rawBust}"` : 'Not recorded';
-  const lengthVal = rawLength && rawLength !== '0.0' && rawLength !== '0' ? `${rawLength}"` : 'Not recorded';
+  const displayedGarments = activeTab === 'all'
+    ? garments.map((g, idx) => ({ garment: g, originalIndex: idx }))
+    : garments[activeTab]
+    ? [{ garment: garments[activeTab], originalIndex: activeTab }]
+    : garments.map((g, idx) => ({ garment: g, originalIndex: idx }));
 
   return (
     <div className="fixed inset-0 z-[80] bg-[#EDF4F1] dark:bg-[#061E1B] overflow-y-auto flex flex-col font-['Plus_Jakarta_Sans',sans-serif] animate-fade-in">
       
       {/* Sticky Top Header Bar */}
-      <div className="sticky top-0 z-30 bg-[#EDF4F1]/95 dark:bg-[#061E1B]/95 backdrop-blur-md border-b border-slate-200 dark:border-white/10 px-4 sm:px-6 pt-[max(2.5rem,env(safe-area-inset-top))] sm:pt-4 pb-3.5 flex items-center justify-between shadow-xs">
+      <div className="sticky top-0 z-30 bg-[#EDF4F1]/95 dark:bg-[#061E1B]/95 backdrop-blur-md border-b border-slate-200 dark:border-white/10 px-2.5 sm:px-6 pt-[max(1.5rem,env(safe-area-inset-top))] sm:pt-4 pb-3 flex items-center justify-between gap-2 shadow-xs">
         <button
           type="button"
           onClick={onClose}
-          className="flex items-center gap-1.5 text-[#0D3B36] dark:text-[#DCA134] font-['Outfit'] font-black text-sm transition-transform active:scale-95 py-1.5 px-4 rounded-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-xs cursor-pointer"
+          className="flex items-center gap-1 text-[#0D3B36] dark:text-[#DCA134] font-['Outfit'] font-black text-xs sm:text-sm transition-transform active:scale-95 py-1.5 px-3 sm:px-4 rounded-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-xs cursor-pointer shrink-0"
         >
-          <ArrowLeft className="w-4 h-4 stroke-[3]" />
+          <ArrowLeft className="w-3.5 h-3.5 sm:w-4 sm:h-4 stroke-[3]" />
           <span>Back</span>
         </button>
 
-        <div className="text-center space-y-0.5">
-          <h1 className="font-['Outfit'] font-black text-lg sm:text-xl text-[#0D3B36] dark:text-[#DCA134] tracking-tight uppercase">
+        <div className="text-center space-y-0.5 min-w-0 flex-1 px-1">
+          <h1 className="font-['Outfit'] font-black text-xs xs:text-sm sm:text-xl text-[#0D3B36] dark:text-[#DCA134] tracking-tight uppercase truncate">
             Atelier Spec Sheet
           </h1>
-          <p className="text-[11px] font-bold text-slate-500 dark:text-slate-400">
+          <p className="text-[10px] sm:text-[11px] font-bold text-slate-500 dark:text-slate-400 truncate">
             Client: <span className="font-extrabold text-[#0D3B36] dark:text-slate-200">{client.name}</span>
           </p>
         </div>
@@ -541,41 +609,175 @@ export const SpecSheetModal: React.FC<SpecSheetModalProps> = ({
         <button
           type="button"
           onClick={handleConfirm}
-          className="px-6 py-2 rounded-full bg-[#0D3B36] dark:bg-amber-400 hover:bg-[#082824] dark:hover:bg-amber-300 text-white dark:text-[#0D3B36] font-['Outfit'] font-black text-sm shadow-md transition-all active:scale-95 cursor-pointer uppercase tracking-wider"
+          className="px-3 sm:px-6 py-1.5 sm:py-2 rounded-full bg-[#0D3B36] dark:bg-amber-400 hover:bg-[#082824] dark:hover:bg-amber-300 text-white dark:text-[#0D3B36] font-['Outfit'] font-black text-xs sm:text-sm shadow-md transition-all active:scale-95 cursor-pointer uppercase tracking-wider shrink-0"
         >
-          Confirm
+          <span className="hidden xs:inline">Confirm & Save</span>
+          <span className="xs:hidden">Save</span>
         </button>
       </div>
 
       {savedNotice && (
-        <div className="mx-4 mt-3 p-3.5 rounded-2xl bg-[#0D3B36] text-white font-bold text-xs flex items-center justify-center gap-2 shadow-2xl border border-emerald-400/40 animate-bounce">
-          <Check className="w-4 h-4 text-emerald-400" />
-          <span>Spec sheet order confirmed and saved to atelier records!</span>
+        <div className="mx-3 sm:mx-4 mt-2.5 p-3 rounded-2xl bg-[#0D3B36] text-white font-bold text-xs flex items-center justify-center gap-2 shadow-2xl border border-emerald-400/40 animate-bounce text-center">
+          <Check className="w-4 h-4 text-emerald-400 shrink-0" />
+          <span>All garment spec details saved to client order records!</span>
         </div>
       )}
 
       {/* Main Content Area */}
-      <div className="max-w-xl w-full mx-auto p-4 sm:p-6 space-y-6 pb-24">
+      <div className="max-w-2xl w-full mx-auto p-3 sm:p-6 space-y-4 sm:space-y-5 pb-24">
         
-        {garments.map((g, idx) => {
+        {/* =====================================================
+            1. MULTI-GARMENT OVERVIEW SUMMARY DASHBOARD
+           ===================================================== */}
+        <div className="rounded-[30px] p-5 sm:p-6 bg-gradient-to-br from-[#0D3B36] via-[#092825] to-[#061E1B] text-white shadow-xl border border-amber-400/30 space-y-4 relative overflow-hidden">
+          <div className="flex items-center justify-between flex-wrap gap-2 border-b border-emerald-500/20 pb-3">
+            <div className="flex items-center gap-2.5">
+              <div className="w-9 h-9 rounded-2xl bg-amber-400/20 text-amber-300 border border-amber-400/40 flex items-center justify-center">
+                <Scissors className="w-5 h-5" />
+              </div>
+              <div>
+                <h2 className="font-['Outfit'] font-black text-sm sm:text-base text-amber-300 uppercase tracking-wide">
+                  Order Production Overview
+                </h2>
+                <p className="text-[11px] font-semibold text-emerald-200/80">
+                  Total of <strong className="text-white">{garments.length} Garment{garments.length > 1 ? 's' : ''}</strong> in this client order
+                </p>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setIsFullMeasurementsOpen(true)}
+              className="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-amber-300 hover:text-white font-extrabold text-[11px] border border-white/10 flex items-center gap-1.5 transition-all cursor-pointer shadow-xs"
+            >
+              <Ruler className="w-3.5 h-3.5" />
+              <span>Full Measurements</span>
+            </button>
+          </div>
+
+          {/* Quick Metrics Grid */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-center">
+            <div className="p-3 rounded-2xl bg-black/30 border border-emerald-500/20 flex flex-col justify-between">
+              <span className="text-[10px] font-extrabold text-emerald-200/80 uppercase">Total Garments</span>
+              <span className="font-['Outfit'] font-black text-xl text-amber-300 mt-1">{garments.length}</span>
+            </div>
+
+            <div className="p-3 rounded-2xl bg-black/30 border border-emerald-500/20 flex flex-col justify-between">
+              <span className="text-[10px] font-extrabold text-emerald-200/80 uppercase">Main Fabric</span>
+              <span className="font-['Outfit'] font-black text-xl text-white mt-1">{summaryTotals.totalMainYards} <span className="text-xs text-amber-300 font-bold">Yds</span></span>
+            </div>
+
+            <div className="p-3 rounded-2xl bg-black/30 border border-emerald-500/20 flex flex-col justify-between">
+              <span className="text-[10px] font-extrabold text-emerald-200/80 uppercase">Est. Lining</span>
+              <span className="font-['Outfit'] font-black text-xl text-emerald-300 mt-1">{summaryTotals.totalLiningYards} <span className="text-xs text-emerald-200 font-bold">Yds</span></span>
+            </div>
+
+            <div className="p-3 rounded-2xl bg-black/30 border border-emerald-500/20 flex flex-col justify-between">
+              <span className="text-[10px] font-extrabold text-emerald-200/80 uppercase">Fabric Swatches</span>
+              <span className="font-['Outfit'] font-black text-xl text-indigo-300 mt-1">{summaryTotals.totalPhotos}</span>
+            </div>
+          </div>
+
+          {/* Real Client Measurement Key Metrics Pill */}
+          <div className="bg-[#041916]/80 rounded-2xl p-2.5 border border-emerald-500/20 flex items-center justify-between text-xs flex-wrap gap-2">
+            <div className="flex items-center gap-2 text-[11px] font-semibold text-emerald-100 flex-wrap">
+              <span>Length: <strong className="text-amber-300">{clientMeasures.rawLengthStr || '44" (Std)'}</strong></span>
+              <span>•</span>
+              <span>Bust: <strong className="text-amber-300">{clientMeasures.rawBustStr || '—'}</strong></span>
+              <span>•</span>
+              <span>Waist: <strong className="text-amber-300">{clientMeasures.rawWaistStr || '—'}</strong></span>
+              <span>•</span>
+              <span>Hips: <strong className="text-amber-300">{clientMeasures.rawHipsStr || '—'}</strong></span>
+            </div>
+            {clientMeasures.hasRealData ? (
+              <span className="text-[10px] font-black text-emerald-400 flex items-center gap-1">
+                <CheckCircle2 className="w-3 h-3" /> Live CAD Data
+              </span>
+            ) : (
+              <span className="text-[10px] font-black text-amber-300 flex items-center gap-1">
+                <AlertCircle className="w-3 h-3" /> Baseline Estimates
+              </span>
+            )}
+          </div>
+        </div>
+
+        {/* =====================================================
+            2. GARMENT TABS NAVIGATION BAR
+           ===================================================== */}
+        <div className="flex items-center justify-between gap-2 border-b border-slate-200 dark:border-slate-800 pb-2 overflow-x-auto custom-scrollbar">
+          <div className="flex items-center gap-1.5 shrink-0">
+            <button
+              type="button"
+              onClick={() => setActiveTab('all')}
+              className={`px-3.5 py-2 rounded-2xl text-xs font-['Outfit'] font-black transition-all cursor-pointer shrink-0 ${
+                activeTab === 'all'
+                  ? 'bg-[#0D3B36] text-amber-300 dark:bg-amber-400 dark:text-[#0D3B36] shadow-sm'
+                  : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700'
+              }`}
+            >
+              All Garments ({garments.length})
+            </button>
+
+            {garments.map((g, idx) => (
+              <button
+                key={g.id || idx}
+                type="button"
+                onClick={() => setActiveTab(idx)}
+                className={`px-3.5 py-2 rounded-2xl text-xs font-['Outfit'] font-black transition-all cursor-pointer shrink-0 flex items-center gap-1.5 ${
+                  activeTab === idx
+                    ? 'bg-[#0D3B36] text-amber-300 dark:bg-amber-400 dark:text-[#0D3B36] shadow-sm'
+                    : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700'
+                }`}
+              >
+                <span>#{idx + 1}: {g.garmentType || 'Garment'}</span>
+                {g.fabricPhotos && g.fabricPhotos.length > 0 && (
+                  <span className="w-2 h-2 rounded-full bg-emerald-500" title="Has fabric photos" />
+                )}
+              </button>
+            ))}
+          </div>
+
+          <button
+            type="button"
+            onClick={handleAddGarment}
+            className="px-3 py-2 rounded-2xl bg-white dark:bg-slate-800 border border-dashed border-[#0D3B36]/50 dark:border-amber-400/50 hover:bg-[#EBF5F0] dark:hover:bg-slate-700 text-[#0D3B36] dark:text-amber-300 font-['Outfit'] font-black text-xs flex items-center gap-1 transition-all cursor-pointer shrink-0"
+            title="Add Garment Spec"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            <span>Add Garment</span>
+          </button>
+        </div>
+
+        {/* =====================================================
+            3. GARMENT TECHNICAL SPEC CARDS
+           ===================================================== */}
+        {displayedGarments.map(({ garment: g, originalIndex: idx }) => {
           const angle = croquisAngles[g.id] || 'front';
+          const autoYardage = calculateFabricYardage(
+            g.garmentType || 'Straight Dress',
+            g.fabricBoltWidth || '60 Inches Width',
+            clientMeasures
+          );
+          const currentYards = g.yardsNeeded !== undefined ? g.yardsNeeded : autoYardage.mainYards;
 
           return (
             <div
-              key={g.id}
+              key={g.id || idx}
               className="bg-white/90 dark:bg-[#092825]/90 backdrop-blur-md rounded-[36px] p-5 sm:p-6 border border-white dark:border-white/10 shadow-xl space-y-5 relative"
             >
               {/* Card Header Badge */}
               <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3.5">
                 <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-2xl bg-[#0D3B36] text-amber-300 font-['Outfit'] font-black text-xs flex items-center justify-center shadow-xs">
+                  <div className="w-9 h-9 rounded-2xl bg-[#0D3B36] dark:bg-amber-400 text-amber-300 dark:text-[#0D3B36] font-['Outfit'] font-black text-sm flex items-center justify-center shadow-xs">
                     {idx + 1}
                   </div>
                   <div>
                     <h3 className="font-['Outfit'] font-black text-slate-900 dark:text-slate-100 text-base uppercase">
                       Garment #{idx + 1}: {g.garmentType || 'Straight Dress'}
                     </h3>
-                    <p className="text-[10px] font-bold text-slate-400 uppercase">Production Technical Blueprint</p>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase">
+                      Technical Spec & Fabric Requirement
+                    </p>
                   </div>
                 </div>
 
@@ -584,7 +786,7 @@ export const SpecSheetModal: React.FC<SpecSheetModalProps> = ({
                     type="button"
                     onClick={() => handleRemoveGarment(idx)}
                     className="p-2 text-rose-500 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/60 rounded-xl transition-colors cursor-pointer"
-                    title="Remove Garment"
+                    title="Remove Garment from Order"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
@@ -599,7 +801,7 @@ export const SpecSheetModal: React.FC<SpecSheetModalProps> = ({
                   <div className="flex items-center gap-1.5">
                     <Sparkles className="w-3.5 h-3.5 text-[#0D3B36] dark:text-amber-300" />
                     <span className="text-[11px] font-black text-[#0D3B36] dark:text-amber-300 uppercase tracking-wider">
-                      VISUAL CROQUIS SILHOUETTE
+                      CAD VISUAL CROQUIS BLUEPRINT
                     </span>
                   </div>
 
@@ -622,7 +824,7 @@ export const SpecSheetModal: React.FC<SpecSheetModalProps> = ({
                       className="px-2.5 py-1 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-[#0D3B36] dark:text-slate-200 text-[10px] font-bold shadow-2xs hover:bg-slate-50 transition-all cursor-pointer flex items-center gap-1"
                     >
                       <Eye className="w-3 h-3" />
-                      <span>{angle === 'front' ? 'Back' : 'Front'}</span>
+                      <span>{angle === 'front' ? 'Back View' : 'Front View'}</span>
                     </button>
                   </div>
                 </div>
@@ -644,23 +846,73 @@ export const SpecSheetModal: React.FC<SpecSheetModalProps> = ({
                 </div>
               </div>
 
-              {/* Garment Type Selector Input */}
-              <div className="space-y-1.5">
-                <label className="block text-xs font-black text-slate-700 dark:text-slate-300 uppercase tracking-wider">
-                  GARMENT TYPE & CATEGORY
-                </label>
-                <select
-                  value={g.garmentType || 'Straight Dress'}
-                  onChange={(e) => handleUpdateGarment(idx, { garmentType: e.target.value })}
-                  className="w-full p-3.5 rounded-2xl bg-[#EBF5F0]/60 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm font-extrabold text-[#0D3B36] dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-[#0D3B36] dark:focus:ring-amber-400 cursor-pointer"
-                >
-                  <option value="Straight Dress">Straight Dress (Fitted Sheath)</option>
-                  <option value="Evening Gown">Evening Gown (Flared Ball Gown)</option>
-                  <option value="Suit & Blazer">Tailored Suit & Blazer</option>
-                  <option value="Kaftan & Boubou">Kaftan / Boubou / Agbada</option>
-                  <option value="Skirt & Blouse">Skirt & Blouse (Two Piece)</option>
-                  <option value="Corset & Pants">Corset Top & Tailored Trousers</option>
-                </select>
+              {/* Garment Style & Category Input with Direct Custom Typing & Presets */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="block text-xs font-black text-slate-700 dark:text-slate-300 uppercase tracking-wider">
+                    GARMENT TYPE / BESPOKE STYLE TO DESIGN <span className="text-rose-500">*</span>
+                  </label>
+                  <span className="text-[10px] text-slate-400 dark:text-slate-500 font-semibold hidden xs:inline">
+                    Type custom design or tap presets
+                  </span>
+                </div>
+
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={g.garmentType || ''}
+                    onChange={(e) => {
+                      const newType = e.target.value;
+                      const newAutoYards = calculateFabricYardage(
+                        newType,
+                        g.fabricBoltWidth || '60 Inches Width',
+                        clientMeasures
+                      ).mainYards;
+                      handleUpdateGarment(idx, {
+                        garmentType: newType,
+                        yardsNeeded: g.yardsNeeded === undefined || g.yardsNeeded === autoYardage.mainYards ? newAutoYards : g.yardsNeeded
+                      });
+                    }}
+                    placeholder="Enter style (e.g. Kente Corset Gown, Senator Wear, Agbada...)"
+                    className="w-full px-3.5 sm:px-4 py-2.5 sm:py-3 rounded-2xl bg-[#EBF5F0]/70 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs sm:text-sm font-black text-[#0D3B36] dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0D3B36] dark:focus:ring-amber-400 shadow-2xs"
+                  />
+                </div>
+
+                {/* Popular Style Selection Chips */}
+                <div className="space-y-1">
+                  <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">
+                    Quick Style Presets:
+                  </span>
+                  <div className="flex flex-wrap gap-1.5">
+                    {POPULAR_GARMENT_STYLES.map((style) => {
+                      const isSelected = (g.garmentType || '').toLowerCase() === style.toLowerCase();
+                      return (
+                        <button
+                          key={style}
+                          type="button"
+                          onClick={() => {
+                            const newAutoYards = calculateFabricYardage(
+                              style,
+                              g.fabricBoltWidth || '60 Inches Width',
+                              clientMeasures
+                            ).mainYards;
+                            handleUpdateGarment(idx, {
+                              garmentType: style,
+                              yardsNeeded: g.yardsNeeded === undefined || g.yardsNeeded === autoYardage.mainYards ? newAutoYards : g.yardsNeeded
+                            });
+                          }}
+                          className={`px-2.5 py-1 rounded-xl text-[10px] sm:text-[11px] font-extrabold border transition-all cursor-pointer ${
+                            isSelected
+                              ? 'bg-[#0D3B36] text-amber-300 border-[#0D3B36] dark:bg-amber-400 dark:text-[#0D3B36] shadow-xs scale-105'
+                              : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200/80 dark:border-slate-700 hover:bg-[#EBF5F0]'
+                          }`}
+                        >
+                          {isSelected ? '✓ ' : '+ '}{style}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
               </div>
 
               {/* Fabric Bolt Width Selector */}
@@ -728,139 +980,104 @@ export const SpecSheetModal: React.FC<SpecSheetModalProps> = ({
               </div>
 
               {/* Automated Fabric Yardage & Atelier Material Requirement Engine */}
-              {(() => {
-                const autoYardage = calculateFabricYardage(
-                  g.garmentType || 'Straight Dress',
-                  g.fabricBoltWidth || '60 Inches Width',
-                  clientMeasures
-                );
-                const currentYards = g.yardsNeeded !== undefined ? g.yardsNeeded : autoYardage.mainYards;
-
-                return (
-                  <div className="rounded-[28px] p-4 sm:p-5 space-y-3.5 bg-gradient-to-br from-[#0D3B36] via-[#092825] to-[#061E1B] text-white shadow-xl border border-amber-400/40 relative overflow-hidden">
-                    {/* Header Title & Status Badge */}
-                    <div className="flex items-center justify-between flex-wrap gap-2 border-b border-emerald-500/20 pb-3">
-                      <div className="flex items-center gap-2">
-                        <div className="p-1.5 rounded-xl bg-amber-400/20 text-amber-300 border border-amber-400/40">
-                          <Calculator className="w-4 h-4" />
-                        </div>
-                        <div>
-                          <span className="text-xs font-black text-amber-300 tracking-wider uppercase block leading-none">
-                            FABRIC YARDAGE & MATERIAL ENGINE
-                          </span>
-                          <span className="text-[10px] text-emerald-200/70 font-semibold block mt-0.5">
-                            {autoYardage.formulaNote}
-                          </span>
-                        </div>
-                      </div>
-
-                      {clientMeasures.hasRealData ? (
-                        <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/25 text-emerald-300 border border-emerald-400/40 text-[10px] font-black uppercase flex items-center gap-1">
-                          <CheckCircle2 className="w-3 h-3 text-emerald-400" />
-                          <span>Real Client Measurements</span>
-                        </span>
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={() => setIsFullMeasurementsOpen(true)}
-                          className="px-2.5 py-0.5 rounded-full bg-amber-500/25 hover:bg-amber-500/40 text-amber-200 border border-amber-400/40 text-[10px] font-black uppercase flex items-center gap-1 transition-all cursor-pointer"
-                        >
-                          <AlertCircle className="w-3 h-3 text-amber-300" />
-                          <span>+ Record Measurements</span>
-                        </button>
-                      )}
+              <div className="rounded-[28px] p-4 sm:p-5 space-y-3.5 bg-gradient-to-br from-[#0D3B36] via-[#092825] to-[#061E1B] text-white shadow-xl border border-amber-400/40 relative overflow-hidden">
+                {/* Header Title & Status Badge */}
+                <div className="flex items-center justify-between flex-wrap gap-2 border-b border-emerald-500/20 pb-3">
+                  <div className="flex items-center gap-2">
+                    <div className="p-1.5 rounded-xl bg-amber-400/20 text-amber-300 border border-amber-400/40">
+                      <Calculator className="w-4 h-4" />
                     </div>
-
-                    {/* Real Measurement Metrics Row */}
-                    <div className="bg-[#041916]/80 rounded-2xl p-2.5 border border-emerald-500/20 flex items-center justify-between text-xs flex-wrap gap-2">
-                      <div className="flex items-center gap-2.5 text-[11px] font-semibold text-emerald-100 flex-wrap">
-                        <span>Length: <strong className="text-amber-300">{clientMeasures.rawLengthStr || '44" (Std)'}</strong></span>
-                        <span>•</span>
-                        <span>Bust: <strong className="text-amber-300">{clientMeasures.rawBustStr || '—'}</strong></span>
-                        <span>•</span>
-                        <span>Hips: <strong className="text-amber-300">{clientMeasures.rawHipsStr || '—'}</strong></span>
-                        {clientMeasures.rawSleeveStr && (
-                          <>
-                            <span>•</span>
-                            <span>Sleeve: <strong className="text-amber-300">{clientMeasures.rawSleeveStr}</strong></span>
-                          </>
-                        )}
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => setIsFullMeasurementsOpen(true)}
-                        className="text-[10px] font-black text-amber-300 hover:text-white underline transition-colors cursor-pointer"
-                      >
-                        View All
-                      </button>
-                    </div>
-
-                    {/* Yardage Display & Quick Adjustment Controls */}
-                    <div className="py-2 flex flex-col sm:flex-row items-center justify-between gap-3 bg-white/5 rounded-2xl p-3.5 border border-white/10">
-                      <div className="text-center sm:text-left space-y-0.5">
-                        <span className="text-[10px] font-extrabold text-amber-200/80 uppercase tracking-widest block">
-                          ESTIMATED MAIN FABRIC REQUIRED
-                        </span>
-                        <div className="flex items-baseline gap-2 justify-center sm:justify-start">
-                          <span className="font-['Outfit'] font-black text-3xl sm:text-4xl text-amber-300 drop-shadow-md">
-                            {currentYards}
-                          </span>
-                          <span className="font-black text-sm text-white uppercase tracking-wider">
-                            Yards ({g.fabricBoltWidth || '60" Bolt'})
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* Adjuster Buttons */}
-                      <div className="flex items-center gap-1.5 shrink-0">
-                        <button
-                          type="button"
-                          onClick={() => handleAdjustYards(idx, -0.25, autoYardage.mainYards)}
-                          className="w-8 h-8 rounded-xl bg-white/10 hover:bg-white/20 text-white font-black flex items-center justify-center border border-white/10 active:scale-95 transition-all cursor-pointer"
-                          title="Decrease by 0.25 Yards"
-                        >
-                          <Minus className="w-3.5 h-3.5" />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleAdjustYards(idx, 0.25, autoYardage.mainYards)}
-                          className="w-8 h-8 rounded-xl bg-white/10 hover:bg-white/20 text-white font-black flex items-center justify-center border border-white/10 active:scale-95 transition-all cursor-pointer"
-                          title="Increase by 0.25 Yards"
-                        >
-                          <Plus className="w-3.5 h-3.5" />
-                        </button>
-                        {g.yardsNeeded !== undefined && g.yardsNeeded !== autoYardage.mainYards && (
-                          <button
-                            type="button"
-                            onClick={() => handleResetYards(idx, autoYardage.mainYards)}
-                            className="px-2 py-1.5 rounded-xl bg-amber-400/20 hover:bg-amber-400/30 text-amber-300 font-bold text-[10px] border border-amber-400/40 flex items-center gap-1 transition-all cursor-pointer ml-1"
-                            title="Reset to Auto Yardage"
-                          >
-                            <RefreshCw className="w-3 h-3" />
-                            <span>Reset</span>
-                          </button>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Atelier Material Requirement Breakdown Cards */}
-                    <div className="grid grid-cols-3 gap-2 pt-1 text-center">
-                      <div className="p-2 rounded-xl bg-black/20 border border-emerald-500/20">
-                        <span className="text-[9px] font-extrabold text-emerald-200 uppercase block">Main Fabric</span>
-                        <span className="font-['Outfit'] font-black text-sm text-amber-300">{currentYards} Yds</span>
-                      </div>
-                      <div className="p-2 rounded-xl bg-black/20 border border-emerald-500/20">
-                        <span className="text-[9px] font-extrabold text-emerald-200 uppercase block">Est. Lining</span>
-                        <span className="font-['Outfit'] font-black text-sm text-emerald-300">{autoYardage.liningYards} Yds</span>
-                      </div>
-                      <div className="p-2 rounded-xl bg-black/20 border border-emerald-500/20">
-                        <span className="text-[9px] font-extrabold text-emerald-200 uppercase block">Interfacing</span>
-                        <span className="font-['Outfit'] font-black text-sm text-indigo-300">{autoYardage.interfacingYards} Yds</span>
-                      </div>
+                    <div>
+                      <span className="text-xs font-black text-amber-300 tracking-wider uppercase block leading-none">
+                        FABRIC YARDAGE & MATERIAL ENGINE
+                      </span>
+                      <span className="text-[10px] text-emerald-200/70 font-semibold block mt-0.5">
+                        {autoYardage.formulaNote}
+                      </span>
                     </div>
                   </div>
-                );
-              })()}
+
+                  {clientMeasures.hasRealData ? (
+                    <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/25 text-emerald-300 border border-emerald-400/40 text-[10px] font-black uppercase flex items-center gap-1">
+                      <CheckCircle2 className="w-3 h-3 text-emerald-400" />
+                      <span>Real Client Measurements</span>
+                    </span>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setIsFullMeasurementsOpen(true)}
+                      className="px-2.5 py-0.5 rounded-full bg-amber-500/25 hover:bg-amber-500/40 text-amber-200 border border-amber-400/40 text-[10px] font-black uppercase flex items-center gap-1 transition-all cursor-pointer"
+                    >
+                      <AlertCircle className="w-3 h-3 text-amber-300" />
+                      <span>+ Record Measurements</span>
+                    </button>
+                  )}
+                </div>
+
+                {/* Yardage Display & Quick Adjustment Controls */}
+                <div className="py-2 flex flex-col sm:flex-row items-center justify-between gap-3 bg-white/5 rounded-2xl p-3.5 border border-white/10">
+                  <div className="text-center sm:text-left space-y-0.5">
+                    <span className="text-[10px] font-extrabold text-amber-200/80 uppercase tracking-widest block">
+                      ESTIMATED MAIN FABRIC REQUIRED
+                    </span>
+                    <div className="flex items-baseline gap-2 justify-center sm:justify-start">
+                      <span className="font-['Outfit'] font-black text-3xl sm:text-4xl text-amber-300 drop-shadow-md">
+                        {currentYards}
+                      </span>
+                      <span className="font-black text-sm text-white uppercase tracking-wider">
+                        Yards ({g.fabricBoltWidth || '60" Bolt'})
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Adjuster Buttons */}
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => handleAdjustYards(idx, -0.25, autoYardage.mainYards)}
+                      className="w-8 h-8 rounded-xl bg-white/10 hover:bg-white/20 text-white font-black flex items-center justify-center border border-white/10 active:scale-95 transition-all cursor-pointer"
+                      title="Decrease by 0.25 Yards"
+                    >
+                      <Minus className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleAdjustYards(idx, 0.25, autoYardage.mainYards)}
+                      className="w-8 h-8 rounded-xl bg-white/10 hover:bg-white/20 text-white font-black flex items-center justify-center border border-white/10 active:scale-95 transition-all cursor-pointer"
+                      title="Increase by 0.25 Yards"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                    </button>
+                    {g.yardsNeeded !== undefined && g.yardsNeeded !== autoYardage.mainYards && (
+                      <button
+                        type="button"
+                        onClick={() => handleResetYards(idx, autoYardage.mainYards)}
+                        className="px-2 py-1.5 rounded-xl bg-amber-400/20 hover:bg-amber-400/30 text-amber-300 font-bold text-[10px] border border-amber-400/40 flex items-center gap-1 transition-all cursor-pointer ml-1"
+                        title="Reset to Auto Yardage"
+                      >
+                        <RefreshCw className="w-3 h-3" />
+                        <span>Reset</span>
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {/* Atelier Material Requirement Breakdown Cards */}
+                <div className="grid grid-cols-3 gap-2 pt-1 text-center">
+                  <div className="p-2 rounded-xl bg-black/20 border border-emerald-500/20">
+                    <span className="text-[9px] font-extrabold text-emerald-200 uppercase block">Main Fabric</span>
+                    <span className="font-['Outfit'] font-black text-sm text-amber-300">{currentYards} Yds</span>
+                  </div>
+                  <div className="p-2 rounded-xl bg-black/20 border border-emerald-500/20">
+                    <span className="text-[9px] font-extrabold text-emerald-200 uppercase block">Est. Lining</span>
+                    <span className="font-['Outfit'] font-black text-sm text-emerald-300">{autoYardage.liningYards} Yds</span>
+                  </div>
+                  <div className="p-2 rounded-xl bg-black/20 border border-emerald-500/20">
+                    <span className="text-[9px] font-extrabold text-emerald-200 uppercase block">Interfacing</span>
+                    <span className="font-['Outfit'] font-black text-sm text-indigo-300">{autoYardage.interfacingYards} Yds</span>
+                  </div>
+                </div>
+              </div>
 
               {/* Pattern Notes & Sewing Specs */}
               <div className="space-y-2">
@@ -916,10 +1133,10 @@ export const SpecSheetModal: React.FC<SpecSheetModalProps> = ({
         {/* Add Another Garment Button */}
         <button
           type="button"
-          onClick={handleAddGarment}
-          className="w-full py-4 rounded-3xl border-2 border-dashed border-[#0D3B36]/30 dark:border-slate-700 hover:border-[#0D3B36] bg-white/90 dark:bg-slate-800/80 font-['Outfit'] font-black text-[#0D3B36] dark:text-slate-100 text-sm flex items-center justify-center gap-2 shadow-xs transition-all active:scale-95 cursor-pointer uppercase tracking-wider"
+          onClick={() => handleAddGarment('')}
+          className="w-full py-3.5 sm:py-4 rounded-3xl border-2 border-dashed border-[#0D3B36]/30 dark:border-slate-700 hover:border-[#0D3B36] bg-white/90 dark:bg-slate-800/80 font-['Outfit'] font-black text-[#0D3B36] dark:text-slate-100 text-xs sm:text-sm flex items-center justify-center gap-2 shadow-xs transition-all active:scale-95 cursor-pointer uppercase tracking-wider"
         >
-          <Plus className="w-5 h-5 text-[#0D3B36] dark:text-amber-300" />
+          <Plus className="w-4 h-4 sm:w-5 sm:h-5 text-[#0D3B36] dark:text-amber-300" />
           <span>Add Another Garment Spec to Order</span>
         </button>
 

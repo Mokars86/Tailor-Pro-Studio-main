@@ -36,10 +36,11 @@ import {
 } from '../services/supabaseService';
 import { flushOfflineQueue, queueOfflineAction } from '../services/offlineSyncService';
 import { syncUserAccountsFromSupabase } from '../services/licenseService';
-import { parseCleanNumber, sanitizeClient, sanitizeTransaction, sanitizeDeposit } from '../utils/numeric';
+import { parseCleanNumber, sanitizeClient, sanitizeTransaction, sanitizeDeposit, isMockOrTestApprentice } from '../utils/numeric';
 
 const isMockId = (id?: string) =>
-  ['cli-1', 'cli-2', 'cli-3', 'cli-4', 'app-1', 'dep-1', 'dep-2', 'tx-1', 'tx-2', 'inv-1', 'inv-2', 'inv-3', 'run-1', 'run-2'].includes(id || '');
+  ['cli-1', 'cli-2', 'cli-3', 'cli-4', 'app-1', 'dep-1', 'dep-2', 'tx-1', 'tx-2', 'inv-1', 'inv-2', 'inv-3', 'run-1', 'run-2'].includes(id || '') ||
+  isMockOrTestApprentice(id);
 
 function loadInitialStudioSettings(): StudioSettings {
   try {
@@ -113,7 +114,11 @@ export const useDataStore = create<DataState>((set, get) => ({
   apprentices: (() => {
     try {
       const parsed = storageService.getItemSync<Apprentice[]>('tailor_apprentices', []);
-      return Array.isArray(parsed) ? parsed.filter((a) => a && !isMockId(a.id)) : [];
+      const clean = Array.isArray(parsed) ? parsed.filter((a) => a && !isMockOrTestApprentice(a)) : [];
+      if (Array.isArray(parsed) && clean.length !== parsed.length) {
+        storageService.setItem('tailor_apprentices', clean);
+      }
+      return clean;
     } catch {
       return [];
     }
@@ -173,10 +178,11 @@ export const useDataStore = create<DataState>((set, get) => ({
       }
 
       const storedApprentices = await storageService.getItem<Apprentice[]>('tailor_apprentices', []);
-      if (Array.isArray(storedApprentices) && storedApprentices.length > 0) {
-        const clean = storedApprentices.filter((a) => a && !isMockId(a.id));
-        if (clean.length >= get().apprentices.length) {
-          set({ apprentices: clean });
+      if (Array.isArray(storedApprentices)) {
+        const clean = storedApprentices.filter((a) => a && !isMockOrTestApprentice(a));
+        set({ apprentices: clean });
+        if (clean.length !== storedApprentices.length) {
+          storageService.setItem('tailor_apprentices', clean);
         }
       }
 
@@ -348,65 +354,76 @@ export const useDataStore = create<DataState>((set, get) => ({
         }
       }
 
-      // 4. Sync Apprentices & Users
-      const currentApprentices = get().apprentices.filter((a) => a && !isMockId(a.id));
-      const dbApprentices = await fetchApprenticesFromSupabase();
-      const dbUsers = await fetchUserAccountsFromSupabase();
-      let combinedApprentices: Apprentice[] = dbApprentices && dbApprentices.length > 0 
-        ? [...dbApprentices.filter((a) => !isMockId(a.id))] 
-        : [...currentApprentices];
+      // 4. Sync Apprentices
+      const currentMasterCode = (get().studioSettings.pairCode || '').trim().toUpperCase();
+      const currentStudioName = (get().studioSettings.studioName || '').trim().toLowerCase();
+      const currentOwnerName = (get().studioSettings.ownerName || '').trim().toLowerCase();
 
-      if (dbUsers) {
-        const apprenticeUsers = dbUsers.filter((u) => u.role && u.role.startsWith('Apprentice'));
-        for (const u of apprenticeUsers) {
-          const rawName = u.fullName && u.fullName.trim() ? u.fullName.trim() : u.email.split('@')[0];
-          const appName = rawName.charAt(0).toUpperCase() + rawName.slice(1);
-          const emailTag = u.email.split('@')[0].toLowerCase().replace(/[^a-zA-Z0-9]/g, '_');
-          const synthId = `app_${emailTag}`;
+      const currentApprentices = get().apprentices.filter((a) => a && !isMockOrTestApprentice(a));
+      const dbApprentices = await fetchApprenticesFromSupabase(currentMasterCode);
+      
+      const localAppMap = new Map<string, Apprentice>();
+      currentApprentices.forEach((a) => {
+        localAppMap.set(a.id, a);
+        localAppMap.set(a.name.toLowerCase(), a);
+      });
 
-          const exists = combinedApprentices.some(
-            (a) => a.id === synthId || a.name.toLowerCase() === appName.toLowerCase()
+      let combinedApprentices: Apprentice[] = [];
+
+      if (dbApprentices && dbApprentices.length > 0) {
+        // Filter out any mock/test and only include those belonging to this workshop
+        const validRemoteApprentices = dbApprentices.filter((remoteApp) => {
+          if (isMockOrTestApprentice(remoteApp)) return false;
+          const remoteCode = (remoteApp.workshopCode || '').trim().toUpperCase();
+          const remoteMentor = (remoteApp.mentor || '').trim().toLowerCase();
+          
+          // Match by workshop code, or studio/mentor name, or already tracked locally
+          const matchesWorkshop = Boolean(currentMasterCode && remoteCode && remoteCode === currentMasterCode);
+          const matchesMentor = Boolean(
+            (currentStudioName && remoteMentor.includes(currentStudioName)) ||
+            (currentOwnerName && remoteMentor.includes(currentOwnerName))
           );
+          const isKnownLocally = localAppMap.has(remoteApp.id) || localAppMap.has(remoteApp.name.toLowerCase());
 
-          if (!exists) {
-            const initials = appName.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2) || 'AT';
-            const synthRecord: Apprentice = {
-              id: synthId,
-              name: appName,
-              initials,
-              role: 'Apprentice Trainee',
-              mentor: get().studioSettings.ownerName || get().studioSettings.studioName || 'Master Atelier',
-              isLinked: true,
-              handshakeLocked: true,
-              hasCert: false,
-              hoursCompleted: 0,
-              totalRequiredHours: 120,
-              certifications: ['Pattern Drafting & Garment Construction'],
-              tasksCount: 0,
-              status: 'On Track',
-              specialty: 'Couture Assembly & Garment Construction'
+          return matchesWorkshop || matchesMentor || isKnownLocally;
+        });
+
+        // Merge Supabase apprentices with local progress data
+        combinedApprentices = validRemoteApprentices.map((remoteApp) => {
+          const local = localAppMap.get(remoteApp.id) || localAppMap.get(remoteApp.name.toLowerCase());
+          if (local) {
+            return {
+              ...remoteApp,
+              hoursCompleted: Math.max(remoteApp.hoursCompleted || 0, local.hoursCompleted || 0),
+              totalRequiredHours: local.totalRequiredHours || remoteApp.totalRequiredHours || 120,
+              certifications: (local.certifications && local.certifications.length > 0) ? local.certifications : remoteApp.certifications,
+              handshakeLocked: local.handshakeLocked !== undefined ? local.handshakeLocked : remoteApp.handshakeLocked,
+              hasCert: local.hasCert || remoteApp.hasCert,
+              status: local.status || remoteApp.status,
+              tasksCount: Math.max(remoteApp.tasksCount || 0, local.tasksCount || 0),
+              specialty: local.specialty || remoteApp.specialty
             };
-            combinedApprentices.push(synthRecord);
-            upsertApprenticeToSupabase(synthRecord);
           }
+          return remoteApp;
+        });
+      } else {
+        combinedApprentices = [...currentApprentices];
+      }
+
+      const remoteMap = new Map(combinedApprentices.map((a) => [a.id, a]));
+      const nameMap = new Map(combinedApprentices.map((a) => [a.name.toLowerCase(), a]));
+      const merged: Apprentice[] = [...combinedApprentices];
+
+      for (const loc of currentApprentices) {
+        if (!loc || isMockOrTestApprentice(loc)) continue;
+        if (!remoteMap.has(loc.id) && !nameMap.has(loc.name.toLowerCase())) {
+          merged.unshift(loc);
         }
       }
 
-      if (combinedApprentices.length > 0) {
-        const remoteMap = new Map(combinedApprentices.map((a) => [a.id, a]));
-        const nameMap = new Map(combinedApprentices.map((a) => [a.name.toLowerCase(), a]));
-        const merged: Apprentice[] = [...combinedApprentices];
-
-        for (const loc of currentApprentices) {
-          if (!loc || isMockId(loc.id)) continue;
-          if (!remoteMap.has(loc.id) && !nameMap.has(loc.name.toLowerCase())) {
-            merged.unshift(loc);
-            upsertApprenticeToSupabase(loc);
-          }
-        }
-        set({ apprentices: merged });
-        storageService.setItem('tailor_apprentices', merged);
-      }
+      const finalCleanApprentices = merged.filter((a) => a && !isMockOrTestApprentice(a));
+      set({ apprentices: finalCleanApprentices });
+      storageService.setItem('tailor_apprentices', finalCleanApprentices);
 
       // 5. Sync Tasks
       const currentTasks = get().apprenticeTasks.filter((t) => t && !isMockId(t.id));

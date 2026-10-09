@@ -44,6 +44,12 @@ export interface SpecSheetGarment {
   fabricPhotos: string[];
   notes: string;
   yardsNeeded?: number;
+  liningYards?: number;
+  interfacingYards?: number;
+  fabricName?: string;
+  fabricColor?: string;
+  customSpecs?: string[];
+  createdAt?: string;
 }
 
 export interface ClientOrder {
@@ -82,6 +88,7 @@ export interface Client {
   fittingDate?: string;
   tags?: string[];
   orderHistory?: ClientOrder[];
+  specSheetGarments?: SpecSheetGarment[];
 }
 
 export type ApprenticeTaskStatus = 'in_progress' | 'review_pending' | 'passed';
@@ -115,6 +122,8 @@ export interface Apprentice {
   tasksCount: number;
   status: 'On Track' | 'Review Due' | 'Graduating';
   specialty: string;
+  workshopCode?: string;
+  email?: string;
 }
 
 export interface UnpaidDeposit {

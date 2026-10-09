@@ -10,6 +10,7 @@ interface SwipeableClientCardProps {
   onEditClient: (client: Client) => void;
   onOpenMeasurements: (client: Client) => void;
   onOpenFullMeasurements?: (client: Client) => void;
+  onOpenSpecSheet?: (client: Client) => void;
   onOpenInvoice: (client: Client) => void;
   onOpenCollectDeposit?: (client: Client) => void;
   onDeleteClient?: (clientId: string) => void;
@@ -22,6 +23,7 @@ export const SwipeableClientCard: React.FC<SwipeableClientCardProps> = ({
   onEditClient,
   onOpenMeasurements,
   onOpenFullMeasurements,
+  onOpenSpecSheet,
   onOpenInvoice,
   onOpenCollectDeposit,
   onDeleteClient
@@ -290,6 +292,19 @@ export const SwipeableClientCard: React.FC<SwipeableClientCardProps> = ({
             >
               <Phone className="w-4 h-4" />
             </button>
+            {onOpenSpecSheet && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onOpenSpecSheet(client);
+                }}
+                className="p-2 rounded-xl bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/40 dark:hover:bg-amber-900/60 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800 transition-all cursor-pointer shrink-0"
+                title="Atelier Spec Sheet"
+              >
+                <Scissors className="w-4 h-4" />
+              </button>
+            )}
             <button
               type="button"
               onClick={(e) => {

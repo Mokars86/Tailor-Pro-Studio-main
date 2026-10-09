@@ -45,6 +45,7 @@ import {
   deleteUnpaidDepositFromSupabase
 } from '../../services/supabaseService';
 import { queueOfflineAction } from '../../services/offlineSyncService';
+import { storageService } from '../../services/storageService';
 import { markAllNotificationsAsRead, clearAllNotifications } from '../../services/pushNotificationService';
 import { parseCleanNumber, sanitizeClient, sanitizeTransaction, sanitizeDeposit } from '../../utils/numeric';
 
@@ -483,18 +484,24 @@ export const ModalRoot: React.FC = () => {
   };
 
   const handleSaveSpecSheet = (clientId: string, garments: SpecSheetGarment[]) => {
+    storageService.setItem(`tailor_spec_sheets_${clientId}`, garments);
+
     setClients((prev) =>
       prev.map((c) => {
         if (c.id === clientId) {
           const combinedNotes = garments.map((g) => g.notes).filter(Boolean).join(' | ');
-          const updated = {
+          const updated: Client = {
             ...c,
+            specSheetGarments: garments,
             notes: combinedNotes || c.notes
           };
           upsertClientToSupabase(updated);
           queueOfflineAction('client', updated);
           if (profileClient && profileClient.id === clientId) {
             setProfileClient(updated);
+          }
+          if (specSheetClient && specSheetClient.id === clientId) {
+            setSpecSheetClient(updated);
           }
           return updated;
         }

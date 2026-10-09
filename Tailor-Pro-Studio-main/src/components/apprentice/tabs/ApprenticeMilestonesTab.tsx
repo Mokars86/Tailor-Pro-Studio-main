@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Sparkles, Lock, ChevronDown, ChevronUp, Award, Printer, Handshake, CheckCircle2, CheckSquare, Square } from 'lucide-react';
 import { ApprenticeCertificateModal } from '../../modals/ApprenticeCertificateModal';
 import { GraduationPaymentModal } from '../../modals/GraduationPaymentModal';
 import { Apprentice, ApprenticeTask, Client } from '../../../types';
 import { getGraduationPayment } from '../../../services/subscriptionService';
+import { storageService } from '../../../services/storageService';
 
 interface ApprenticeMilestonesTabProps {
   apprenticeName?: string;
@@ -30,13 +31,19 @@ export const ApprenticeMilestonesTab: React.FC<ApprenticeMilestonesTabProps> = (
   const [isCertModalOpen, setIsCertModalOpen] = useState(false);
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
 
-  // Default checked units for basic stage
-  const [checkedUnits, setCheckedUnits] = useState<string[]>([
-    'Body Measurements & Tape Handling',
-    'Fabric Pressing & Steam Ironing',
-    'Fabric Identification & Color Matching',
-    'Hand Sewing & Button Attachments'
-  ]);
+  // Storage key specific to this apprentice to ensure a fresh clean slate for newly registered apprentices
+  const apprenticeKey = (apprentice?.id || apprenticeName || 'default').toLowerCase().replace(/[^a-z0-9]/g, '_');
+  const storageKey = `tailor_apprentice_milestones_${apprenticeKey}`;
+
+  // Start clean afresh with empty array for newly registered/linked apprentices
+  const [checkedUnits, setCheckedUnits] = useState<string[]>(() => {
+    return storageService.getItemSync<string[]>(storageKey, []);
+  });
+
+  useEffect(() => {
+    const saved = storageService.getItemSync<string[]>(storageKey, []);
+    setCheckedUnits(saved);
+  }, [storageKey]);
 
   const activeApprentice: Apprentice = apprentice || {
     id: `app_${Date.now()}`,
@@ -58,9 +65,11 @@ export const ApprenticeMilestonesTab: React.FC<ApprenticeMilestonesTabProps> = (
   const isHandshakeApproved = !activeApprentice.handshakeLocked;
 
   const toggleUnitCheck = (unitName: string) => {
-    setCheckedUnits((prev) =>
-      prev.includes(unitName) ? prev.filter((u) => u !== unitName) : [...prev, unitName]
-    );
+    setCheckedUnits((prev) => {
+      const next = prev.includes(unitName) ? prev.filter((u) => u !== unitName) : [...prev, unitName];
+      storageService.setItem(storageKey, next);
+      return next;
+    });
   };
 
   const stages = [

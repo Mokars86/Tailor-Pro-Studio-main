@@ -12,6 +12,7 @@ interface CustomerDirectoryProps {
   onEditClient: (client: Client) => void;
   onOpenMeasurements: (client: Client) => void;
   onOpenFullMeasurements?: (client: Client) => void;
+  onOpenSpecSheet?: (client: Client) => void;
   onOpenInvoice: (client: Client) => void;
   onOpenNewConsult: () => void;
   onSelectClient?: (client: Client) => void;
@@ -26,6 +27,7 @@ export const CustomerDirectory: React.FC<CustomerDirectoryProps> = ({
   onEditClient,
   onOpenMeasurements,
   onOpenFullMeasurements,
+  onOpenSpecSheet,
   onOpenInvoice,
   onOpenNewConsult,
   onSelectClient,
@@ -115,6 +117,7 @@ export const CustomerDirectory: React.FC<CustomerDirectoryProps> = ({
               onEditClient={onEditClient}
               onOpenMeasurements={onOpenMeasurements}
               onOpenFullMeasurements={onOpenFullMeasurements}
+              onOpenSpecSheet={onOpenSpecSheet}
               onOpenInvoice={onOpenInvoice}
               onOpenCollectDeposit={handleCollectDepositForClient}
               onDeleteClient={onDeleteClient}
@@ -237,6 +240,10 @@ export const CustomerDirectory: React.FC<CustomerDirectoryProps> = ({
                     onOpenFullMeasurements={(c) => {
                       setIsAllClientsModalOpen(false);
                       onOpenFullMeasurements && onOpenFullMeasurements(c);
+                    }}
+                    onOpenSpecSheet={(c) => {
+                      setIsAllClientsModalOpen(false);
+                      onOpenSpecSheet && onOpenSpecSheet(c);
                     }}
                     onOpenInvoice={(c) => {
                       setIsAllClientsModalOpen(false);

@@ -7,6 +7,7 @@ import { generateMasterWorkshopCode } from '../utils/workshopCode';
 import { getGraduationPayment, canLinkApprentice } from '../services/subscriptionService';
 import { downloadOrShareDocument } from '../utils/mobileDocumentDownloader';
 import { storageService } from '../services/storageService';
+import { isMockOrTestApprentice } from '../utils/numeric';
 
 export interface GraduatedAlumniRecord {
   id: string;
@@ -57,6 +58,8 @@ export const ApprenticeRegistry: React.FC<ApprenticeRegistryProps> = ({
   studioName,
   masterTrainer
 }) => {
+  const activeApprentices = (apprentices || []).filter((a) => a && !isMockOrTestApprentice(a));
+
   const [curriculumNotice, setCurriculumNotice] = useState<string | null>(null);
   const [isCurriculumOpen, setIsCurriculumOpen] = useState(false);
   const [selectedCurriculumApprenticeId, setSelectedCurriculumApprenticeId] = useState<string | undefined>(undefined);
@@ -72,9 +75,10 @@ export const ApprenticeRegistry: React.FC<ApprenticeRegistryProps> = ({
   const [activeSearchQuery, setActiveSearchQuery] = useState('');
   const [alumniSearchQuery, setAlumniSearchQuery] = useState('');
 
-  // Persisted list of Graduated Alumni
+  // Persisted list of Graduated Alumni (filtered to remove any legacy mock records)
   const [graduatedAlumni, setGraduatedAlumni] = useState<GraduatedAlumniRecord[]>(() => {
-    return storageService.getItemSync<GraduatedAlumniRecord[]>('tailor_graduated_alumni_history', []);
+    const raw = storageService.getItemSync<GraduatedAlumniRecord[]>('tailor_graduated_alumni_history', []);
+    return (Array.isArray(raw) ? raw : []).filter((a) => a && !isMockOrTestApprentice(a));
   });
 
   // Auto-sync active graduated apprentices into permanent alumni history
@@ -82,7 +86,8 @@ export const ApprenticeRegistry: React.FC<ApprenticeRegistryProps> = ({
     let updated = false;
     const currentAlumni = [...graduatedAlumni];
 
-    apprentices.forEach((apprentice) => {
+    activeApprentices.forEach((apprentice) => {
+      if (isMockOrTestApprentice(apprentice)) return;
       const assignedDuties = tasks.filter(
         (t) => t.assignedTo === 'all' || t.assignedTo === apprentice.id || t.assignedTo === apprentice.name
       );
@@ -119,7 +124,7 @@ export const ApprenticeRegistry: React.FC<ApprenticeRegistryProps> = ({
       setGraduatedAlumni(currentAlumni);
       storageService.setItem('tailor_graduated_alumni_history', currentAlumni);
     }
-  }, [apprentices, tasks, masterTrainer]);
+  }, [activeApprentices, tasks, masterTrainer]);
 
   const handleGraduateAndArchive = (apprentice: Apprentice) => {
     const assignedDuties = tasks.filter(
@@ -299,7 +304,7 @@ export const ApprenticeRegistry: React.FC<ApprenticeRegistryProps> = ({
     }
   };
 
-  const linkCheck = canLinkApprentice(apprentices.length);
+  const linkCheck = canLinkApprentice(activeApprentices.length);
 
   return (
     <div className="w-full bg-[#061E1B] border-2 border-[#DCA134] rounded-2xl sm:rounded-3xl p-3.5 sm:p-5 text-white shadow-xl relative overflow-hidden font-['Outfit'] space-y-3.5 sm:space-y-4 my-2 sm:my-3">
@@ -322,7 +327,7 @@ export const ApprenticeRegistry: React.FC<ApprenticeRegistryProps> = ({
             <span>
               {linkCheck.isExpired
                 ? 'Subscription Expired: Apprentice syncing and profile linking is currently restricted. Please renew your subscription to resume workshop sync.'
-                : `Free Tier Limit: Tailor Pro Free allows linking max 1 apprentice profile (${apprentices.length}/1). Upgrade to Master Pro for unlimited linked apprentices!`}
+                : `Free Tier Limit: Tailor Pro Free allows linking max 1 apprentice profile (${activeApprentices.length}/1). Upgrade to Master Pro for unlimited linked apprentices!`}
             </span>
           </div>
           {onTriggerUpgradeModal && (
@@ -348,9 +353,9 @@ export const ApprenticeRegistry: React.FC<ApprenticeRegistryProps> = ({
             <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
               <h2 className="font-extrabold text-sm sm:text-lg text-white tracking-tight uppercase flex items-center gap-1.5 sm:gap-2 flex-wrap">
                 <span>Master Apprentice Registry</span>
-                {apprentices.length > 0 && (
+                {activeApprentices.length > 0 && (
                   <span className="px-2 py-0.5 rounded-full bg-[#DCA134]/20 text-[#DCA134] text-[10px] sm:text-xs font-extrabold border border-[#DCA134]/40 lowercase tracking-normal">
-                    {apprentices.length} {apprentices.length === 1 ? 'apprentice' : 'apprentices'}
+                    {activeApprentices.length} {activeApprentices.length === 1 ? 'apprentice' : 'apprentices'}
                   </span>
                 )}
               </h2>
@@ -401,7 +406,7 @@ export const ApprenticeRegistry: React.FC<ApprenticeRegistryProps> = ({
             }`}
           >
             <Users className="w-3.5 h-3.5" />
-            <span>Active Trainees ({apprentices.length})</span>
+            <span>Active Trainees ({activeApprentices.length})</span>
           </button>
 
           <button
@@ -598,7 +603,7 @@ export const ApprenticeRegistry: React.FC<ApprenticeRegistryProps> = ({
         </div>
       ) : (
         <div className="space-y-3 relative z-10">
-          {apprentices.length === 0 ? (
+          {activeApprentices.length === 0 ? (
             <div className="text-center py-6 sm:py-8 px-3 bg-black/20 rounded-2xl border border-white/10 space-y-3">
               <Info className="w-7 h-7 sm:w-8 sm:h-8 text-amber-400/80 mx-auto" />
               <div>
@@ -617,7 +622,7 @@ export const ApprenticeRegistry: React.FC<ApprenticeRegistryProps> = ({
               </button>
             </div>
           ) : (() => {
-            const filteredApprentices = apprentices.filter((apprentice) => {
+            const filteredApprentices = activeApprentices.filter((apprentice) => {
               if (!activeSearchQuery.trim()) return true;
               const q = activeSearchQuery.toLowerCase();
               return (
@@ -631,7 +636,7 @@ export const ApprenticeRegistry: React.FC<ApprenticeRegistryProps> = ({
             return (
               <div className="space-y-3">
                 {/* Active Apprentices Filter Search Bar (when multiple apprentices exist) */}
-                {apprentices.length > 1 && (
+                {activeApprentices.length > 1 && (
                   <div className="bg-[#082824] p-2.5 rounded-2xl border border-amber-400/30 flex items-center gap-2">
                     <div className="relative flex-1">
                       <Search className="w-3.5 h-3.5 text-amber-400 absolute left-3 top-1/2 -translate-y-1/2" />
@@ -644,7 +649,7 @@ export const ApprenticeRegistry: React.FC<ApprenticeRegistryProps> = ({
                       />
                     </div>
                     <span className="text-[10px] font-black text-amber-300 bg-amber-500/20 px-2.5 py-1 rounded-xl border border-amber-400/30 shrink-0">
-                      {filteredApprentices.length} of {apprentices.length}
+                      {filteredApprentices.length} of {activeApprentices.length}
                     </span>
                   </div>
                 )}
@@ -658,8 +663,9 @@ export const ApprenticeRegistry: React.FC<ApprenticeRegistryProps> = ({
                     </p>
                   </div>
                 ) : (
-                  <div className="grid grid-cols-1 gap-3 relative z-10">
-                    {filteredApprentices.map((apprentice) => {
+                  <div className="space-y-3 relative z-10">
+                    {/* Primary Single Apprentice Display (first in registry) */}
+                    {filteredApprentices.slice(0, 1).map((apprentice) => {
                       const isHandshakeApproved = !apprentice.handshakeLocked;
                       const assignedDuties = tasks.filter(
                         (t) => t.assignedTo === 'all' || t.assignedTo === apprentice.id || t.assignedTo === apprentice.name
@@ -857,42 +863,17 @@ export const ApprenticeRegistry: React.FC<ApprenticeRegistryProps> = ({
                             </div>
                           </div>
 
-                          {/* Training Hours & Mentor Summary Grid */}
-                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs pt-1">
-                            <div className="p-2.5 rounded-xl bg-[#041916] border border-amber-400/20 space-y-1">
-                              <div className="flex items-center justify-between text-[10px] font-bold text-amber-300">
-                                <span>TRAINING HOURS</span>
-                                <span>{hrsPercent}%</span>
-                              </div>
-                              <div className="font-black text-xs text-white">
-                                {completedHrs} / {requiredHrs} hrs
-                              </div>
-                              <div className="w-full h-1.5 rounded-full bg-slate-800 overflow-hidden">
-                                <div
-                                  className="h-full bg-gradient-to-r from-amber-400 to-emerald-400 rounded-full transition-all duration-500"
-                                  style={{ width: `${hrsPercent}%` }}
-                                />
-                              </div>
+                          {/* Training Hours Progress Bar */}
+                          <div className="p-2.5 rounded-xl bg-[#041916] border border-amber-400/20 space-y-1">
+                            <div className="flex items-center justify-between text-[10px] font-bold text-amber-300">
+                              <span>TRAINING HOURS PROGRESS</span>
+                              <span>{completedHrs} / {requiredHrs} hrs ({hrsPercent}%)</span>
                             </div>
-
-                            <div className="p-2.5 rounded-xl bg-[#041916] border border-amber-400/20 space-y-0.5">
-                              <span className="text-[10px] font-bold text-emerald-400 block">WORKSHOP LINK KEY</span>
-                              <span className="font-mono font-black text-xs text-amber-200 truncate block">
-                                {pairCode}
-                              </span>
-                              <span className="text-[10px] text-slate-400 block">
-                                Direct Master Atelier Sync
-                              </span>
-                            </div>
-
-                            <div className="p-2.5 rounded-xl bg-[#041916] border border-amber-400/20 space-y-0.5">
-                              <span className="text-[10px] font-bold text-amber-300 block">ASSIGNED MENTOR</span>
-                              <span className="font-black text-xs text-white truncate block">
-                                {apprentice.mentor || masterTrainer || 'Master Atelier'}
-                              </span>
-                              <span className="text-[10px] text-slate-400 block">
-                                Principal Atelier Instructor
-                              </span>
+                            <div className="w-full h-1.5 rounded-full bg-slate-800 overflow-hidden">
+                              <div
+                                className="h-full bg-gradient-to-r from-amber-400 to-emerald-400 rounded-full transition-all duration-500"
+                                style={{ width: `${hrsPercent}%` }}
+                              />
                             </div>
                           </div>
 
@@ -1030,26 +1011,45 @@ export const ApprenticeRegistry: React.FC<ApprenticeRegistryProps> = ({
                         </div>
                       );
                     })}
-                  </div>
-                )}
 
-                {/* View Full Roster Modal Trigger (for when master wants full screen mode) */}
-                {apprentices.length > 1 && (
-                  <div className="pt-2 flex justify-end">
-                    <button
-                      type="button"
-                      onClick={() => setIsAllApprenticesModalOpen(true)}
-                      className="px-3.5 py-2 rounded-xl bg-[#041916] hover:bg-[#082824] text-amber-300 text-xs font-bold border border-amber-400/30 flex items-center gap-1.5 transition-all cursor-pointer"
-                    >
-                      <Eye className="w-3.5 h-3.5 text-amber-400" />
-                      <span>Open Full-Screen Supervision View</span>
-                    </button>
+                    {/* View All Apprentices Banner Trigger (when multiple apprentices are enrolled) */}
+                    {activeApprentices.length > 1 && (
+                      <div className="pt-2">
+                        <button
+                          type="button"
+                          onClick={() => setIsAllApprenticesModalOpen(true)}
+                          className="w-full p-3.5 sm:p-4 rounded-2xl bg-[#082824] hover:bg-[#0a3530] border-2 border-dashed border-[#DCA134]/60 hover:border-[#DCA134] text-amber-300 font-extrabold text-xs sm:text-sm flex items-center justify-between gap-3 transition-all cursor-pointer shadow-lg group active:scale-[0.99]"
+                        >
+                          <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+                            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-[#DCA134]/20 border border-[#DCA134]/40 flex items-center justify-center text-amber-300 group-hover:scale-105 transition-transform shrink-0">
+                              <Users className="w-4 h-4 sm:w-5 sm:h-5 text-amber-400" />
+                            </div>
+                            <div className="text-left min-w-0">
+                              <div className="text-white font-extrabold text-xs sm:text-sm flex items-center gap-2 flex-wrap">
+                                <span>View All Apprentices ({activeApprentices.length})</span>
+                                <span className="px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 text-[10px] font-black border border-amber-400/30 shrink-0">
+                                  +{activeApprentices.length - 1} more in roster
+                                </span>
+                              </div>
+                              <p className="text-[10px] sm:text-[11px] text-white/60 font-medium mt-0.5 truncate">
+                                Supervise all trainees, evaluate duties, approve handshakes & issue certificates
+                              </p>
+                            </div>
+                          </div>
+                          <div className="px-3.5 py-1.5 rounded-xl bg-[#DCA134] text-[#0D3B36] font-black text-xs flex items-center gap-1.5 shadow-md group-hover:bg-amber-400 shrink-0">
+                            <Eye className="w-3.5 h-3.5" />
+                            <span>View All</span>
+                          </div>
+                        </button>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
             );
           })()}
-        </div>)}
+        </div>
+      )}
 
       {/* Dedicated Full-Screen All Master Apprentices & Trainees Modal */}
       {isAllApprenticesModalOpen && (
@@ -1066,7 +1066,7 @@ export const ApprenticeRegistry: React.FC<ApprenticeRegistryProps> = ({
                   </div>
                   <div className="min-w-0 flex-1">
                     <h3 className="text-xs xs:text-sm sm:text-base font-black tracking-wide uppercase text-[#0D3B36] dark:text-amber-300 leading-snug break-words">
-                      ALL MASTER APPRENTICES & TRAINEES ({apprentices.length})
+                      ALL MASTER APPRENTICES & TRAINEES ({activeApprentices.length})
                     </h3>
                     <p className="text-[10px] sm:text-xs text-slate-600 dark:text-slate-400 font-semibold leading-tight mt-0.5 hidden xs:block">
                       Master supervision roster, curriculum task evaluation, and certificate issuance.
@@ -1121,7 +1121,7 @@ export const ApprenticeRegistry: React.FC<ApprenticeRegistryProps> = ({
 
               {/* Apprentice Cards List */}
               {(() => {
-                const modalFilteredApprentices = apprentices.filter((apprentice) => {
+                const modalFilteredApprentices = activeApprentices.filter((apprentice) => {
                   if (!modalSearchQuery.trim()) return true;
                   const q = modalSearchQuery.toLowerCase();
                   return (
@@ -1445,7 +1445,7 @@ export const ApprenticeRegistry: React.FC<ApprenticeRegistryProps> = ({
             {/* Modal Footer Controls (Static) */}
             <div className="flex flex-col sm:flex-row items-center justify-between bg-white dark:bg-slate-900/90 border border-slate-200 dark:border-amber-400/30 rounded-2xl p-3 px-4 text-slate-700 dark:text-white text-xs font-semibold gap-2 shadow-xl shrink-0">
               <span className="text-slate-600 dark:text-amber-200/80">
-                Showing {apprentices.length} registered apprentices in studio roster
+                Showing {activeApprentices.length} registered apprentices in studio roster
               </span>
               <button
                 type="button"
@@ -1467,7 +1467,7 @@ export const ApprenticeRegistry: React.FC<ApprenticeRegistryProps> = ({
           setIsCurriculumOpen(false);
           setSelectedCurriculumApprenticeId(undefined);
         }}
-        apprentices={apprentices}
+        apprentices={activeApprentices}
         tasks={tasks}
         initialApprenticeId={selectedCurriculumApprenticeId}
         onAssignTask={handleAssignTaskFromModal}
