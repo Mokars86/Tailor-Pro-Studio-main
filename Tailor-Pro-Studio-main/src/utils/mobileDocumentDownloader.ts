@@ -2,6 +2,14 @@ import { Capacitor } from '@capacitor/core';
 import { Filesystem, Directory, Encoding } from '@capacitor/filesystem';
 import { Share } from '@capacitor/share';
 import { Apprentice, InventoryItem } from '../types';
+import { TAILOR_PRO_LOGO_BASE64, MOKARS_TECH_LOGO_BASE64 } from './brandLogos';
+
+export function resolveImageSrc(url?: string, fallback: string = TAILOR_PRO_LOGO_BASE64): string {
+  if (!url || typeof url !== 'string' || url.trim() === '') return fallback;
+  if (url === '/tailor_pro_logo.jpg' || url.includes('tailor_pro_logo')) return TAILOR_PRO_LOGO_BASE64;
+  if (url === '/mokars_tech_logo.png' || url.includes('mokars_tech_logo')) return MOKARS_TECH_LOGO_BASE64;
+  return url;
+}
 
 export interface DocumentExportOptions {
   filename: string;
@@ -455,8 +463,10 @@ export function generateMasterCertificateHtml(params: {
     issueDate,
     certCode,
     qrCodeUrl,
-    studioLogoUrl = '/tailor_pro_logo.jpg'
+    studioLogoUrl
   } = params;
+
+  const studioLogoSrc = resolveImageSrc(studioLogoUrl, TAILOR_PRO_LOGO_BASE64);
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -465,7 +475,7 @@ export function generateMasterCertificateHtml(params: {
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Master Certificate — ${recipientTitle}</title>
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800;900&family=Outfit:wght@400;600;700;800;900&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&family=Playfair+Display:ital,wght@1,700;1,800;1,900&family=Plus+Jakarta+Sans:wght@500;600;700;800;900&display=swap');
     
     @page {
       size: A4 landscape;
@@ -479,9 +489,9 @@ export function generateMasterCertificateHtml(params: {
       print-color-adjust: exact !important;
     }
     body {
-      font-family: 'Plus Jakarta Sans', sans-serif;
-      background: #061E1B;
-      color: #0F2D2A;
+      font-family: 'Outfit', 'Plus Jakarta Sans', sans-serif;
+      background: #041916;
+      color: #072C27;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -489,11 +499,11 @@ export function generateMasterCertificateHtml(params: {
       padding: 15px;
     }
     .cert-page {
-      background: #FDFCF7;
+      background: #FFFFFF;
       width: 297mm;
       min-height: 210mm;
       max-width: 100%;
-      padding: 12mm 15mm;
+      padding: 10mm 14mm 10mm 14mm;
       border-radius: 20px;
       box-shadow: 0 25px 60px rgba(0,0,0,0.5);
       border: 4px solid #DCA134;
@@ -509,15 +519,65 @@ export function generateMasterCertificateHtml(params: {
       border: 1.5px solid rgba(220, 161, 52, 0.6);
       border-radius: 14px;
       pointer-events: none;
+      z-index: 5;
+    }
+    .corner-tl {
+      position: absolute;
+      top: 14px;
+      left: 14px;
+      width: 32px;
+      height: 32px;
+      border-top: 2.5px solid #DCA134;
+      border-left: 2.5px solid #DCA134;
+      border-top-left-radius: 10px;
+      z-index: 6;
+      pointer-events: none;
+    }
+    .corner-tr {
+      position: absolute;
+      top: 14px;
+      right: 14px;
+      width: 32px;
+      height: 32px;
+      border-top: 2.5px solid #DCA134;
+      border-right: 2.5px solid #DCA134;
+      border-top-right-radius: 10px;
+      z-index: 6;
+      pointer-events: none;
+    }
+    .corner-bl {
+      position: absolute;
+      bottom: 14px;
+      left: 14px;
+      width: 32px;
+      height: 32px;
+      border-bottom: 2.5px solid #DCA134;
+      border-left: 2.5px solid #DCA134;
+      border-bottom-left-radius: 10px;
+      z-index: 6;
+      pointer-events: none;
+    }
+    .corner-br {
+      position: absolute;
+      bottom: 14px;
+      right: 14px;
+      width: 32px;
+      height: 32px;
+      border-bottom: 2.5px solid #DCA134;
+      border-right: 2.5px solid #DCA134;
+      border-bottom-right-radius: 10px;
+      z-index: 6;
+      pointer-events: none;
     }
     .accent-triangle {
       position: absolute;
       top: 0;
       left: 0;
       bottom: 0;
-      width: 22%;
-      background: #0D3B36;
-      clip-path: polygon(0 0, 100% 0, 36% 100%, 0% 100%);
+      width: 120px;
+      background: #072C27;
+      clip-path: polygon(0 0, 100% 0, 20% 100%, 0% 100%);
+      -webkit-clip-path: polygon(0 0, 100% 0, 20% 100%, 0% 100%);
       z-index: 1;
     }
     .accent-gold {
@@ -525,192 +585,422 @@ export function generateMasterCertificateHtml(params: {
       top: 0;
       left: 0;
       bottom: 0;
-      width: 23%;
+      width: 132px;
       background: #DCA134;
-      clip-path: polygon(0 0, 100% 0, 38% 100%, 0% 100%);
+      clip-path: polygon(0 0, 100% 0, 22% 100%, 0% 100%);
+      -webkit-clip-path: polygon(0 0, 100% 0, 22% 100%, 0% 100%);
       z-index: 0;
+    }
+    .cert-content {
+      position: relative;
+      z-index: 10;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      height: 100%;
+      gap: 8px;
     }
     .header-row {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      position: relative;
-      z-index: 10;
+      gap: 15px;
     }
-    .brand-logo-box {
-      width: 68px;
-      height: 68px;
-      border-radius: 16px;
-      background: #0D3B36;
+    .brand-logo-circle {
+      width: 64px;
+      height: 64px;
+      border-radius: 50%;
+      background: #FFFFFF;
       border: 3px solid #DCA134;
       overflow: hidden;
       display: flex;
       align-items: center;
       justify-content: center;
+      padding: 3px;
+      flex-shrink: 0;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.12);
     }
-    .brand-logo-box img {
+    .brand-logo-circle img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      border-radius: 50%;
+    }
+    .center-logo-box {
+      width: 72px;
+      height: 72px;
+      border-radius: 18px;
+      background: #072C27;
+      border: 3.5px solid #DCA134;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto;
+      box-shadow: 0 4px 14px rgba(0,0,0,0.18);
+    }
+    .center-logo-box img {
       width: 100%;
       height: 100%;
       object-fit: cover;
     }
+    .corp-logo-box {
+      width: 64px;
+      height: 64px;
+      border-radius: 50%;
+      background: #FFFFFF;
+      border: 3px solid #DCA134;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 4px;
+      flex-shrink: 0;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+    }
+    .corp-logo-box img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
     .cert-heading-area {
       text-align: center;
-      position: relative;
-      z-index: 10;
-      margin: 8px 0;
-    }
-    .cert-title-sub {
-      font-size: 11px;
-      font-weight: 800;
-      color: #DCA134;
-      letter-spacing: 4px;
-      text-transform: uppercase;
+      margin: 4px 0 2px 0;
     }
     .cert-title-main {
-      font-family: 'Cinzel', serif;
-      font-size: 26px;
+      font-family: 'Outfit', sans-serif;
+      font-size: 44px;
       font-weight: 900;
-      color: #0D3B36;
+      color: #072C27;
+      text-transform: uppercase;
+      letter-spacing: 5px;
+      margin: 0;
+      line-height: 1;
+    }
+    .cert-title-sub {
+      font-family: 'Outfit', sans-serif;
+      font-size: 13.5px;
+      font-weight: 800;
+      color: #DCA134;
+      letter-spacing: 6px;
+      text-transform: uppercase;
+      margin-top: 5px;
+    }
+    .cert-grant-text {
+      font-family: 'Outfit', sans-serif;
+      font-size: 11.5px;
+      font-weight: 800;
+      color: #1E293B;
+      letter-spacing: 5px;
+      text-transform: uppercase;
+      margin-top: 7px;
+    }
+    .recipient-area {
+      text-align: center;
+      margin: 4px 0;
+    }
+    .recipient-name {
+      font-family: 'Outfit', 'Plus Jakarta Sans', sans-serif;
+      font-size: 38px;
+      font-weight: 900;
+      color: #072C27;
       text-transform: uppercase;
       letter-spacing: 2px;
-      margin: 2px 0;
+      display: inline-block;
+      line-height: 1.1;
+      padding: 0 15px;
+    }
+    .recipient-underline {
+      height: 5px;
+      width: 100%;
+      max-width: 580px;
+      background: #DCA134;
+      border-radius: 3px;
+      margin: 6px auto 0;
     }
     .cert-body-area {
       text-align: center;
-      position: relative;
-      z-index: 10;
-      padding: 0 40px;
-    }
-    .recipient-name {
-      font-family: 'Cinzel', serif;
-      font-size: 28px;
-      font-weight: 900;
-      color: #0D3B36;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      margin: 8px 0;
-      border-bottom: 2px solid #DCA134;
-      display: inline-block;
-      padding: 0 20px 4px 20px;
+      padding: 6px 20px;
+      margin: 4px 0;
     }
     .cert-description {
-      font-size: 12.5px;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 15.5px;
       font-weight: 600;
-      color: #334155;
-      line-height: 1.6;
-      max-width: 800px;
+      color: #1E293B;
+      line-height: 1.85;
+      letter-spacing: 0.3px;
+      max-width: 900px;
       margin: 0 auto;
     }
-    .footer-row {
+    .credentials-card {
+      background: #FAFAFA;
+      border: 2px solid rgba(220, 161, 52, 0.8);
+      border-radius: 14px;
+      padding: 9px 16px;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+      margin: 3px 0;
+    }
+    .cred-item {
       display: flex;
-      align-items: flex-end;
-      justify-content: space-between;
-      position: relative;
-      z-index: 10;
-      border-top: 1.5px solid rgba(220, 161, 52, 0.4);
-      padding-top: 10px;
+      flex-direction: column;
+      justify-content: center;
+      padding: 0 8px;
+    }
+    .cred-item:not(:last-child) {
+      border-right: 1.5px solid rgba(220, 161, 52, 0.4);
+    }
+    .cred-label {
+      font-size: 10px;
+      font-weight: 900;
+      color: #DCA134;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .cred-value {
+      font-size: 13px;
+      font-weight: 900;
+      color: #072C27;
+      margin-top: 3px;
+      line-height: 1.25;
+    }
+    .footer-row {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      align-items: center;
+      gap: 15px;
+      border-top: 1.5px solid rgba(220, 161, 52, 0.5);
+      padding-top: 8px;
+      margin-top: 2px;
     }
     .sig-block {
-      text-align: center;
-      width: 180px;
+      display: flex;
+      flex-direction: column;
+    }
+    .sig-name {
+      font-family: 'Playfair Display', serif;
+      font-style: italic;
+      font-weight: 900;
+      font-size: 17px;
+      color: #072C27;
+      text-transform: uppercase;
+      line-height: 1;
     }
     .sig-line {
-      border-bottom: 1.5px solid #0D3B36;
-      margin-bottom: 4px;
-      padding-bottom: 2px;
-      font-family: 'Cinzel', serif;
-      font-weight: 800;
-      font-size: 11px;
-      color: #0D3B36;
+      height: 2px;
+      width: 170px;
+      background: #072C27;
+      margin: 5px 0;
+      border-radius: 2px;
     }
     .sig-title {
       font-size: 9px;
       font-weight: 800;
-      color: #DCA134;
+      color: #475569;
       text-transform: uppercase;
-      letter-spacing: 1px;
+      letter-spacing: 0.5px;
+      line-height: 1.3;
     }
-    .qr-box {
-      text-align: center;
-    }
-    .qr-box img {
-      width: 60px;
-      height: 60px;
+    .qr-container {
+      background: #FFFFFF;
       border: 2px solid #DCA134;
-      border-radius: 8px;
-      background: white;
+      border-radius: 14px;
+      padding: 5px 14px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
     }
-    .qr-code-txt {
+    .qr-img-box {
+      width: 50px;
+      height: 50px;
+      border: 1px solid #CBD5E1;
+      border-radius: 8px;
+      padding: 2px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #FFFFFF;
+      flex-shrink: 0;
+    }
+    .qr-img-box img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+    .qr-details {
+      display: flex;
+      flex-direction: column;
+      text-align: left;
+      line-height: 1.2;
+    }
+    .qr-status {
+      font-size: 10px;
+      font-weight: 900;
+      color: #059669;
+      letter-spacing: 0.5px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .qr-code-text {
       font-family: monospace;
-      font-size: 9px;
+      font-size: 11px;
+      font-weight: 900;
+      color: #072C27;
+      margin: 1.5px 0;
+    }
+    .qr-scan-label {
+      font-size: 8px;
       font-weight: 800;
-      color: #0D3B36;
-      margin-top: 2px;
+      color: #64748B;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
     }
     @media print {
-      body { background: transparent; padding: 0; }
-      .cert-page { box-shadow: none; border-radius: 0; width: 100%; min-height: 100vh; }
+      body { background: transparent !important; padding: 0 !important; margin: 0 !important; }
+      .no-print { display: none !important; }
+      .cert-page {
+        box-shadow: none !important;
+        border-radius: 0 !important;
+        width: 297mm !important;
+        height: 210mm !important;
+        min-height: 210mm !important;
+        max-width: 297mm !important;
+        max-height: 210mm !important;
+        margin: 0 !important;
+        padding: 12mm 16mm !important;
+        border: 4.5px solid #DCA134 !important;
+      }
     }
   </style>
 </head>
 <body>
+  <!-- Print / Save button for screen viewing -->
+  <div class="no-print" style="position:fixed; top:12px; right:12px; z-index:9999;">
+    <button onclick="window.print()" style="background:#DCA134; color:#072C27; border:none; padding:8px 16px; border-radius:10px; font-family:'Outfit',sans-serif; font-weight:900; font-size:12px; cursor:pointer; box-shadow:0 4px 12px rgba(0,0,0,0.25); text-transform:uppercase; letter-spacing:1px; display:flex; align-items:center; gap:6px;">
+      🖨️ Print / Save as PDF
+    </button>
+  </div>
+
   <div class="cert-page">
     <div class="frame-border"></div>
+    <div class="corner-tl"></div>
+    <div class="corner-tr"></div>
+    <div class="corner-bl"></div>
+    <div class="corner-br"></div>
     <div class="accent-gold"></div>
     <div class="accent-triangle"></div>
 
-    <div class="header-row">
-      <div style="display:flex; align-items:center; gap:12px; margin-left:10px;">
-        <div class="brand-logo-box">
-          <img src="${studioLogoUrl}" alt="Logo" onerror="this.src='/tailor_pro_logo.jpg';" />
+    <div class="cert-content">
+      <!-- Top Header Row -->
+      <div class="header-row">
+        <!-- Left: Studio Logo & Name -->
+        <div style="display:flex; align-items:center; gap:14px; z-index:2;">
+          <div class="brand-logo-circle">
+            <img src="${studioLogoSrc}" alt="Master Studio Logo" onerror="this.src='${TAILOR_PRO_LOGO_BASE64}';" />
+          </div>
+          <div>
+            <div style="font-family:'Outfit',sans-serif; font-size:17px; font-weight:900; color:#072C27; text-transform:uppercase; letter-spacing:0.5px; line-height:1.2;">${studioName}</div>
+            <div style="font-size:11.5px; font-weight:600; color:#64748B; margin-top:2px;">Master Principal &amp; Founder</div>
+          </div>
         </div>
-        <div>
-          <div style="font-family:'Outfit',sans-serif; font-size:15px; font-weight:900; color:#0D3B36; text-transform:uppercase;">${studioName}</div>
-          <div style="font-size:10px; font-weight:800; color:#DCA134; text-transform:uppercase; letter-spacing:1px;">Master Principal Atelier</div>
+
+        <!-- Center: Official Tailor Pro Logo & Subtitle -->
+        <div style="text-align:center;">
+          <div class="center-logo-box">
+            <img src="${TAILOR_PRO_LOGO_BASE64}" alt="Tailor Pro Logo" />
+          </div>
+          <div style="font-size:11.5px; font-weight:900; color:#072C27; letter-spacing:4px; text-transform:uppercase; margin-top:4px; text-align:center;">TAILOR PRO</div>
+        </div>
+
+        <!-- Right: Mokars Tech Corp & Corporate Logo -->
+        <div style="display:flex; align-items:center; gap:14px; justify-content:flex-end;">
+          <div style="text-align:right;">
+            <div style="font-family:'Outfit',sans-serif; font-size:17px; font-weight:900; color:#072C27; text-transform:uppercase; line-height:1.2;">MOKARS TECH CORP</div>
+            <div style="font-size:11.5px; font-weight:600; color:#64748B; margin-top:2px;">Engineering Suite</div>
+          </div>
+          <div class="corp-logo-box">
+            <img src="${MOKARS_TECH_LOGO_BASE64}" alt="Mokars Tech Corp Logo" />
+          </div>
         </div>
       </div>
 
-      <div style="text-align:center;">
-        <div class="brand-logo-box" style="margin:0 auto; width:54px; height:54px;">
-          <img src="/tailor_pro_logo.jpg" alt="Tailor Pro Logo" />
+      <!-- Center Title Area -->
+      <div class="cert-heading-area">
+        <h1 class="cert-title-main">MASTER CRAFTSMAN</h1>
+        <div class="cert-title-sub">C E R T I F I C A T E &nbsp; O F &nbsp; T A I L O R I N G &nbsp; E X C E L L E N C E</div>
+        <div class="cert-grant-text">T H I S &nbsp; O F F I C I A L &nbsp; A C C R E D I T A T I O N &nbsp; I S &nbsp; G R A N T E D &nbsp; T O</div>
+      </div>
+
+      <!-- Recipient Area with Gold Accent Underline -->
+      <div class="recipient-area">
+        <div class="recipient-name">${recipientTitle.toUpperCase()}</div>
+        <div class="recipient-underline"></div>
+      </div>
+
+      <!-- Body Narrative Description -->
+      <div class="cert-body-area">
+        <p class="cert-description">
+          is hereby certified as an accredited <strong style="color:#072C27; font-weight:800;">Master Tailor &amp; Studio Principal of ${studioName}</strong>, recognized for exemplary craftsmanship, CAD silhouette blueprinting, and digital fashion studio leadership authorized by <strong style="color:#072C27; font-weight:800;">Mokars Tech Corp (MTC)</strong> and <strong style="color:#072C27; font-weight:800;">Tailor Pro Engineering Suite</strong>.
+        </p>
+      </div>
+
+      <!-- 4 Highlighted Credential Cards -->
+      <div class="credentials-card">
+        <div class="cred-item">
+          <span class="cred-label">📅 GRADUATION DATE</span>
+          <p class="cred-value">${issueDate}</p>
         </div>
-        <div style="font-size:9px; font-weight:900; color:#0D3B36; letter-spacing:2px; text-transform:uppercase; margin-top:2px;">TAILOR PRO</div>
+        <div class="cred-item">
+          <span class="cred-label">✂️ MASTER TRAINER</span>
+          <p class="cred-value">${masterTrainer.toUpperCase()}</p>
+        </div>
+        <div class="cred-item">
+          <span class="cred-label">📍 GRADUATION STUDIO</span>
+          <p class="cred-value">${studioName.toUpperCase()}</p>
+        </div>
+        <div class="cred-item">
+          <span class="cred-label">👥 CERTIFICATION</span>
+          <p class="cred-value">Master Studio Principal</p>
+        </div>
       </div>
 
-      <div style="text-align:right;">
-        <div style="font-size:10px; font-weight:800; color:#0D3B36; text-transform:uppercase;">MOKARS TECH CORP</div>
-        <div style="font-size:9px; font-weight:800; color:#DCA134; letter-spacing:1px; text-transform:uppercase;">AUTHENTICATED SEAL</div>
-      </div>
-    </div>
+      <!-- Bottom Dual Signatures & Scannable QR Matrix -->
+      <div class="footer-row">
+        <!-- Left: CEO Signature -->
+        <div class="sig-block" style="align-items:flex-start; text-align:left;">
+          <div class="sig-name">${ceoName.toUpperCase()}</div>
+          <div class="sig-line"></div>
+          <div class="sig-title">CEO, MOKARS TECH CORP<br/>(MTC)</div>
+        </div>
 
-    <div class="cert-heading-area">
-      <div class="cert-title-sub">CERTIFICATE OF MASTER ACCREDITATION</div>
-      <div class="cert-title-main">MASTER ATELIER CRAFTSMAN</div>
-    </div>
+        <!-- Center: Verification QR Badge -->
+        <div class="qr-container">
+          <div class="qr-img-box">
+            <img src="${qrCodeUrl}" alt="QR Verification" />
+          </div>
+          <div class="qr-details">
+            <div class="qr-status">
+              <span>🟢</span>
+              <span>100% VERIFIED</span>
+            </div>
+            <div class="qr-code-text">${certCode}</div>
+            <div class="qr-scan-label">SCAN TO VERIFY CERTIFICATE</div>
+          </div>
+        </div>
 
-    <div class="cert-body-area">
-      <div style="font-size:11px; font-weight:700; color:#64748B; text-transform:uppercase; letter-spacing:1.5px;">This official accreditation is conferred upon</div>
-      <div class="recipient-name">${recipientTitle}</div>
-      <p class="cert-description">
-        in recognition of demonstrated mastery in bespoke tailoring, haute couture garment construction, atelier operational management, and exemplary craftsmanship in mentoring fashion apprentices.
-      </p>
-    </div>
-
-    <div class="footer-row">
-      <div class="sig-block">
-        <div class="sig-line">${masterTrainer}</div>
-        <div class="sig-title">Master Designer & Principal</div>
-      </div>
-
-      <div class="qr-box">
-        <img src="${qrCodeUrl}" alt="QR Verification" />
-        <div class="qr-code-txt">${certCode}</div>
-        <div style="font-size:8px; color:#64748B;">Issued: ${issueDate}</div>
-      </div>
-
-      <div class="sig-block">
-        <div class="sig-line">${ceoName}</div>
-        <div class="sig-title">President, Mokars Tech Corp</div>
+        <!-- Right: Master Trainer Signature -->
+        <div class="sig-block" style="align-items:flex-end; text-align:right;">
+          <div class="sig-name">${masterTrainer.toUpperCase()}</div>
+          <div class="sig-line" style="margin-left:auto;"></div>
+          <div class="sig-title">MASTER DESIGNER &amp; TRAINER<br/>(${studioName})</div>
+        </div>
       </div>
     </div>
   </div>
@@ -744,8 +1034,10 @@ export function generateApprenticeCertificateHtml(params: {
     issueDate,
     certCode,
     qrCodeUrl,
-    studioLogoUrl = '/tailor_pro_logo.jpg'
+    studioLogoUrl
   } = params;
+
+  const studioLogoSrc = resolveImageSrc(studioLogoUrl, TAILOR_PRO_LOGO_BASE64);
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -754,7 +1046,7 @@ export function generateApprenticeCertificateHtml(params: {
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Apprentice Certificate — ${apprenticeName}</title>
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800;900&family=Outfit:wght@400;600;700;800;900&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&family=Playfair+Display:ital,wght@1,700;1,800;1,900&family=Plus+Jakarta+Sans:wght@500;600;700;800;900&display=swap');
     
     @page {
       size: A4 landscape;
@@ -768,9 +1060,9 @@ export function generateApprenticeCertificateHtml(params: {
       print-color-adjust: exact !important;
     }
     body {
-      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-family: 'Outfit', 'Plus Jakarta Sans', sans-serif;
       background: #041916;
-      color: #0F2D2A;
+      color: #072C27;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -778,11 +1070,11 @@ export function generateApprenticeCertificateHtml(params: {
       padding: 15px;
     }
     .cert-page {
-      background: #FDFCF7;
+      background: #FFFFFF;
       width: 297mm;
       min-height: 210mm;
       max-width: 100%;
-      padding: 12mm 15mm;
+      padding: 10mm 14mm 10mm 14mm;
       border-radius: 20px;
       box-shadow: 0 25px 60px rgba(0,0,0,0.5);
       border: 4px solid #DCA134;
@@ -798,15 +1090,65 @@ export function generateApprenticeCertificateHtml(params: {
       border: 1.5px solid rgba(220, 161, 52, 0.6);
       border-radius: 14px;
       pointer-events: none;
+      z-index: 5;
+    }
+    .corner-tl {
+      position: absolute;
+      top: 14px;
+      left: 14px;
+      width: 32px;
+      height: 32px;
+      border-top: 2.5px solid #DCA134;
+      border-left: 2.5px solid #DCA134;
+      border-top-left-radius: 10px;
+      z-index: 6;
+      pointer-events: none;
+    }
+    .corner-tr {
+      position: absolute;
+      top: 14px;
+      right: 14px;
+      width: 32px;
+      height: 32px;
+      border-top: 2.5px solid #DCA134;
+      border-right: 2.5px solid #DCA134;
+      border-top-right-radius: 10px;
+      z-index: 6;
+      pointer-events: none;
+    }
+    .corner-bl {
+      position: absolute;
+      bottom: 14px;
+      left: 14px;
+      width: 32px;
+      height: 32px;
+      border-bottom: 2.5px solid #DCA134;
+      border-left: 2.5px solid #DCA134;
+      border-bottom-left-radius: 10px;
+      z-index: 6;
+      pointer-events: none;
+    }
+    .corner-br {
+      position: absolute;
+      bottom: 14px;
+      right: 14px;
+      width: 32px;
+      height: 32px;
+      border-bottom: 2.5px solid #DCA134;
+      border-right: 2.5px solid #DCA134;
+      border-bottom-right-radius: 10px;
+      z-index: 6;
+      pointer-events: none;
     }
     .accent-triangle {
       position: absolute;
       top: 0;
       left: 0;
       bottom: 0;
-      width: 22%;
-      background: #0D3B36;
-      clip-path: polygon(0 0, 100% 0, 36% 100%, 0% 100%);
+      width: 120px;
+      background: #072C27;
+      clip-path: polygon(0 0, 100% 0, 20% 100%, 0% 100%);
+      -webkit-clip-path: polygon(0 0, 100% 0, 20% 100%, 0% 100%);
       z-index: 1;
     }
     .accent-gold {
@@ -814,192 +1156,422 @@ export function generateApprenticeCertificateHtml(params: {
       top: 0;
       left: 0;
       bottom: 0;
-      width: 23%;
+      width: 132px;
       background: #DCA134;
-      clip-path: polygon(0 0, 100% 0, 38% 100%, 0% 100%);
+      clip-path: polygon(0 0, 100% 0, 22% 100%, 0% 100%);
+      -webkit-clip-path: polygon(0 0, 100% 0, 22% 100%, 0% 100%);
       z-index: 0;
+    }
+    .cert-content {
+      position: relative;
+      z-index: 10;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      height: 100%;
+      gap: 8px;
     }
     .header-row {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      position: relative;
-      z-index: 10;
+      gap: 15px;
     }
-    .brand-logo-box {
-      width: 66px;
-      height: 66px;
-      border-radius: 16px;
-      background: #0D3B36;
+    .brand-logo-circle {
+      width: 64px;
+      height: 64px;
+      border-radius: 50%;
+      background: #FFFFFF;
       border: 3px solid #DCA134;
       overflow: hidden;
       display: flex;
       align-items: center;
       justify-content: center;
+      padding: 3px;
+      flex-shrink: 0;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.12);
     }
-    .brand-logo-box img {
+    .brand-logo-circle img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      border-radius: 50%;
+    }
+    .center-logo-box {
+      width: 72px;
+      height: 72px;
+      border-radius: 18px;
+      background: #072C27;
+      border: 3.5px solid #DCA134;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto;
+      box-shadow: 0 4px 14px rgba(0,0,0,0.18);
+    }
+    .center-logo-box img {
       width: 100%;
       height: 100%;
       object-fit: cover;
     }
+    .corp-logo-box {
+      width: 64px;
+      height: 64px;
+      border-radius: 50%;
+      background: #FFFFFF;
+      border: 3px solid #DCA134;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 4px;
+      flex-shrink: 0;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+    }
+    .corp-logo-box img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
     .cert-heading-area {
       text-align: center;
-      position: relative;
-      z-index: 10;
-      margin: 8px 0;
-    }
-    .cert-title-sub {
-      font-size: 11px;
-      font-weight: 800;
-      color: #DCA134;
-      letter-spacing: 4px;
-      text-transform: uppercase;
+      margin: 4px 0 2px 0;
     }
     .cert-title-main {
-      font-family: 'Cinzel', serif;
-      font-size: 26px;
+      font-family: 'Outfit', sans-serif;
+      font-size: 44px;
       font-weight: 900;
-      color: #0D3B36;
+      color: #072C27;
+      text-transform: uppercase;
+      letter-spacing: 5px;
+      margin: 0;
+      line-height: 1;
+    }
+    .cert-title-sub {
+      font-family: 'Outfit', sans-serif;
+      font-size: 13.5px;
+      font-weight: 800;
+      color: #DCA134;
+      letter-spacing: 6px;
+      text-transform: uppercase;
+      margin-top: 5px;
+    }
+    .cert-grant-text {
+      font-family: 'Outfit', sans-serif;
+      font-size: 11.5px;
+      font-weight: 800;
+      color: #1E293B;
+      letter-spacing: 5px;
+      text-transform: uppercase;
+      margin-top: 7px;
+    }
+    .recipient-area {
+      text-align: center;
+      margin: 4px 0;
+    }
+    .recipient-name {
+      font-family: 'Outfit', 'Plus Jakarta Sans', sans-serif;
+      font-size: 38px;
+      font-weight: 900;
+      color: #072C27;
       text-transform: uppercase;
       letter-spacing: 2px;
-      margin: 2px 0;
+      display: inline-block;
+      line-height: 1.1;
+      padding: 0 15px;
+    }
+    .recipient-underline {
+      height: 5px;
+      width: 100%;
+      max-width: 580px;
+      background: #DCA134;
+      border-radius: 3px;
+      margin: 6px auto 0;
     }
     .cert-body-area {
       text-align: center;
-      position: relative;
-      z-index: 10;
-      padding: 0 40px;
-    }
-    .recipient-name {
-      font-family: 'Cinzel', serif;
-      font-size: 30px;
-      font-weight: 900;
-      color: #0D3B36;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      margin: 8px 0;
-      border-bottom: 2px solid #DCA134;
-      display: inline-block;
-      padding: 0 24px 4px 24px;
+      padding: 6px 20px;
+      margin: 4px 0;
     }
     .cert-description {
-      font-size: 12.5px;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 15.5px;
       font-weight: 600;
-      color: #334155;
-      line-height: 1.6;
-      max-width: 820px;
+      color: #1E293B;
+      line-height: 1.85;
+      letter-spacing: 0.3px;
+      max-width: 900px;
       margin: 0 auto;
     }
-    .footer-row {
+    .credentials-card {
+      background: #FAFAFA;
+      border: 2px solid rgba(220, 161, 52, 0.8);
+      border-radius: 14px;
+      padding: 9px 16px;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+      margin: 3px 0;
+    }
+    .cred-item {
       display: flex;
-      align-items: flex-end;
-      justify-content: space-between;
-      position: relative;
-      z-index: 10;
-      border-top: 1.5px solid rgba(220, 161, 52, 0.4);
-      padding-top: 10px;
+      flex-direction: column;
+      justify-content: center;
+      padding: 0 8px;
+    }
+    .cred-item:not(:last-child) {
+      border-right: 1.5px solid rgba(220, 161, 52, 0.4);
+    }
+    .cred-label {
+      font-size: 10px;
+      font-weight: 900;
+      color: #DCA134;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .cred-value {
+      font-size: 13px;
+      font-weight: 900;
+      color: #072C27;
+      margin-top: 3px;
+      line-height: 1.25;
+    }
+    .footer-row {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      align-items: center;
+      gap: 15px;
+      border-top: 1.5px solid rgba(220, 161, 52, 0.5);
+      padding-top: 8px;
+      margin-top: 2px;
     }
     .sig-block {
-      text-align: center;
-      width: 180px;
+      display: flex;
+      flex-direction: column;
+    }
+    .sig-name {
+      font-family: 'Playfair Display', serif;
+      font-style: italic;
+      font-weight: 900;
+      font-size: 17px;
+      color: #072C27;
+      text-transform: uppercase;
+      line-height: 1;
     }
     .sig-line {
-      border-bottom: 1.5px solid #0D3B36;
-      margin-bottom: 4px;
-      padding-bottom: 2px;
-      font-family: 'Cinzel', serif;
-      font-weight: 800;
-      font-size: 11px;
-      color: #0D3B36;
+      height: 2px;
+      width: 170px;
+      background: #072C27;
+      margin: 5px 0;
+      border-radius: 2px;
     }
     .sig-title {
       font-size: 9px;
       font-weight: 800;
-      color: #DCA134;
+      color: #475569;
       text-transform: uppercase;
-      letter-spacing: 1px;
+      letter-spacing: 0.5px;
+      line-height: 1.3;
     }
-    .qr-box {
-      text-align: center;
-    }
-    .qr-box img {
-      width: 60px;
-      height: 60px;
+    .qr-container {
+      background: #FFFFFF;
       border: 2px solid #DCA134;
-      border-radius: 8px;
-      background: white;
+      border-radius: 14px;
+      padding: 5px 14px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
     }
-    .qr-code-txt {
+    .qr-img-box {
+      width: 50px;
+      height: 50px;
+      border: 1px solid #CBD5E1;
+      border-radius: 8px;
+      padding: 2px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #FFFFFF;
+      flex-shrink: 0;
+    }
+    .qr-img-box img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+    .qr-details {
+      display: flex;
+      flex-direction: column;
+      text-align: left;
+      line-height: 1.2;
+    }
+    .qr-status {
+      font-size: 10px;
+      font-weight: 900;
+      color: #059669;
+      letter-spacing: 0.5px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .qr-code-text {
       font-family: monospace;
-      font-size: 9px;
+      font-size: 11px;
+      font-weight: 900;
+      color: #072C27;
+      margin: 1.5px 0;
+    }
+    .qr-scan-label {
+      font-size: 8px;
       font-weight: 800;
-      color: #0D3B36;
-      margin-top: 2px;
+      color: #64748B;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
     }
     @media print {
-      body { background: transparent; padding: 0; }
-      .cert-page { box-shadow: none; border-radius: 0; width: 100%; min-height: 100vh; }
+      body { background: transparent !important; padding: 0 !important; margin: 0 !important; }
+      .no-print { display: none !important; }
+      .cert-page {
+        box-shadow: none !important;
+        border-radius: 0 !important;
+        width: 297mm !important;
+        height: 210mm !important;
+        min-height: 210mm !important;
+        max-width: 297mm !important;
+        max-height: 210mm !important;
+        margin: 0 !important;
+        padding: 12mm 16mm !important;
+        border: 4.5px solid #DCA134 !important;
+      }
     }
   </style>
 </head>
 <body>
+  <!-- Print / Save button for screen viewing -->
+  <div class="no-print" style="position:fixed; top:12px; right:12px; z-index:9999;">
+    <button onclick="window.print()" style="background:#DCA134; color:#072C27; border:none; padding:8px 16px; border-radius:10px; font-family:'Outfit',sans-serif; font-weight:900; font-size:12px; cursor:pointer; box-shadow:0 4px 12px rgba(0,0,0,0.25); text-transform:uppercase; letter-spacing:1px; display:flex; align-items:center; gap:6px;">
+      🖨️ Print / Save as PDF
+    </button>
+  </div>
+
   <div class="cert-page">
     <div class="frame-border"></div>
+    <div class="corner-tl"></div>
+    <div class="corner-tr"></div>
+    <div class="corner-bl"></div>
+    <div class="corner-br"></div>
     <div class="accent-gold"></div>
     <div class="accent-triangle"></div>
 
-    <div class="header-row">
-      <div style="display:flex; align-items:center; gap:12px; margin-left:10px;">
-        <div class="brand-logo-box">
-          <img src="${studioLogoUrl}" alt="Studio Logo" onerror="this.src='/tailor_pro_logo.jpg';" />
+    <div class="cert-content">
+      <!-- Top Header Row -->
+      <div class="header-row">
+        <!-- Left: Studio Logo & Name -->
+        <div style="display:flex; align-items:center; gap:14px; z-index:2;">
+          <div class="brand-logo-circle">
+            <img src="${studioLogoSrc}" alt="Studio Logo" onerror="this.src='${TAILOR_PRO_LOGO_BASE64}';" />
+          </div>
+          <div>
+            <div style="font-family:'Outfit',sans-serif; font-size:17px; font-weight:900; color:#072C27; text-transform:uppercase; letter-spacing:0.5px; line-height:1.2;">${studioName}</div>
+            <div style="font-size:11.5px; font-weight:600; color:#64748B; margin-top:2px;">Graduating Atelier</div>
+          </div>
         </div>
-        <div>
-          <div style="font-family:'Outfit',sans-serif; font-size:15px; font-weight:900; color:#0D3B36; text-transform:uppercase;">${studioName}</div>
-          <div style="font-size:10px; font-weight:800; color:#DCA134; text-transform:uppercase; letter-spacing:1px;">Graduating Atelier</div>
+
+        <!-- Center: Official Tailor Pro Logo & Subtitle -->
+        <div style="text-align:center;">
+          <div class="center-logo-box">
+            <img src="${TAILOR_PRO_LOGO_BASE64}" alt="Tailor Pro Logo" />
+          </div>
+          <div style="font-size:11.5px; font-weight:900; color:#072C27; letter-spacing:4px; text-transform:uppercase; margin-top:4px; text-align:center;">TAILOR PRO</div>
+        </div>
+
+        <!-- Right: Mokars Tech Corp & Corporate Logo -->
+        <div style="display:flex; align-items:center; gap:14px; justify-content:flex-end;">
+          <div style="text-align:right;">
+            <div style="font-family:'Outfit',sans-serif; font-size:17px; font-weight:900; color:#072C27; text-transform:uppercase; line-height:1.2;">MOKARS TECH CORP</div>
+            <div style="font-size:11.5px; font-weight:600; color:#64748B; margin-top:2px;">Engineering Suite</div>
+          </div>
+          <div class="corp-logo-box">
+            <img src="${MOKARS_TECH_LOGO_BASE64}" alt="Mokars Tech Corp Logo" />
+          </div>
         </div>
       </div>
 
-      <div style="text-align:center;">
-        <div class="brand-logo-box" style="margin:0 auto; width:52px; height:52px;">
-          <img src="/tailor_pro_logo.jpg" alt="Tailor Pro Logo" />
+      <!-- Center Title Area -->
+      <div class="cert-heading-area">
+        <h1 class="cert-title-main">CERTIFICATE</h1>
+        <div class="cert-title-sub">O F &nbsp; P R O F I C I E N C Y &nbsp; A N D &nbsp; G R A D U A T I O N</div>
+        <div class="cert-grant-text">T H I S &nbsp; O F F I C I A L &nbsp; D I P L O M A &nbsp; I S &nbsp; A W A R D E D &nbsp; T O</div>
+      </div>
+
+      <!-- Recipient Area with Gold Accent Underline -->
+      <div class="recipient-area">
+        <div class="recipient-name">${apprenticeName.toUpperCase()}</div>
+        <div class="recipient-underline"></div>
+      </div>
+
+      <!-- Body Narrative Description -->
+      <div class="cert-body-area">
+        <p class="cert-description">
+          having successfully completed <strong style="color:#072C27; font-weight:800;">${hoursCompleted} hours</strong> of intensive CAD blueprint drafting, garment pattern cutting, and bespoke tailoring in <strong style="color:#072C27; font-weight:800;">${specialty}</strong> under the direct mentorship of <strong style="color:#072C27; font-weight:800;">${masterTrainer}</strong> at <strong style="color:#072C27; font-weight:800;">${studioName}</strong>.
+        </p>
+      </div>
+
+      <!-- 4 Highlighted Credential Cards -->
+      <div class="credentials-card">
+        <div class="cred-item">
+          <span class="cred-label">📅 GRADUATION DATE</span>
+          <p class="cred-value">${issueDate}</p>
         </div>
-        <div style="font-size:9px; font-weight:900; color:#0D3B36; letter-spacing:2px; text-transform:uppercase; margin-top:2px;">TAILOR PRO</div>
+        <div class="cred-item">
+          <span class="cred-label">✂️ MASTER TRAINER</span>
+          <p class="cred-value">${masterTrainer.toUpperCase()}</p>
+        </div>
+        <div class="cred-item">
+          <span class="cred-label">📍 GRADUATION STUDIO</span>
+          <p class="cred-value">${studioName.toUpperCase()}</p>
+        </div>
+        <div class="cred-item">
+          <span class="cred-label">👥 CERTIFICATION</span>
+          <p class="cred-value">Accredited Bespoke Tailor</p>
+        </div>
       </div>
 
-      <div style="text-align:right;">
-        <div style="font-size:10px; font-weight:800; color:#0D3B36; text-transform:uppercase;">PROFICIENCY DIPLOMA</div>
-        <div style="font-size:9px; font-weight:800; color:#DCA134; letter-spacing:1px; text-transform:uppercase;">${hoursCompleted} / ${totalRequiredHours} HOURS</div>
-      </div>
-    </div>
+      <!-- Bottom Dual Signatures & Scannable QR Matrix -->
+      <div class="footer-row">
+        <!-- Left: CEO Signature -->
+        <div class="sig-block" style="align-items:flex-start; text-align:left;">
+          <div class="sig-name">MUBARIK TUAHIR ALI</div>
+          <div class="sig-line"></div>
+          <div class="sig-title">CEO, MOKARS TECH CORP<br/>(MTC)</div>
+        </div>
 
-    <div class="cert-heading-area">
-      <div class="cert-title-sub">CERTIFICATE OF PROFICIENCY & GRADUATION</div>
-      <div class="cert-title-main">GRADUATED BESPOKE TAILOR</div>
-    </div>
+        <!-- Center: Verification QR Badge -->
+        <div class="qr-container">
+          <div class="qr-img-box">
+            <img src="${qrCodeUrl}" alt="QR Verification" />
+          </div>
+          <div class="qr-details">
+            <div class="qr-status">
+              <span>🟢</span>
+              <span>100% VERIFIED</span>
+            </div>
+            <div class="qr-code-text">${certCode}</div>
+            <div class="qr-scan-label">SCAN TO VERIFY CERTIFICATE</div>
+          </div>
+        </div>
 
-    <div class="cert-body-area">
-      <div style="font-size:11px; font-weight:700; color:#64748B; text-transform:uppercase; letter-spacing:1.5px;">This official certificate of completion is awarded to</div>
-      <div class="recipient-name">${apprenticeName}</div>
-      <p class="cert-description">
-        having successfully completed <strong>${hoursCompleted} hours</strong> of rigorous CAD blueprint drafting, garment pattern cutting, and bespoke tailoring in <em>${specialty}</em> under the direct mentorship of <strong>${masterTrainer}</strong> at <strong>${studioName}</strong>.
-      </p>
-    </div>
-
-    <div class="footer-row">
-      <div class="sig-block">
-        <div class="sig-line">${masterTrainer}</div>
-        <div class="sig-title">Master Trainer & Mentor</div>
-      </div>
-
-      <div class="qr-box">
-        <img src="${qrCodeUrl}" alt="QR Verification" />
-        <div class="qr-code-txt">${certCode}</div>
-        <div style="font-size:8px; color:#64748B;">Issued: ${issueDate}</div>
-      </div>
-
-      <div class="sig-block">
-        <div class="sig-line">MUBARIK TUAHIR ALI</div>
-        <div class="sig-title">President, Mokars Tech Corp</div>
+        <!-- Right: Master Trainer Signature -->
+        <div class="sig-block" style="align-items:flex-end; text-align:right;">
+          <div class="sig-name">${masterTrainer.toUpperCase()}</div>
+          <div class="sig-line" style="margin-left:auto;"></div>
+          <div class="sig-title">MASTER DESIGNER &amp; TRAINER<br/>(${studioName})</div>
+        </div>
       </div>
     </div>
   </div>

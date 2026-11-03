@@ -2,6 +2,7 @@ import React, { useRef, useState } from 'react';
 import { X, Printer, ShieldCheck, Award, Edit3, Calendar, Scissors, Building2, BadgeCheck, Lock, Sparkles, Download, CheckCircle2 } from 'lucide-react';
 import { generateUniqueCertNumber, formatCertificateDate, generateQRCodeUrl } from '../../utils/certificateGenerator';
 import { downloadOrShareDocument, generateMasterCertificateHtml } from '../../utils/mobileDocumentDownloader';
+import { TAILOR_PRO_LOGO_BASE64, MOKARS_TECH_LOGO_BASE64 } from '../../utils/brandLogos';
 
 interface MasterCertificateModalProps {
   isOpen: boolean;
@@ -250,22 +251,22 @@ export const MasterCertificateModal: React.FC<MasterCertificateModalProps> = ({
           <div
             ref={certificateRef}
             id="printable-master-certificate"
-            className="relative w-full min-w-[280px] sm:min-w-[320px] aspect-[1.414/1] bg-[#FDFCF7] text-slate-900 rounded-2xl sm:rounded-3xl shadow-2xl overflow-hidden border-2 sm:border-4 border-[#DCA134] select-none print:m-0 print:border-none print:shadow-none print:rounded-none flex flex-col justify-between"
+            className="relative w-full min-w-[280px] sm:min-w-[320px] aspect-[1.414/1] bg-[#FFFFFF] text-slate-900 rounded-2xl sm:rounded-3xl shadow-2xl overflow-hidden border-2 sm:border-4 border-[#DCA134] select-none print:m-0 print:border-none print:shadow-none print:rounded-none flex flex-col justify-between"
           >
           {/* Outer & Inner Frame Accent Lines */}
           <div className="absolute inset-2 border border-[#DCA134]/60 rounded-[20px] pointer-events-none z-20" />
 
           {/* Left Teal Angled Panel with Gold Stripe Accent */}
           <div
-            className="absolute top-0 left-0 bottom-0 w-[25%] bg-[#DCA134] z-0"
+            className="absolute top-0 left-0 bottom-0 w-[105px] bg-[#DCA134] z-0 pointer-events-none"
             style={{
-              clipPath: 'polygon(0 0, 100% 0, 38% 100%, 0% 100%)',
+              clipPath: 'polygon(0 0, 100% 0, 22% 100%, 0% 100%)',
             }}
           />
           <div
-            className="absolute top-0 left-0 bottom-0 w-[24.2%] bg-[#0D3B36] z-0"
+            className="absolute top-0 left-0 bottom-0 w-[95px] bg-[#072C27] z-0 pointer-events-none"
             style={{
-              clipPath: 'polygon(0 0, 100% 0, 36.5% 100%, 0% 100%)',
+              clipPath: 'polygon(0 0, 100% 0, 20% 100%, 0% 100%)',
             }}
           />
 
@@ -283,22 +284,22 @@ export const MasterCertificateModal: React.FC<MasterCertificateModalProps> = ({
               
               {/* Left Side: Master Brand Logo Emblem & Studio Title */}
               <div className="flex items-center gap-3 relative z-20">
-                <div className="w-14 h-14 sm:w-18 sm:h-18 md:w-20 md:h-20 rounded-2xl bg-[#0D3B36] border-3 border-[#DCA134] overflow-hidden shadow-lg flex items-center justify-center shrink-0">
+                <div className="w-14 h-14 sm:w-16 sm:h-16 md:w-18 md:h-18 rounded-full bg-white border-3 border-[#DCA134] overflow-hidden shadow-md flex items-center justify-center p-1 shrink-0">
                   <img
-                    src={studioLogoUrl || '/tailor_pro_logo.jpg'}
+                    src={studioLogoUrl || TAILOR_PRO_LOGO_BASE64}
                     alt="Master Studio Logo"
-                    className="w-full h-full object-cover"
+                    className="w-full h-full object-cover rounded-full"
                     onError={(e) => {
-                      (e.target as HTMLImageElement).src = '/tailor_pro_logo.jpg';
+                      (e.target as HTMLImageElement).src = TAILOR_PRO_LOGO_BASE64;
                     }}
                   />
                 </div>
 
                 <div className="text-left flex flex-col justify-center">
-                  <h3 className="font-['Outfit'] font-black text-sm sm:text-base md:text-lg text-black tracking-wider uppercase leading-tight">
+                  <h3 className="font-['Outfit'] font-black text-sm sm:text-base md:text-lg text-[#072C27] tracking-wider uppercase leading-tight">
                     {studioName || 'MOKARS STITCHES STUDIO'}
                   </h3>
-                  <p className="text-xs sm:text-sm font-black text-black tracking-wide mt-1 uppercase leading-snug">
+                  <p className="text-xs sm:text-sm font-semibold text-slate-500 tracking-wide mt-0.5 leading-snug">
                     Master Principal & Founder
                   </p>
                 </div>
@@ -306,14 +307,14 @@ export const MasterCertificateModal: React.FC<MasterCertificateModalProps> = ({
 
               {/* Center: Official Tailor Pro Emblem & Spaced Subtitle */}
               <div className="flex flex-col items-center justify-center text-center">
-                <div className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 rounded-2xl bg-[#0D3B36] border-4 border-[#DCA134] overflow-hidden shadow-xl relative p-0.5">
+                <div className="w-16 h-16 sm:w-20 sm:h-20 md:w-22 md:h-22 rounded-2xl bg-[#072C27] border-3 sm:border-4 border-[#DCA134] overflow-hidden shadow-xl relative p-0.5">
                   <img
-                    src="/tailor_pro_logo.jpg"
+                    src={TAILOR_PRO_LOGO_BASE64}
                     alt="Tailor Pro Logo"
                     className="w-full h-full object-cover rounded-xl"
                   />
                 </div>
-                <span className="text-xs sm:text-sm md:text-base font-black text-[#0D3B36] tracking-[0.35em] uppercase mt-1.5 leading-none">
+                <span className="text-xs sm:text-sm md:text-base font-black text-[#072C27] tracking-[0.35em] uppercase mt-1.5 leading-none">
                   TAILOR PRO
                 </span>
               </div>
@@ -321,17 +322,17 @@ export const MasterCertificateModal: React.FC<MasterCertificateModalProps> = ({
               {/* Right Side: Mokars Tech Corp & Corporate Emblem */}
               <div className="flex items-center gap-3 text-right">
                 <div className="flex flex-col justify-center items-end text-right">
-                  <h4 className="font-['Outfit'] font-black text-sm sm:text-base md:text-lg text-slate-900 tracking-wider uppercase leading-tight">
+                  <h4 className="font-['Outfit'] font-black text-sm sm:text-base md:text-lg text-[#072C27] tracking-wider uppercase leading-tight">
                     MOKARS TECH CORP
                   </h4>
-                  <p className="text-xs sm:text-sm font-extrabold text-[#0D3B36] tracking-wide mt-1 uppercase leading-snug">
+                  <p className="text-xs sm:text-sm font-semibold text-slate-500 tracking-wide mt-0.5 leading-snug">
                     Engineering Suite
                   </p>
                 </div>
 
-                <div className="w-14 h-14 sm:w-18 sm:h-18 md:w-20 md:h-20 rounded-full bg-white border-3 border-[#DCA134] shadow-md flex items-center justify-center p-1 shrink-0 overflow-hidden">
+                <div className="w-14 h-14 sm:w-16 sm:h-16 md:w-18 md:h-18 rounded-full bg-white border-3 border-[#DCA134] shadow-md flex items-center justify-center p-1 shrink-0 overflow-hidden">
                   <img
-                    src="/mokars_tech_logo.png"
+                    src={MOKARS_TECH_LOGO_BASE64}
                     alt="Mokars Tech Corp Logo"
                     className="w-full h-full object-contain"
                   />
@@ -340,46 +341,45 @@ export const MasterCertificateModal: React.FC<MasterCertificateModalProps> = ({
 
             </div>
 
-            {/* Center Area: Main Master Certificate Title in Black */}
-            <div className="text-center space-y-1.5 pt-1">
-              <h1 className="font-['Outfit'] font-black text-3xl sm:text-4xl md:text-5xl lg:text-5xl text-[#0D3B36] tracking-[0.14em] uppercase leading-none">
+            {/* Center Area: Main Master Certificate Title in Dark Teal */}
+            <div className="text-center space-y-1 pt-1">
+              <h1 className="font-['Outfit'] font-black text-3xl sm:text-4xl md:text-5xl text-[#072C27] tracking-[0.12em] uppercase leading-none">
                 MASTER CRAFTSMAN
               </h1>
 
               <div className="flex items-center justify-center gap-3 pt-1">
-                <h2 className="font-['Outfit'] font-black text-xs sm:text-sm md:text-base text-[#DCA134] tracking-[0.35em] uppercase">
+                <h2 className="font-['Outfit'] font-extrabold text-xs sm:text-sm md:text-base text-[#DCA134] tracking-[0.35em] uppercase">
                   C E R T I F I C A T E &nbsp; O F &nbsp; T A I L O R I N G &nbsp; E X C E L L E N C E
                 </h2>
               </div>
 
-              <p className="font-['Outfit'] font-extrabold text-xs sm:text-sm text-slate-700 tracking-[0.25em] uppercase pt-2">
+              <p className="font-['Outfit'] font-extrabold text-[10px] sm:text-xs text-slate-800 tracking-[0.25em] uppercase pt-1.5">
                 T H I S &nbsp; O F F I C I A L &nbsp; A C C R E D I T A T I O N &nbsp; I S &nbsp; G R A N T E D &nbsp; T O
               </p>
             </div>
 
-            {/* Recipient Full Name / Studio Principal in Bold Non-Italic Font with Gold Underline */}
-            <div className="text-center py-1.5">
-              <div className="inline-block relative">
-                <h2 className="font-['Outfit'] font-black text-3xl sm:text-4xl md:text-5xl lg:text-6xl text-slate-900 tracking-wider uppercase px-6">
+            {/* Recipient Full Name / Studio Principal in Elegant Serif Font with Gold Underline */}
+            <div className="text-center py-1">
+              <div className="inline-block relative max-w-2xl w-full">
+                <h2 className="font-['Playfair_Display',Georgia,serif] font-black text-2xl sm:text-3xl md:text-4xl lg:text-5xl text-[#072C27] tracking-wider uppercase px-4">
                   {recipientTitle.toUpperCase()}
                 </h2>
-                {/* Thick Gold Accent Underline */}
-                <div className="h-1.5 sm:h-2 w-full bg-[#DCA134] rounded-full mt-2 shadow-xs" />
+                {/* Gold Accent Underline */}
+                <div className="h-1 sm:h-1.5 w-full max-w-lg bg-[#DCA134] rounded-full mx-auto mt-2 shadow-xs" />
               </div>
             </div>
 
-            {/* Narrative Body Text - Properly Aligned & Increased Size */}
-            <div className="text-center max-w-3xl mx-auto px-3 sm:px-8 py-1">
-              <p className="text-sm sm:text-base md:text-lg lg:text-xl text-slate-800 leading-relaxed font-bold font-['Plus_Jakarta_Sans',sans-serif]">
-                is hereby certified as an accredited <strong className="text-slate-900 font-black">Master Tailor & Studio Principal</strong> of{' '}
-                <strong className="text-slate-900 font-black">{studioName}</strong>, recognized for exemplary craftsmanship, CAD silhouette blueprinting, and digital fashion studio leadership authorized by{' '}
-                <strong className="text-slate-900 font-black">Mokars Tech Corp (MTC)</strong> and{' '}
-                <strong className="text-slate-900 font-black">Tailor Pro Engineering Suite</strong>.
+            {/* Narrative Body Text */}
+            <div className="text-center max-w-4xl mx-auto px-4 sm:px-8 py-1">
+              <p className="text-sm sm:text-base md:text-lg lg:text-[19px] text-slate-800 leading-[1.8] sm:leading-[1.9] tracking-wide font-semibold font-['Plus_Jakarta_Sans',sans-serif]">
+                is hereby certified as an accredited <strong className="text-[#072C27] font-black">Master Tailor & Studio Principal of {studioName}</strong>, recognized for exemplary craftsmanship, CAD silhouette blueprinting, and digital fashion studio leadership authorized by{' '}
+                <strong className="text-[#072C27] font-black">Mokars Tech Corp (MTC)</strong> and{' '}
+                <strong className="text-[#072C27] font-black">Tailor Pro Engineering Suite</strong>.
               </p>
             </div>
 
-            {/* Highlighted Credentials Card with Lucide Vector Icons (4 Columns with Accreditation Icon) */}
-            <div className="bg-[#FAF7F0] border-2 border-[#DCA134]/70 rounded-2xl p-3.5 sm:p-4 shadow-2xs">
+            {/* Highlighted Credentials Card (4 Columns) */}
+            <div className="bg-[#FAFAFA] border-2 border-[#DCA134]/70 rounded-2xl p-3 sm:p-3.5 shadow-2xs">
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 text-left divide-y md:divide-y-0 md:divide-x divide-amber-300/80">
                 
                 {/* Item 1: Graduation Date */}
@@ -388,7 +388,7 @@ export const MasterCertificateModal: React.FC<MasterCertificateModalProps> = ({
                     <Calendar className="w-3.5 h-3.5 text-[#DCA134] shrink-0" />
                     <span>GRADUATION DATE</span>
                   </span>
-                  <p className="font-black text-xs sm:text-sm text-black mt-1">
+                  <p className="font-black text-xs sm:text-sm text-[#072C27] mt-1">
                     {issueDate}
                   </p>
                 </div>
@@ -399,29 +399,29 @@ export const MasterCertificateModal: React.FC<MasterCertificateModalProps> = ({
                     <Scissors className="w-3.5 h-3.5 text-[#DCA134] shrink-0" />
                     <span>MASTER TRAINER</span>
                   </span>
-                  <p className="font-black text-xs sm:text-sm text-black mt-1 uppercase">
+                  <p className="font-black text-xs sm:text-sm text-[#072C27] mt-1 uppercase">
                     {trainerName}
                   </p>
                 </div>
 
-                {/* Item 3: Graduation Studio with Accreditation Badge Icon */}
+                {/* Item 3: Graduation Studio */}
                 <div className="pt-2 md:pt-0 md:px-3 flex flex-col justify-center">
                   <span className="text-[10px] sm:text-[11px] font-black text-[#DCA134] uppercase tracking-wider flex items-center gap-1.5">
                     <BadgeCheck className="w-3.5 h-3.5 text-[#DCA134] shrink-0" />
                     <span>GRADUATION STUDIO</span>
                   </span>
-                  <p className="font-black text-xs sm:text-sm text-black mt-1 leading-tight uppercase">
+                  <p className="font-black text-xs sm:text-sm text-[#072C27] mt-1 leading-tight uppercase">
                     {studioName}
                   </p>
                 </div>
 
-                {/* Item 4: Certification Level with Award Icon */}
+                {/* Item 4: Certification Level */}
                 <div className="pt-2 md:pt-0 md:px-3 flex flex-col justify-center">
                   <span className="text-[10px] sm:text-[11px] font-black text-[#DCA134] uppercase tracking-wider flex items-center gap-1.5">
                     <Award className="w-3.5 h-3.5 text-[#DCA134] shrink-0" />
                     <span>CERTIFICATION</span>
                   </span>
-                  <p className="font-black text-xs sm:text-sm text-black mt-1 leading-tight">
+                  <p className="font-black text-xs sm:text-sm text-[#072C27] mt-1 leading-tight">
                     Master Studio Principal
                   </p>
                 </div>
